@@ -228,7 +228,7 @@ const styles = StyleSheet.create({
     flexShrink: 1,
   },
   button: {
-    backgroundColor: '#5E5CE6',
+    backgroundColor: '#5E67CC',
     paddingVertical: 14,
     borderRadius: 10,
     alignItems: 'center',

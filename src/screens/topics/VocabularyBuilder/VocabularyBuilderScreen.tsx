@@ -341,7 +341,6 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: '#fff' },
   scrollContent: { padding: 20, paddingBottom: 80 }, // extra bottom space for nav
 
-  // Progress
   progressCard: {
     borderWidth: 1,
     borderColor: '#E0E0E0',
@@ -355,7 +354,6 @@ const styles = StyleSheet.create({
   dot: { width: 10, height: 10, borderRadius: 5, backgroundColor: '#ddd', marginRight: 6 },
   dotActive: { backgroundColor: '#5E67CC' },
 
-  // Level
   levelCard: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -380,7 +378,6 @@ const styles = StyleSheet.create({
   levelTitle: { fontWeight: 'bold', fontSize: 16 },
   levelDesc: { fontSize: 13, color: '#777' },
 
-  // Sub-level
   subLevelCard: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -395,7 +392,6 @@ const styles = StyleSheet.create({
   subLevelTitle: { fontWeight: '600', fontSize: 15 },
   subLevelDesc: { fontSize: 12, color: '#777' },
 
-  // Badges & text
   badge: {
     fontSize: 12,
     fontWeight: 'normal',
@@ -406,7 +402,6 @@ const styles = StyleSheet.create({
   },
   lockedText: { fontSize: 12, color: '#999' },
 
-  // Buttons
   startButton: {
     backgroundColor: '#5E67CC',
     flexDirection: 'row',
