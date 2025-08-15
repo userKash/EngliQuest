@@ -90,11 +90,16 @@ export default function App() {
             headerShadowVisible: false, // ✅ removes iOS bottom border
           }}
         />
+
         <Stack.Screen name="VocabularyBuilder" component={VocabularyBuilderScreen} />
         <Stack.Screen name="VocabularyGame" component={VocabularyGameScreen} />
+
         <Stack.Screen name="GrammarPractice" component={GrammarPracticeScreen} />
+
         <Stack.Screen name="ReadingComprehension" component={ReadingComprehensionScreen} />
+
         <Stack.Screen name="FilipinoToEnglish" component={FilipinoToEnglishScreen} />
+
         <Stack.Screen name="SentenceConstruction" component={SentenceConstructionScreen} />
         <Stack.Screen
           name="Progress"

@@ -11,30 +11,46 @@ import {
   Platform,
   UIManager,
 } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import AsyncStorage from '@react-native-async-storage/async-storage'; // to save progress
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../../../navigation/type';
 import BottomNav from '../../../components/BottomNav';
 
-// Enable LayoutAnimation on Android
-if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
-  UIManager.setLayoutAnimationEnabledExperimental(true);
+// enable LayoutAnimation on Android
+if (Platform.OS === 'android') {
+  if (UIManager.setLayoutAnimationEnabledExperimental) {
+    UIManager.setLayoutAnimationEnabledExperimental(true);
+  }
 }
 
-/** STORAGE */
-const STORAGE_KEY = 'grammarProgress';
+const STORAGE_KEY = 'grammarProgress'; // key for storage
 
-/** DATA MODEL */
+const PASSING = 70;
+
+// to track each sublevel progress
 type SubLevelProgress = {
   score?: number; // best score 0-100
   attempted?: boolean; // played at least once
 };
-type ProgressState = Record<string, SubLevelProgress>;
+function subLevelBadge(progress?: SubLevelProgress) {
+  if (!progress || !progress.attempted) {
+    return 'Not Started';
+  }
 
-type TopLevel = 'easy' | 'medium' | 'hard';
+  if ((progress.score || 0) >= PASSING) {
+    return 'Completed';
+  }
 
+  return 'In Progress';
+}
+
+type ProgressState = Record<string, SubLevelProgress>; // Store progress for all sublevels
+
+type TopLevel = 'easy' | 'medium' | 'hard'; // types
 type SubLevel = { id: string; title: string };
+
+// Structure for each difficulty
 type LevelDef = {
   key: TopLevel;
   order: number;
@@ -43,7 +59,7 @@ type LevelDef = {
   sublevels: SubLevel[];
 };
 
-// Feel free to rename sublevel IDs if you already persist something else
+//  Difficulty and Sublevel definition
 const LEVELS: LevelDef[] = [
   {
     key: 'easy',
@@ -77,51 +93,41 @@ const LEVELS: LevelDef[] = [
   },
 ];
 
-const PASSING = 70;
-
-/** HELPERS */
-function subLevelBadge(s?: SubLevelProgress) {
-  if (!s?.attempted) return 'Not Started';
-  return (s.score ?? 0) >= PASSING ? 'Completed' : 'In Progress';
-}
-
-function levelPassed(progress: ProgressState, def: LevelDef) {
-  return def.sublevels.every((sub) => (progress[sub.id]?.score ?? 0) >= PASSING);
-}
-
+// count the levels unlock
 function countTopLevelsPassed(progress: ProgressState) {
-  return LEVELS.reduce((acc, def) => (levelPassed(progress, def) ? acc + 1 : acc), 0);
+  let count = 0;
+  for (let level of LEVELS) {
+    if (levelPassed(progress, level)) {
+      count++;
+    }
+  }
+  return count;
 }
-
+// check if all sublevel unlock to unlock next level
+function levelPassed(progress: ProgressState, level: LevelDef) {
+  for (let sub of level.sublevels) {
+    const score = progress[sub.id]?.score ?? 0;
+    if (score < PASSING) return false; // Found one that isn't passed
+  }
+  return true; // All passed
+}
 function isSubLevelUnlocked(def: LevelDef, subIndex: number, progress: ProgressState) {
   if (subIndex === 0) return true;
   const prevId = def.sublevels[subIndex - 1].id;
   const prevScore = progress[prevId]?.score ?? 0;
-  return prevScore >= PASSING;
+  return prevScore >= PASSING; // Unlock if previous is passed
 }
-
+// Start with an empty progress object for new users
 function makeInitialProgress(): ProgressState {
   return {};
 }
-
 export default function GrammarPracticeScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
-  const [progress, setProgress] = useState<ProgressState>({});
-  const [expanded, setExpanded] = useState<Record<TopLevel, boolean>>({
-    easy: false,
-    medium: false,
-    hard: false,
-  });
+  const [progress, setProgress] = useState<ProgressState>({}); // Track all progress
 
-  // Rotation anim per top-level arrow
-  const rotations = useRef<Record<TopLevel, Animated.Value>>({
-    easy: new Animated.Value(0),
-    medium: new Animated.Value(0),
-    hard: new Animated.Value(0),
-  }).current;
-
-  // Initial load
+  // On first load, get saved progress from AsyncStorage.
+  // If none is found, start with empty progress.
   useEffect(() => {
     (async () => {
       try {
@@ -132,8 +138,7 @@ export default function GrammarPracticeScreen() {
       }
     })();
   }, []);
-
-  // Refresh on focus (e.g., returning from game)
+  // Refresh on focus (returning from game)
   useFocusEffect(
     useMemo(
       () => () => {
@@ -150,15 +155,30 @@ export default function GrammarPracticeScreen() {
     )
   );
 
+  //show and hide the sublevel
+  const [expanded, setExpanded] = useState<Record<TopLevel, boolean>>({
+    easy: false,
+    medium: false,
+    hard: false,
+  });
+
+  // Rotation anim per top-level arrow
+  const rotations = useRef<Record<TopLevel, Animated.Value>>({
+    easy: new Animated.Value(0),
+    medium: new Animated.Value(0),
+    hard: new Animated.Value(0),
+  }).current;
+
   // Top-level locks from pass rules
   const easyPassed = levelPassed(progress, LEVELS[0]);
   const mediumPassed = levelPassed(progress, LEVELS[1]);
   const mediumLocked = !easyPassed;
   const hardLocked = !mediumPassed;
 
-  const completedTopLevels = countTopLevelsPassed(progress);
-  const totalTopLevels = LEVELS.length;
+  const completedTopLevels = countTopLevelsPassed(progress); // How many top levels are finished
+  const totalTopLevels = LEVELS.length; // How many top levels exist in total
 
+  // expand/collapse for a difficulty and arrow animation
   const toggleExpand = (key: TopLevel) => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     const next = !expanded[key];
@@ -169,21 +189,31 @@ export default function GrammarPracticeScreen() {
       useNativeDriver: true,
     }).start();
 
-    setExpanded((prev) => ({ ...prev, [key]: next }));
+    setExpanded((prev) => ({ ...prev, [key]: next })); // Save new state
   };
-
+  // Returns a rotation style for the given difficulty's arrow.
   const rotateInterpolate = (key: TopLevel) =>
     rotations[key].interpolate({
       inputRange: [0, 1],
       outputRange: ['0deg', '90deg'],
     });
 
+  // Starts the selected sublevel if it’s unlocked; otherwise, does nothing
   const onStartSubLevel = (subId: string) => {
-    const def = LEVELS.find((l) => l.sublevels.some((s) => s.id === subId))!;
-    const idx = def.sublevels.findIndex((s) => s.id === subId);
-    const topLocked = (def.key === 'medium' && mediumLocked) || (def.key === 'hard' && hardLocked);
+    const level = LEVELS.find((lvl) => lvl.sublevels.some((sub) => sub.id === subId));
+    if (!level) return; // guard: subId not found
 
-    if (topLocked || !isSubLevelUnlocked(def, idx, progress)) return;
+    const subIndex = level.sublevels.findIndex((sub) => sub.id === subId);
+
+    // Determine if the sublevel is locked (parent difficulty locked or previous sublevel not passed)
+    const isLocked =
+      (level.key === 'medium' && mediumLocked) ||
+      (level.key === 'hard' && hardLocked) ||
+      !isSubLevelUnlocked(level, subIndex, progress);
+
+    // Stop here if locked
+    if (isLocked) return;
+
     navigation.navigate('GrammarGame', { levelId: subId });
   };
 
