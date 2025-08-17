@@ -17,6 +17,7 @@ import type { RootStackParamList } from './src/navigation/type';
 import VocabularyBuilderScreen from './src/screens/topics/VocabularyBuilder/VocabularyBuilderScreen';
 import VocabularyGameScreen from './src/screens/topics/VocabularyBuilder/VocabularyGameScreen';
 import GrammarPracticeScreen from './src/screens/topics/GrammarPractice/GrammarPracticeScreen';
+import GrammarGameScreen from './src/screens/topics/GrammarPractice/GrammarGameScreen';
 import ReadingComprehensionScreen from './src/screens/topics/ReadingComprehension/ReadingComprehensionScreen';
 import FilipinoToEnglishScreen from './src/screens/topics/FilipinoToEnglish/FilipinoToEnglishScreen';
 import SentenceConstructionScreen from './src/screens/topics/SentenceConstruction/SentenceConstructionScreen';
@@ -95,6 +96,7 @@ export default function App() {
         <Stack.Screen name="VocabularyGame" component={VocabularyGameScreen} />
 
         <Stack.Screen name="GrammarPractice" component={GrammarPracticeScreen} />
+        <Stack.Screen name="GrammarGame" component={GrammarGameScreen} />
 
         <Stack.Screen name="ReadingComprehension" component={ReadingComprehensionScreen} />
 

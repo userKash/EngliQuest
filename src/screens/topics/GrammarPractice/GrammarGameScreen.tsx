@@ -4,15 +4,15 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import InstructionCard from '../../../components/InstructionCard';
-import VocabularyQuiz from '../../../components/VocabularyQuiz';
+import GrammarQuiz from '../../../components/GrammarQuiz';
 import BottomNav from '../../../components/BottomNav';
 
 import type { RootStackParamList } from '../../../navigation/type';
 
-type Props = NativeStackScreenProps<RootStackParamList, 'VocabularyGame'>;
+type Props = NativeStackScreenProps<RootStackParamList, 'GrammarGame'>;
 
-export default function VocabularyGameScreen({ route, navigation }: Props) {
-  const { levelId } = route.params;
+export default function GrammarGameScreen({ route, navigation }: Props) {
+  const { levelId } = route.params; // e.g., 'easy-1'
 
   const [step, setStep] = useState<'instructions' | 'quiz'>('instructions');
   const [progress, setProgress] = useState<{ current: number; total: number }>({
@@ -25,7 +25,7 @@ export default function VocabularyGameScreen({ route, navigation }: Props) {
       navigation.setOptions({
         headerTitle: () => (
           <View style={{ alignItems: 'center' }}>
-            <Text style={{ fontSize: 18, fontWeight: 'bold' }}>Vocabulary Builder</Text>
+            <Text style={{ fontSize: 18, fontWeight: 'bold' }}>Grammar Practice</Text>
             <Text style={{ fontSize: 12, color: '#555' }}>
               {levelId} • Question {progress.current + 1} of {progress.total}
             </Text>
@@ -33,19 +33,19 @@ export default function VocabularyGameScreen({ route, navigation }: Props) {
         ),
       });
     } else {
-      navigation.setOptions({ headerTitle: 'Vocabulary Builder' });
+      navigation.setOptions({ headerTitle: 'Grammar Practice' });
     }
   }, [step, progress, levelId, navigation]);
 
   const instructions = {
-    title: 'Vocabulary Builder',
+    title: 'Grammar Practice',
     body:
       'Instruction:\n\n' +
-      'Read the word and choose the correct definition or meaning.\n\n' +
-      'Some questions may ask for synonyms or example usage.\n\n' +
+      'Read each sentence and select the correct grammar form.\n\n' +
+      'Focus on subject-verb agreement, tense, and word order.\n\n' +
       'Only one choice is correct.',
-    tip: 'Use context clues to find the best answer.',
-    titleIcon: require('../../../../assets/Vocabulary Builder.png'),
+    tip: 'Read the full sentence out loud to hear which choice sounds correct.',
+    titleIcon: require('../../../../assets/Grammar Practice.png'),
     tipIcon: require('../../../../assets/flat-color-icons_idea.png'),
   };
 
@@ -61,9 +61,9 @@ export default function VocabularyGameScreen({ route, navigation }: Props) {
           onNext={() => setStep('quiz')}
         />
       ) : (
-        <VocabularyQuiz
+        <GrammarQuiz
           levelId={levelId}
-          onProgressChange={setProgress}
+          onProgressChange={(p) => setProgress(p)}
           onExit={() => navigation.goBack()}
         />
       )}
@@ -72,4 +72,6 @@ export default function VocabularyGameScreen({ route, navigation }: Props) {
   );
 }
 
-const styles = StyleSheet.create({ screen: { flex: 1, backgroundColor: '#fff' } });
+const styles = StyleSheet.create({
+  screen: { flex: 1, backgroundColor: '#fff' },
+});
