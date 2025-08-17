@@ -1,19 +1,13 @@
 import React, { useLayoutEffect, useState } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-
+import { useNavigation } from '@react-navigation/native';
 import InstructionCard from '../../../components/InstructionCard';
 import VocabularyQuiz from '../../../components/VocabularyQuiz';
 import BottomNav from '../../../components/BottomNav';
 
-import type { RootStackParamList } from '../../../navigation/type';
-
-type Props = NativeStackScreenProps<RootStackParamList, 'VocabularyGame'>;
-
-export default function VocabularyGameScreen({ route, navigation }: Props) {
-  const { levelId } = route.params;
-
+export default function VocabularyGameScreen() {
+  const navigation = useNavigation();
   const [step, setStep] = useState<'instructions' | 'quiz'>('instructions');
   const [progress, setProgress] = useState<{ current: number; total: number }>({
     current: 0,
@@ -27,15 +21,13 @@ export default function VocabularyGameScreen({ route, navigation }: Props) {
           <View style={{ alignItems: 'center' }}>
             <Text style={{ fontSize: 18, fontWeight: 'bold' }}>Vocabulary Builder</Text>
             <Text style={{ fontSize: 12, color: '#555' }}>
-              {levelId} • Question {progress.current + 1} of {progress.total}
+              Easy – Question {progress.current + 1} of {progress.total}
             </Text>
           </View>
         ),
       });
-    } else {
-      navigation.setOptions({ headerTitle: 'Vocabulary Builder' });
-    }
-  }, [step, progress, levelId, navigation]);
+    } else navigation.setOptions({ headerTitle: 'Vocabulary Builder' });
+  }, [step, progress]);
 
   const instructions = {
     title: 'Vocabulary Builder',
@@ -61,11 +53,7 @@ export default function VocabularyGameScreen({ route, navigation }: Props) {
           onNext={() => setStep('quiz')}
         />
       ) : (
-        <VocabularyQuiz
-          levelId={levelId}
-          onProgressChange={setProgress}
-          onExit={() => navigation.goBack()}
-        />
+        <VocabularyQuiz onProgressChange={setProgress} />
       )}
       <BottomNav />
     </SafeAreaView>

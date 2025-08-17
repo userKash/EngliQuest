@@ -1,30 +1,32 @@
+// src/components/PrimaryButton.tsx
 import React from 'react';
 import { TouchableOpacity, Text, StyleSheet } from 'react-native';
 
 type Props = {
   label: string;
   onPress: () => void;
-  disabled?: boolean;
 };
 
-export default function PrimaryButton({ label, onPress, disabled }: Props) {
+export default function PrimaryButton({ label, onPress }: Props) {
   return (
-    <TouchableOpacity
-      onPress={onPress}
-      disabled={disabled}
-      style={[styles.btn, disabled && { opacity: 0.6 }]}
-      activeOpacity={0.8}>
+    <TouchableOpacity style={styles.button} onPress={onPress}>
       <Text style={styles.text}>{label}</Text>
     </TouchableOpacity>
   );
 }
 
 const styles = StyleSheet.create({
-  btn: {
-    backgroundColor: '#1e90ff',
+  button: {
+    backgroundColor: '#5E67CC',
     paddingVertical: 14,
-    borderRadius: 12,
+    borderRadius: 10,
     alignItems: 'center',
+    marginTop: 16,
+    width: '100%',
   },
-  text: { color: '#fff', fontWeight: '700', fontSize: 16 },
+  text: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
 });
