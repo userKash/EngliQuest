@@ -14,6 +14,12 @@ import { MaterialIcons, Ionicons, Feather } from '@expo/vector-icons';
 import BottomNav from '../components/BottomNav';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native'; // ✅ FIXED
+import { signOut } from 'firebase/auth';
+import { auth } from '../../firebaseConfig';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { RootStackParamList } from '../navigation/type'; 
+
 
 const AVATARS = [
   require('../../assets/avatars/Ellipse1.png'),
@@ -28,8 +34,11 @@ const AVATARS = [
   require('../../assets/avatars/Ellipse10.png'),
 ];
 
+type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'Profile'>;
+
 export default function ProfileScreen() {
   const [selectedAvatar, setSelectedAvatar] = useState<any>(AVATARS[0]);
+  const navigation = useNavigation<NavigationProp>();
 
   // ✅ Load avatar when screen is focused
   useFocusEffect(
@@ -57,9 +66,19 @@ export default function ProfileScreen() {
     }
   };
 
-  const handleLogout = () => {
-    Alert.alert('Logout', 'You have been logged out (mock).');
+  const handleLogout = async () => {
+    try {
+      await signOut(auth); // Firebase logout
+      Alert.alert('Logout', 'You have been logged out.');
+      navigation.reset({
+        index: 0,
+        routes: [{ name: 'Login' }],
+      });
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'Logout failed.');
+    }
   };
+
 
   const handleChangePassword = () => {
     Alert.alert('Change Password', 'Open change password flow (mock).');
