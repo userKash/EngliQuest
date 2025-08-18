@@ -13,13 +13,12 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons, Ionicons, Feather } from '@expo/vector-icons';
 import BottomNav from '../components/BottomNav';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useFocusEffect } from '@react-navigation/native'; // ✅ FIXED
-import { signOut } from 'firebase/auth';
+import { useFocusEffect } from '@react-navigation/native';
+import { signOut, onAuthStateChanged } from 'firebase/auth';
 import { auth } from '../../firebaseConfig';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import type { RootStackParamList } from '../navigation/type'; 
-
+import type { RootStackParamList } from '../navigation/type';
 
 const AVATARS = [
   require('../../assets/avatars/Ellipse1.png'),
@@ -38,22 +37,30 @@ type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'Profile'>;
 
 export default function ProfileScreen() {
   const [selectedAvatar, setSelectedAvatar] = useState<any>(AVATARS[0]);
+  const [email, setEmail] = useState<string>(''); 
   const navigation = useNavigation<NavigationProp>();
 
-  // ✅ Load avatar when screen is focused
   useFocusEffect(
     useCallback(() => {
-      const loadAvatar = async () => {
+      const loadProfileData = async () => {
         try {
           const saved = await AsyncStorage.getItem('selectedAvatar');
           if (saved) {
             setSelectedAvatar(JSON.parse(saved));
           }
+
+          const unsubscribe = onAuthStateChanged(auth, (user) => {
+            if (user?.email) {
+              setEmail(user.email);
+            }
+          });
+
+          return unsubscribe; 
         } catch (err) {
-          console.error('Error loading avatar:', err);
+          console.error('Error loading profile:', err);
         }
       };
-      loadAvatar();
+      loadProfileData();
     }, [])
   );
 
@@ -68,7 +75,7 @@ export default function ProfileScreen() {
 
   const handleLogout = async () => {
     try {
-      await signOut(auth); // Firebase logout
+      await signOut(auth); 
       Alert.alert('Logout', 'You have been logged out.');
       navigation.reset({
         index: 0,
@@ -78,7 +85,6 @@ export default function ProfileScreen() {
       Alert.alert('Error', error.message || 'Logout failed.');
     }
   };
-
 
   const handleChangePassword = () => {
     Alert.alert('Change Password', 'Open change password flow (mock).');
@@ -130,7 +136,8 @@ export default function ProfileScreen() {
         </View>
 
         <Text style={styles.sectionLabel}>Email</Text>
-        <TextInput style={styles.inputReadOnly} value="klumabi@google.com" editable={false} />
+        <TextInput style={styles.inputReadOnly} value={email} editable={false} /> 
+        {/* ✅ email now comes from Firebase */}
 
         <Text style={styles.sectionLabel}>In-Game Name</Text>
         <TextInput style={styles.inputReadOnly} value="AstroBoy" editable={false} />
