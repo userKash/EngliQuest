@@ -35,18 +35,23 @@ export default function App() {
     PoppinsBoldItalic: require('./assets/fonts/Poppins-BoldItalic.ttf'),
   });
 
+  // b) Nav + state hooks NEXT (still unconditional)
+  const navRef = useNavigationContainerRef();
+  const [currentRoute, setCurrentRoute] = useState<string | undefined>(undefined);
+
+  // c) Global Text default (not a hook, safe anywhere)
   (Text as any).defaultProps = (Text as any).defaultProps || {};
   (Text as any).defaultProps.style = { fontFamily: 'PoppinsRegular' };
 
+  // d) Effect after hooks
   useEffect(() => {
     if (fontsLoaded) SplashScreen.hideAsync();
   }, [fontsLoaded]);
 
-  if (!fontsLoaded) return null;
-
-  // 🔗 Ref + route tracking
-  const navRef = useNavigationContainerRef();
-  const [currentRoute, setCurrentRoute] = useState<string | undefined>(undefined);
+  /** 2) Only now, branch on fontsLoaded */
+  if (!fontsLoaded) {
+    return <View style={{ flex: 1, backgroundColor: 'white' }} />;
+  }
 
   return (
     <NavigationContainer
@@ -60,7 +65,6 @@ export default function App() {
             headerTitleAlign: 'left',
             headerShadowVisible: false,
           }}>
-          {/* your screens exactly as before */}
           <Stack.Screen name="Login" component={LoginScreen} options={{ headerShown: false }} />
           <Stack.Screen name="Home" component={HomeScreen} options={{ headerShown: false }} />
           <Stack.Screen

@@ -15,7 +15,6 @@ export type RootStackParamList = {
   Profile: undefined;
   WordOfTheDay: undefined;
 
-  //VOCABULARY SCREENS NAVIGATIONS
   VocabularyBuilder: undefined;
 
   GrammarPractice: undefined;
