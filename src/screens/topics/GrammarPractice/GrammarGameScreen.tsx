@@ -4,7 +4,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import InstructionCard from '../../../components/InstructionCard';
 import GrammarQuiz from '../../../components/GrammarQuiz';
-import BottomNav from '../../../components/BottomNav';
 
 export default function GrammarGameScreen() {
   const navigation = useNavigation();
@@ -55,7 +54,6 @@ export default function GrammarGameScreen() {
       ) : (
         <GrammarQuiz onProgressChange={setProgress} />
       )}
-      <BottomNav />
     </SafeAreaView>
   );
 }

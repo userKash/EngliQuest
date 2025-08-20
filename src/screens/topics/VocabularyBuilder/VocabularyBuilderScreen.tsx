@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react';
 import { View, Text } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage'; // to save progress
 import { useNavigation } from '@react-navigation/native';
-import BottomNav from '../../../components/BottomNav';
 
 // import the reusable component + types
 import LevelList, { LevelDef, ProgressState } from '../../../components/LevelList'; // <-- adjust path if needed
@@ -106,7 +105,6 @@ export default function GrammarPracticeScreen() {
           </View>
         }
       />
-      <BottomNav />
     </View>
   );
 }

@@ -1,7 +1,6 @@
 // screens/ProgressScreen.tsx
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import BottomNav from '../components/BottomNav';
 
 export default function ProgressScreen() {
   return (
@@ -9,7 +8,6 @@ export default function ProgressScreen() {
       <View style={styles.content}>
         <Text style={styles.text}>Progress Screen</Text>
       </View>
-      <BottomNav />
     </View>
   );
 }

@@ -1,6 +1,9 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert } from 'react-native';
+// src/components/VocabularyQuiz.tsx
+import React, { useEffect, useMemo, useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import PrimaryButton from './PrimaryButton';
+import ResultModal from '../components/ResultModal'; // keep your path
 
 type VocabQuestion = {
   prompt: string;
@@ -15,6 +18,8 @@ type Props = {
 };
 
 export default function VocabularyQuiz({ onFinish, onProgressChange }: Props) {
+  const insets = useSafeAreaInsets();
+
   const questions: VocabQuestion[] = [
     {
       sentence: 'word',
@@ -38,7 +43,10 @@ export default function VocabularyQuiz({ onFinish, onProgressChange }: Props) {
 
   const [qIndex, setQIndex] = useState(0);
   const [selected, setSelected] = useState<number | null>(null);
+  const [answers, setAnswers] = useState<number[]>(Array(questions.length).fill(-1));
   const [score, setScore] = useState(0);
+  const [showResult, setShowResult] = useState(false);
+
   const choiceLabels = ['A', 'B', 'C', 'D'];
   const question = questions[qIndex];
   const last = qIndex === questions.length - 1;
@@ -48,76 +56,132 @@ export default function VocabularyQuiz({ onFinish, onProgressChange }: Props) {
   }, [qIndex]);
 
   const handleSelect = (i: number) => {
+    if (selected !== null) return; // lock after pick
     setSelected(i);
+
+    setAnswers((prev) => {
+      const copy = [...prev];
+      copy[qIndex] = i;
+      return copy;
+    });
+
     if (i === question.correctIndex) setScore((p) => p + 10);
   };
 
   const handleNext = () => {
-    setSelected(null);
-    if (!last) setQIndex((p) => p + 1);
-    else {
+    if (!last) {
+      setQIndex((p) => p + 1);
+      setSelected(null);
+    } else {
+      setShowResult(true);
       onFinish?.(score, questions.length);
-      Alert.alert('Score', `${score}/${questions.length * 10}`);
     }
   };
 
+  const review = useMemo(
+    () =>
+      questions.map((q, i) => {
+        const your = answers[i];
+        return {
+          question: q.prompt,
+          yourAnswer: your >= 0 ? q.choices[your] : '—',
+          isCorrect: your === q.correctIndex,
+          correctAnswer: q.choices[q.correctIndex],
+        };
+      }),
+    [answers]
+  );
+
   return (
-    <ScrollView contentContainerStyle={styles.scrollContainer}>
-      <View style={styles.card}>
-        {question.sentence ? <Text style={styles.sentence}>{question.sentence}</Text> : null}
-        <Text style={styles.prompt}>{question.prompt}</Text>
+    <View style={{ flex: 1 }}>
+      <ScrollView
+        contentContainerStyle={styles.scrollContainer}
+        keyboardShouldPersistTaps="handled">
+        <View style={styles.card}>
+          {question.sentence ? <Text style={styles.sentence}>{question.sentence}</Text> : null}
+          <Text style={styles.prompt}>{question.prompt}</Text>
 
-        {question.choices.map((choice, i) => {
-          const correct = question.correctIndex === i;
-          const isSelected = selected === i;
+          {question.choices.map((choice, i) => {
+            const correct = question.correctIndex === i;
+            const isSelected = selected === i;
 
-          let choiceStyle = styles.choice;
-          if (selected !== null) {
-            if (correct) choiceStyle = { ...choiceStyle, ...styles.correctChoice };
-            else if (isSelected) choiceStyle = { ...choiceStyle, ...styles.wrongChoice };
-          }
+            let choiceStyle = styles.choice;
+            if (selected !== null) {
+              if (correct) choiceStyle = { ...choiceStyle, ...styles.correctChoice };
+              else if (isSelected) choiceStyle = { ...choiceStyle, ...styles.wrongChoice };
+            }
 
-          return (
-            <TouchableOpacity
-              key={i}
-              style={choiceStyle}
-              onPress={() => handleSelect(i)}
-              disabled={selected !== null}>
-              <Text style={styles.choiceLabel}>{choiceLabels[i]}</Text>
-              <Text style={styles.choiceText}>{choice}</Text>
-            </TouchableOpacity>
-          );
-        })}
-      </View>
+            return (
+              <TouchableOpacity
+                key={i}
+                style={choiceStyle}
+                onPress={() => handleSelect(i)}
+                disabled={selected !== null}>
+                <Text style={styles.choiceLabel}>{choiceLabels[i]}</Text>
+                <Text style={styles.choiceText}>{choice}</Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
 
+        {selected !== null && (
+          <View
+            style={[
+              styles.feedbackContainer,
+              selected === question.correctIndex ? styles.feedbackCorrect : styles.feedbackWrong,
+            ]}>
+            <Text
+              style={[
+                styles.feedbackText,
+                selected === question.correctIndex
+                  ? styles.feedbackTextCorrect
+                  : styles.feedbackTextWrong,
+              ]}>
+              {selected === question.correctIndex ? '✅ Correct! +10 points' : '❌ Incorrect'}
+            </Text>
+          </View>
+        )}
+
+        {/* spacer so content never hides behind sticky button */}
+        <View style={{ height: 120 }} />
+      </ScrollView>
+
+      {/* Sticky bottom action (no white background) */}
       {selected !== null && (
-        <View style={styles.feedbackContainer}>
-          <Text style={styles.feedbackText}>
-            {selected === question.correctIndex ? '✅ Correct! +10 points' : '❌ Incorrect'}
-          </Text>
+        <View style={[styles.bottomBar, { paddingBottom: insets.bottom + 70 }]}>
           <PrimaryButton label={last ? 'Finish' : 'Next Question'} onPress={handleNext} />
         </View>
       )}
-    </ScrollView>
+
+      {/* RESULT MODAL */}
+      <ResultModal
+        visible={showResult}
+        score={score / 10}
+        total={questions.length}
+        review={review}
+        onContinue={() => setShowResult(false)}
+        onRequestClose={() => setShowResult(false)}
+        title="🎉 Congratulations!"
+      />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  scrollContainer: { flexGrow: 1, padding: 16, paddingBottom: 90 },
+  scrollContainer: { flexGrow: 1, padding: 16 },
   card: {
     borderWidth: 0.8,
     borderColor: '#A2A2A2',
     padding: 20,
     borderRadius: 16,
     backgroundColor: '#fff',
-    alignItems: 'center',
   },
-  sentence: { marginTop: 30, textAlign: 'center', fontSize: 14, color: '#333' },
+  sentence: { marginTop: 10, textAlign: 'center', fontSize: 14, color: '#333' },
   prompt: {
-    marginTop: 30,
+    marginTop: 24,
     textAlign: 'center',
     fontSize: 16,
-    marginBottom: 45,
+    marginBottom: 28,
     fontWeight: 'bold',
   },
   choice: {
@@ -125,23 +189,39 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 1,
     borderColor: '#ccc',
-    borderRadius: 8,
-    paddingVertical: 18,
-    paddingHorizontal: 10,
+    borderRadius: 10,
+    paddingVertical: 16,
+    paddingHorizontal: 12,
     marginBottom: 10,
     width: '100%',
+    backgroundColor: '#fff',
   },
   choiceLabel: { fontWeight: 'bold', marginRight: 10, color: '#333' },
   choiceText: { fontSize: 14, flexShrink: 1 },
-  correctChoice: { backgroundColor: '#d4edda', borderColor: '#28a745' },
-  wrongChoice: { backgroundColor: '#f8d7da', borderColor: '#dc3545' },
+
+  // state styles after selection
+  correctChoice: { backgroundColor: '#E9F8EE', borderColor: '#2EB872' },
+  wrongChoice: { backgroundColor: '#FDECEC', borderColor: '#F26D6D' },
+
+  // feedback chip/card
   feedbackContainer: {
     borderWidth: 1,
-    borderColor: '#28a745',
-    backgroundColor: '#eafbea',
     padding: 12,
-    borderRadius: 8,
-    marginTop: 8,
+    borderRadius: 10,
+    marginTop: 12,
   },
-  feedbackText: { textAlign: 'center', color: '#28a745', marginBottom: 10, fontWeight: 'bold' },
+  feedbackCorrect: { backgroundColor: '#E9F8EE', borderColor: '#2EB872' },
+  feedbackWrong: { backgroundColor: '#FDECEC', borderColor: '#F26D6D' },
+  feedbackText: { textAlign: 'center', fontWeight: 'bold' },
+  feedbackTextCorrect: { color: '#1F8F5F' },
+  feedbackTextWrong: { color: '#C43D3D' },
+
+  // sticky primary action (no white background block)
+  bottomBar: {
+    position: 'absolute',
+    left: 16,
+    right: 16,
+    bottom: 0,
+    paddingTop: 10,
+  },
 });

@@ -3,9 +3,9 @@ import { View, Text, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import InstructionCard from '../../../components/InstructionCard';
-import VocabularyQuiz from '../../../components/VocabularyQuiz';
+import ReadingQuiz from '../../../components/ReadingQuiz';
 
-export default function VocabularyGameScreen() {
+export default function ReadingGameScreen() {
   const navigation = useNavigation();
   const [step, setStep] = useState<'instructions' | 'quiz'>('instructions');
   const [progress, setProgress] = useState<{ current: number; total: number }>({
@@ -18,25 +18,23 @@ export default function VocabularyGameScreen() {
       navigation.setOptions({
         headerTitle: () => (
           <View style={{ alignItems: 'center' }}>
-            <Text style={{ fontSize: 18, fontWeight: 'bold' }}>Vocabulary Builder</Text>
-            <Text style={{ fontSize: 12, color: '#555' }}>
-              Easy – Question {progress.current + 1} of {progress.total}
-            </Text>
+            <Text style={{ fontSize: 18, fontWeight: 'bold' }}>Comprehension Quiz</Text>
+            <Text style={{ fontSize: 12, color: '#555' }}>Question 1 of {progress.total}</Text>
           </View>
         ),
       });
-    } else navigation.setOptions({ headerTitle: 'Vocabulary Builder' });
-  }, [step, progress]);
+    } else {
+      navigation.setOptions({ headerTitle: 'Reading Comprehension' });
+    }
+  }, [step, progress, navigation]);
 
   const instructions = {
-    title: 'Vocabulary Builder',
+    title: 'Reading Comprehension',
     body:
-      'Instruction:\n\n' +
-      'Read the word and choose the correct definition or meaning.\n\n' +
-      'Some questions may ask for synonyms or example usage.\n\n' +
-      'Only one choice is correct.',
-    tip: 'Use context clues to find the best answer.',
-    titleIcon: require('../../../../assets/Vocabulary Builder.png'),
+      'Read the passage carefully. Then answer all questions on the next screen.\n\n' +
+      'Tip: Skim for the main idea first, then scan for details that match each question.',
+    tip: 'Look for keywords in the question and find them in the passage.',
+    titleIcon: require('../../../../assets/Reading Comprehension.png'),
     tipIcon: require('../../../../assets/flat-color-icons_idea.png'),
   };
 
@@ -50,12 +48,15 @@ export default function VocabularyGameScreen() {
           titleIcon={instructions.titleIcon}
           tipIcon={instructions.tipIcon}
           onNext={() => setStep('quiz')}
+          nextLabel="Continue to Questions"
         />
       ) : (
-        <VocabularyQuiz onProgressChange={setProgress} />
+        <ReadingQuiz onProgressChange={setProgress} />
       )}
     </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.create({ screen: { flex: 1, backgroundColor: '#fff' } });
+const styles = StyleSheet.create({
+  screen: { flex: 1, backgroundColor: '#fff' },
+});

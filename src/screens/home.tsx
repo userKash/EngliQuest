@@ -3,7 +3,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../navigation/type';
-import BottomNav from '../components/BottomNav';
+
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useEffect, useState } from 'react';
 
@@ -166,7 +166,6 @@ export default function HomeScreen() {
           </View>
         </ScrollView>
       </View>
-      <BottomNav />
     </SafeAreaView>
   );
 }

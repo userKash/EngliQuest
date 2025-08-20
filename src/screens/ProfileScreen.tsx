@@ -11,7 +11,6 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons, Ionicons, Feather } from '@expo/vector-icons';
-import BottomNav from '../components/BottomNav';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native'; // ✅ FIXED
 
@@ -129,8 +128,6 @@ export default function ProfileScreen() {
 
         <View style={{ height: 90 }} />
       </ScrollView>
-
-      <BottomNav />
     </View>
   );
 }

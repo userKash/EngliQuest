@@ -3,9 +3,9 @@ import { View, Text, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import InstructionCard from '../../../components/InstructionCard';
-import VocabularyQuiz from '../../../components/VocabularyQuiz';
+import FilipinoToEnglishQuiz from '../../../components/FilipinoToEnglishQuiz';
 
-export default function VocabularyGameScreen() {
+export default function FilipinoToEnglishGameScreen() {
   const navigation = useNavigation();
   const [step, setStep] = useState<'instructions' | 'quiz'>('instructions');
   const [progress, setProgress] = useState<{ current: number; total: number }>({
@@ -18,25 +18,25 @@ export default function VocabularyGameScreen() {
       navigation.setOptions({
         headerTitle: () => (
           <View style={{ alignItems: 'center' }}>
-            <Text style={{ fontSize: 18, fontWeight: 'bold' }}>Vocabulary Builder</Text>
+            <Text style={{ fontSize: 18, fontWeight: 'bold' }}>Grammar Practice</Text>
             <Text style={{ fontSize: 12, color: '#555' }}>
               Easy – Question {progress.current + 1} of {progress.total}
             </Text>
           </View>
         ),
       });
-    } else navigation.setOptions({ headerTitle: 'Vocabulary Builder' });
+    } else navigation.setOptions({ headerTitle: 'Filipino to English' });
   }, [step, progress]);
 
   const instructions = {
-    title: 'Vocabulary Builder',
+    title: 'Filipino to English',
     body:
       'Instruction:\n\n' +
-      'Read the word and choose the correct definition or meaning.\n\n' +
-      'Some questions may ask for synonyms or example usage.\n\n' +
-      'Only one choice is correct.',
-    tip: 'Use context clues to find the best answer.',
-    titleIcon: require('../../../../assets/Vocabulary Builder.png'),
+      'Read the Filipino word or short phrase.\n\n' +
+      'Type its correct English translation.\n\n' +
+      'Answers must be spelled correctly to be marked correct.',
+    tip: 'Scan for the subject and the verb first before checking modifiers.',
+    titleIcon: require('../../../../assets/Filipino to English.png'),
     tipIcon: require('../../../../assets/flat-color-icons_idea.png'),
   };
 
@@ -52,7 +52,7 @@ export default function VocabularyGameScreen() {
           onNext={() => setStep('quiz')}
         />
       ) : (
-        <VocabularyQuiz onProgressChange={setProgress} />
+        <FilipinoToEnglishQuiz onProgressChange={setProgress} />
       )}
     </SafeAreaView>
   );

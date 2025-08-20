@@ -1,63 +1,75 @@
+// src/components/BottomNav.tsx
 import React from 'react';
-import { View, TouchableOpacity, StyleSheet, Text } from 'react-native';
+import { View, TouchableOpacity, Text, StyleSheet } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import { useNavigation, useRoute } from '@react-navigation/native';
-import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import type { RootStackParamList } from '../navigation/type';
 
-type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
+type Props = {
+  currentRoute?: string; // e.g. "Home"
+  onNavigate: (name: 'Home' | 'Progress' | 'Profile') => void;
+};
 
-export default function BottomNav() {
-  const navigation = useNavigation<NavigationProp>();
-  const route = useRoute();
+const BAR_HEIGHT = 85; // ← change height here
+const ACTIVE = '#5B6BEE';
 
-  const getColor = (screen: keyof RootStackParamList) =>
-    route.name === screen ? '#5E67CC' : '#9CA3AF';
+export default function BottomNav({ currentRoute, onNavigate }: Props) {
+  const HIDE = ['Login', 'Register', 'InterestSelection', 'WordOfTheDay'];
+  if (!currentRoute || HIDE.includes(currentRoute)) return null;
 
-  const NavButton = ({
-    screen,
-    icon,
-    label,
-  }: {
-    screen: 'Home' | 'Progress' | 'Profile'; // only these 3
-    icon: keyof typeof Feather.glyphMap;
-    label: string;
-  }) => (
-    <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate(screen)}>
-      <Feather name={icon} size={24} color={getColor(screen)} />
-      <Text style={[styles.navText, { color: getColor(screen) }]}>{label}</Text>
-    </TouchableOpacity>
-  );
+  const Tab = (p: { name: 'Home' | 'Progress' | 'Profile'; label: string; icon: any }) => {
+    const active = currentRoute === p.name;
+    return (
+      <TouchableOpacity style={styles.tab} onPress={() => onNavigate(p.name)}>
+        <Feather
+          name={p.icon}
+          size={20}
+          style={[styles.icon, active && { color: ACTIVE, opacity: 1 }]}
+        />
+        <Text style={[styles.label, active && { color: ACTIVE, opacity: 1, fontWeight: '600' }]}>
+          {p.label}
+        </Text>
+      </TouchableOpacity>
+    );
+  };
 
   return (
-    <View style={styles.bottomNav}>
-      <NavButton screen="Home" icon="home" label="Home" />
-      <NavButton screen="Progress" icon="bar-chart-2" label="Progress" />
-      <NavButton screen="Profile" icon="user" label="Profile" />
+    <View style={styles.wrap}>
+      <View style={styles.bar}>
+        <Tab name="Home" label="Home" icon="home" />
+        <Tab name="Progress" label="Progress" icon="bar-chart-2" />
+        <Tab name="Profile" label="Profile" icon="user" />
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  bottomNav: {
+  wrap: {
     position: 'absolute',
-    bottom: 0,
-    width: '100%',
-    height: 90,
+    left: 0,
+    right: 0,
+    bottom: 0, // pinned to bottom (no floating)
+    zIndex: 1000,
+  },
+  bar: {
+    height: BAR_HEIGHT,
     backgroundColor: '#fff',
-    borderTopWidth: 1,
-    borderColor: '#e5e7eb',
+    borderTopLeftRadius: 18,
+    borderTopRightRadius: 18,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderBottomWidth: 0,
+    borderColor: '#E5E7EB',
     flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'space-around',
-    alignItems: 'center',
-    paddingBottom: 10, // space for text
+    paddingHorizontal: 12,
+    overflow: 'hidden',
   },
-  navItem: {
+  tab: {
+    flex: 1,
+    alignItems: 'center',
     justifyContent: 'center',
-    alignItems: 'center',
+    height: '100%',
   },
-  navText: {
-    fontSize: 12,
-    marginTop: 2,
-  },
+  icon: { color: '#000', opacity: 0.8 },
+  label: { marginTop: 4, fontSize: 13, color: '#000', opacity: 0.8 },
 });

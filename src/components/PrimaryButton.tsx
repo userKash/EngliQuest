@@ -1,32 +1,43 @@
 // src/components/PrimaryButton.tsx
 import React from 'react';
-import { TouchableOpacity, Text, StyleSheet } from 'react-native';
+import { TouchableOpacity, Text, StyleSheet, GestureResponderEvent } from 'react-native';
 
 type Props = {
   label: string;
-  onPress: () => void;
+  onPress?: (e: GestureResponderEvent) => void;
+  disabled?: boolean;
 };
 
-export default function PrimaryButton({ label, onPress }: Props) {
+export default function PrimaryButton({ label, onPress, disabled }: Props) {
   return (
-    <TouchableOpacity style={styles.button} onPress={onPress}>
-      <Text style={styles.text}>{label}</Text>
+    <TouchableOpacity
+      onPress={onPress}
+      disabled={disabled}
+      activeOpacity={0.7}
+      style={[styles.btn, disabled && styles.btnDisabled]}>
+      <Text style={[styles.txt, disabled && styles.txtDisabled]}>{label}</Text>
     </TouchableOpacity>
   );
 }
 
 const styles = StyleSheet.create({
-  button: {
-    backgroundColor: '#5E67CC',
-    paddingVertical: 14,
-    borderRadius: 10,
+  btn: {
+    height: 48,
+    borderRadius: 12,
     alignItems: 'center',
-    marginTop: 16,
-    width: '100%',
+    justifyContent: 'center',
+    backgroundColor: '#5E67CC',
+    marginTop: 30,
   },
-  text: {
+  btnDisabled: {
+    backgroundColor: '#A6A9D9',
+  },
+  txt: {
     color: '#fff',
-    fontWeight: 'bold',
+    fontWeight: '700',
     fontSize: 16,
+  },
+  txtDisabled: {
+    color: '#eee',
   },
 });

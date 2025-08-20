@@ -22,12 +22,14 @@ export default function InstructionCard({
   nextLabel = 'Next',
 }: Props) {
   return (
-    <View style={styles.wrapper}>
+    <View style={styles.screen}>
+      {/* Main card */}
       <View style={styles.card}>
         <View style={styles.rowCenter}>
           {titleIcon ? <Image source={titleIcon} style={styles.icon} /> : null}
           <Text style={styles.title}>{title}</Text>
         </View>
+
         <Text style={styles.body}>{body}</Text>
 
         {tip ? (
@@ -38,26 +40,28 @@ export default function InstructionCard({
         ) : null}
       </View>
 
-      <PrimaryButton label={nextLabel} onPress={onNext} />
+      {/* Button pinned bottom */}
+      <View style={styles.bottomButton}>
+        <PrimaryButton label={nextLabel} onPress={onNext} />
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  wrapper: {
+  screen: {
     flex: 1,
-    justifyContent: 'space-between',
-    marginTop: 16,
-    marginBottom: 90,
+    backgroundColor: '#fff',
     padding: 20,
   },
   card: {
+    flex: 1,
     borderWidth: 0.8,
     borderColor: '#A2A2A2',
-    padding: 20,
     borderRadius: 16,
     backgroundColor: '#fff',
-    justifyContent: 'center',
+    padding: 20,
+    justifyContent: 'center', // vertically centers
     alignItems: 'center',
   },
   rowCenter: {
@@ -69,6 +73,16 @@ const styles = StyleSheet.create({
   icon: { width: 28, height: 28, marginRight: 8, resizeMode: 'contain' },
   iconSmall: { width: 18, height: 18, marginRight: 6, resizeMode: 'contain' },
   title: { fontSize: 24, fontWeight: 'bold', textAlign: 'center' },
-  body: { marginTop: 30, fontSize: 16, lineHeight: 22, marginBottom: 20, textAlign: 'center' },
+  body: {
+    marginTop: 30,
+    fontSize: 16,
+    lineHeight: 22,
+    marginBottom: 20,
+    textAlign: 'center',
+  },
   tip: { fontStyle: 'italic', color: '#666', textAlign: 'center', flexShrink: 1 },
+  bottomButton: {
+    marginTop: 'auto',
+    marginBottom: 70,
+  },
 });
