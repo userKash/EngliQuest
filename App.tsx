@@ -24,7 +24,7 @@ import ReadingGameScreen from './src/screens/topics/ReadingComprehension/Reading
 import FilipinoToEnglishScreen from './src/screens/topics/FilipinoToEnglish/FilipinoToEnglishScreen';
 import FilipinoToEnglishGameScreen from './src/screens/topics/FilipinoToEnglish/FilipinoToEnglishGameScreen';
 import SentenceConstructionScreen from './src/screens/topics/SentenceConstruction/SentenceConstructionScreen';
-
+import SentenceConstructionGameScreen from './src/screens/topics/SentenceConstruction/SentenceConstructionGameScreen';
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export default function App() {
@@ -83,6 +83,10 @@ export default function App() {
           <Stack.Screen name="FilipinoToEnglish" component={FilipinoToEnglishScreen} />
           <Stack.Screen name="FilipinoToEnglishGame" component={FilipinoToEnglishGameScreen} />
           <Stack.Screen name="SentenceConstruction" component={SentenceConstructionScreen} />
+          <Stack.Screen
+            name="SentenceConstructionGame"
+            component={SentenceConstructionGameScreen}
+          />
           <Stack.Screen
             name="Progress"
             component={ProgressScreen}

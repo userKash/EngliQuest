@@ -3,6 +3,8 @@ export type RootStackParamList = {
   GrammarGame: { levelId: string };
   ReadingGame: { levelId: string };
   FilipinoToEnglishGame: { levelId: string };
+  SentenceConstructionGame: { levelId: string };
+
   Login: undefined;
   Register: undefined;
   InterestSelection: {
