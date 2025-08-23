@@ -36,7 +36,7 @@ type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'Profile'>;
 
 export default function ProfileScreen() {
   const [selectedAvatar, setSelectedAvatar] = useState<any>(AVATARS[0]);
-  const [email, setEmail] = useState<string>(''); 
+  const [email, setEmail] = useState<string>('');
   const navigation = useNavigation<NavigationProp>();
 
   useFocusEffect(
@@ -54,7 +54,7 @@ export default function ProfileScreen() {
             }
           });
 
-          return unsubscribe; 
+          return unsubscribe;
         } catch (err) {
           console.error('Error loading profile:', err);
         }
@@ -74,7 +74,7 @@ export default function ProfileScreen() {
 
   const handleLogout = async () => {
     try {
-      await signOut(auth); 
+      await signOut(auth);
       Alert.alert('Logout', 'You have been logged out.');
       navigation.reset({
         index: 0,
@@ -135,7 +135,7 @@ export default function ProfileScreen() {
         </View>
 
         <Text style={styles.sectionLabel}>Email</Text>
-        <TextInput style={styles.inputReadOnly} value={email} editable={false} /> 
+        <TextInput style={styles.inputReadOnly} value={email} editable={false} />
         {/* ✅ email now comes from Firebase */}
 
         <Text style={styles.sectionLabel}>In-Game Name</Text>

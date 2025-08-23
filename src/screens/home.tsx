@@ -28,6 +28,14 @@ export default function HomeScreen() {
     loadAvatar();
   }, []);
 
+  // NOTE: replace these with your real values later
+  const overallPct = 0;
+  const vocabPct = 0;
+  const grammarPct = 0;
+  const readingPct = 0;
+  const translationPct = 0;
+  const sentencePct = 0;
+
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' }}>
       <View style={styles.container}>
@@ -47,9 +55,15 @@ export default function HomeScreen() {
           <View style={styles.progressCard}>
             <Text style={styles.cardTitle}>Overall Progress</Text>
             <Text style={styles.cardLabel}>Completion</Text>
-            <View style={styles.progressBarBg}>
-              <View style={[styles.progressBarFill, { width: '0%' }]} />
+
+            {/* unified progress bar with percent */}
+            <View style={styles.progressRow}>
+              <View style={styles.progressBarBg}>
+                <View style={[styles.progressBarFill, { width: `${overallPct}%` }]} />
+              </View>
+              <Text style={styles.progressPercent}>{overallPct}%</Text>
             </View>
+
             <Text style={styles.totalQuizzes}>Total Quizzes: 1</Text>
           </View>
 
@@ -62,11 +76,15 @@ export default function HomeScreen() {
                 source={require('../../assets/Vocabulary Builder.png')}
                 style={styles.topicIcon}
               />
-              <View>
+              <View style={{ flex: 1 }}>
                 <Text style={styles.topicTitle}>Vocabulary Builder</Text>
                 <Text style={styles.topicDesc}>Learn new words with flashcards</Text>
-                <View style={styles.progressBarBg}>
-                  <View style={[styles.progressBarFill, { width: '0%' }]} />
+
+                <View style={styles.progressRow}>
+                  <View style={styles.progressBarBg}>
+                    <View style={[styles.progressBarFill, { width: `${vocabPct}%` }]} />
+                  </View>
+                  <Text style={styles.progressPercent}>{vocabPct}%</Text>
                 </View>
               </View>
             </View>
@@ -84,11 +102,15 @@ export default function HomeScreen() {
                 source={require('../../assets/Grammar Practice.png')}
                 style={styles.topicIcon}
               />
-              <View>
+              <View style={{ flex: 1 }}>
                 <Text style={styles.topicTitle}>Grammar Practice</Text>
                 <Text style={styles.topicDesc}>Master English grammar rules</Text>
-                <View style={styles.progressBarBg}>
-                  <View style={[styles.progressBarFill, { width: '0%' }]} />
+
+                <View style={styles.progressRow}>
+                  <View style={styles.progressBarBg}>
+                    <View style={[styles.progressBarFill, { width: `${grammarPct}%` }]} />
+                  </View>
+                  <Text style={styles.progressPercent}>{grammarPct}%</Text>
                 </View>
               </View>
             </View>
@@ -106,11 +128,15 @@ export default function HomeScreen() {
                 source={require('../../assets/Reading Comprehension.png')}
                 style={styles.topicIcon}
               />
-              <View>
+              <View style={{ flex: 1 }}>
                 <Text style={styles.topicTitle}>Reading Comprehension</Text>
                 <Text style={styles.topicDesc}>Improve reading skills</Text>
-                <View style={styles.progressBarBg}>
-                  <View style={[styles.progressBarFill, { width: '0%' }]} />
+
+                <View style={styles.progressRow}>
+                  <View style={styles.progressBarBg}>
+                    <View style={[styles.progressBarFill, { width: `${readingPct}%` }]} />
+                  </View>
+                  <Text style={styles.progressPercent}>{readingPct}%</Text>
                 </View>
               </View>
             </View>
@@ -128,11 +154,15 @@ export default function HomeScreen() {
                 source={require('../../assets/Filipino to English.png')}
                 style={styles.topicIcon}
               />
-              <View>
+              <View style={{ flex: 1 }}>
                 <Text style={styles.topicTitle}>Filipino to English</Text>
                 <Text style={styles.topicDesc}>Practice translation skills</Text>
-                <View style={styles.progressBarBg}>
-                  <View style={[styles.progressBarFill, { width: '0%' }]} />
+
+                <View style={styles.progressRow}>
+                  <View style={styles.progressBarBg}>
+                    <View style={[styles.progressBarFill, { width: `${translationPct}%` }]} />
+                  </View>
+                  <Text style={styles.progressPercent}>{translationPct}%</Text>
                 </View>
               </View>
             </View>
@@ -150,11 +180,15 @@ export default function HomeScreen() {
                 source={require('../../assets/Sentence Construction.png')}
                 style={styles.topicIcon}
               />
-              <View>
+              <View style={{ flex: 1 }}>
                 <Text style={styles.topicTitle}>Sentence Construction</Text>
                 <Text style={styles.topicDesc}>Arrange jumbled words</Text>
-                <View style={styles.progressBarBg}>
-                  <View style={[styles.progressBarFill, { width: '0%' }]} />
+
+                <View style={styles.progressRow}>
+                  <View style={styles.progressBarBg}>
+                    <View style={[styles.progressBarFill, { width: `${sentencePct}%` }]} />
+                  </View>
+                  <Text style={styles.progressPercent}>{sentencePct}%</Text>
                 </View>
               </View>
             </View>
@@ -204,15 +238,33 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   cardTitle: { fontSize: 14, fontWeight: 'bold', marginBottom: 8 },
-  cardLabel: { fontSize: 12, color: '#666', marginBottom: 4 },
-  progressBarBg: {
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: '#e5e7eb',
-    overflow: 'hidden',
+  cardLabel: { fontSize: 12, color: '#666', marginBottom: 6 },
+
+  progressRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
     marginBottom: 6,
   },
-  progressBarFill: { height: 6, backgroundColor: '#5E67CC' },
+  progressBarBg: {
+    flex: 1,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#e5e7eb',
+    overflow: 'hidden',
+  },
+  progressBarFill: {
+    height: '100%',
+    backgroundColor: '#5E67CC',
+  },
+  progressPercent: {
+    fontSize: 12,
+    color: '#6B7280',
+    minWidth: 34,
+    textAlign: 'left',
+    marginLeft: 2,
+  },
+
   totalQuizzes: { fontSize: 10, color: '#999' },
   sectionTitle: { fontSize: 14, fontWeight: 'bold', marginBottom: 12 },
   topicCard: {
