@@ -13,12 +13,20 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import PrimaryButton from './PrimaryButton';
+import ResultModal from './ResultModal'; // <--- make sure path is correct
 
 type QA = {
   filipino: string;
   note?: string;
   accepts: string[];
   points?: number;
+};
+
+type ReviewItem = {
+  question: string;
+  yourAnswer: string;
+  isCorrect: boolean;
+  correctAnswer?: string;
 };
 
 type Props = {
@@ -45,11 +53,16 @@ export default function FilipinoToEnglishQuiz({ onProgressChange }: Props) {
   const [value, setValue] = useState('');
   const [locked, setLocked] = useState(false);
   const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
-  const [score, setScore] = useState(0);
+  const [score, setScore] = useState(0); // points (kept if you use points elsewhere)
+
+  // Modal state
+  const [showModal, setShowModal] = useState(false);
+  const [review, setReview] = useState<ReviewItem[]>([]);
+  const [correctCount, setCorrectCount] = useState(0);
 
   useEffect(() => {
     onProgressChange?.({ current: index, total });
-  }, [index]);
+  }, [index, total, onProgressChange]);
 
   const current = items[index];
   const normalize = (s: string) => s.toLowerCase().trim().replace(/\s+/g, ' ');
@@ -57,28 +70,57 @@ export default function FilipinoToEnglishQuiz({ onProgressChange }: Props) {
   const check = () => {
     if (!value.trim() || locked) return;
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+
     const ok = current.accepts.some((a) => normalize(a) === normalize(value));
     setIsCorrect(ok);
     setLocked(true);
-    if (ok) setScore((s) => s + (current.points ?? 12));
+    if (ok) {
+      setScore((s) => s + (current.points ?? 12));
+      setCorrectCount((c) => c + 1);
+    }
+
+    // push review entry
+    setReview((r) => [
+      ...r,
+      {
+        question: current.filipino,
+        yourAnswer: value.trim(),
+        isCorrect: ok,
+        correctAnswer: ok ? undefined : current.accepts[0],
+      },
+    ]);
   };
 
   const next = () => {
     if (!locked) return;
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+
     if (index < total - 1) {
       setIndex((i) => i + 1);
       setValue('');
       setLocked(false);
       setIsCorrect(null);
     } else {
-      console.log('Finished. Score:', score);
+      // FINISHED -> open modal
+      setShowModal(true);
     }
   };
 
   const actionLabel = locked ? (index < total - 1 ? 'Next Question' : 'Finish') : 'Check';
   const actionHandler = locked ? next : check;
   const actionDisabled = locked ? false : value.trim().length === 0;
+
+  const handleContinueFromModal = () => {
+    // Close modal and reset for replay (customize as needed)
+    setShowModal(false);
+    setIndex(0);
+    setValue('');
+    setLocked(false);
+    setIsCorrect(null);
+    setScore(0);
+    setCorrectCount(0);
+    setReview([]);
+  };
 
   return (
     <View style={styles.screen}>
@@ -102,7 +144,8 @@ export default function FilipinoToEnglishQuiz({ onProgressChange }: Props) {
                 if (locked) return;
                 setValue(t);
               }}
-              placeholder=""
+              placeholder="Type your answer here..."
+              placeholderTextColor="#999"
               autoCapitalize="none"
               editable={!locked}
               returnKeyType="done"
@@ -150,6 +193,17 @@ export default function FilipinoToEnglishQuiz({ onProgressChange }: Props) {
           <PrimaryButton label={actionLabel} onPress={actionHandler} disabled={actionDisabled} />
         </View>
       </KeyboardAvoidingView>
+
+      {/* RESULT MODAL */}
+      <ResultModal
+        visible={showModal}
+        score={correctCount}
+        total={total}
+        review={review}
+        onContinue={handleContinueFromModal}
+        onRequestClose={() => setShowModal(false)}
+        title="🎉 Great job!"
+      />
     </View>
   );
 }

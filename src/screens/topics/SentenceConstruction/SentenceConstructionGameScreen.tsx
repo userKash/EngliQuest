@@ -42,10 +42,10 @@ export default function SentenceConstructionGameScreen() {
     title: 'Sentence Construction',
     body:
       'Instruction:\n\n' +
-      'Arrange the jumbled words to form a correct, natural‑sounding English sentence.\n\n' +
-      'Tap the words in order. Tap a selected word to remove it.\n\n' +
-      'Punctuation is handled for you — focus on correct word order.',
-    tip: 'Find the subject and verb first, then place modifiers and time expressions.',
+      'Read the word and choose the correct definition or meaning.\n\n' +
+      'Some questions may ask for synonyms or usage.\n\n' +
+      'Only one choice is correct.',
+    tip: ' Tip: Look for capital letters and punctuation clues!',
     titleIcon: require('../../../../assets/Sentence Construction.png'), // update if you have a different filename
     tipIcon: require('../../../../assets/flat-color-icons_idea.png'),
   };

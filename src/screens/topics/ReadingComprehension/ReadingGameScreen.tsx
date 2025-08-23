@@ -32,8 +32,8 @@ export default function ReadingGameScreen() {
     title: 'Reading Comprehension',
     body:
       'Read the passage carefully. Then answer all questions on the next screen.\n\n' +
-      'Tip: Skim for the main idea first, then scan for details that match each question.',
-    tip: 'Look for keywords in the question and find them in the passage.',
+      'Answer the multiple-choice question based on what you read.',
+    tip: 'Tip: Pay attention to details like who, what, where, and when!',
     titleIcon: require('../../../../assets/Reading Comprehension.png'),
     tipIcon: require('../../../../assets/flat-color-icons_idea.png'),
   };

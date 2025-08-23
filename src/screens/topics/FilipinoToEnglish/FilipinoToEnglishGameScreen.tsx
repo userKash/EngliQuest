@@ -35,7 +35,7 @@ export default function FilipinoToEnglishGameScreen() {
       'Read the Filipino word or short phrase.\n\n' +
       'Type its correct English translation.\n\n' +
       'Answers must be spelled correctly to be marked correct.',
-    tip: 'Scan for the subject and the verb first before checking modifiers.',
+    tip: 'Tip: Think of common English phrases. No need for full sentences!',
     titleIcon: require('../../../../assets/Filipino to English.png'),
     tipIcon: require('../../../../assets/flat-color-icons_idea.png'),
   };

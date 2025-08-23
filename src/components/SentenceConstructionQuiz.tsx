@@ -11,13 +11,20 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import PrimaryButton from './PrimaryButton';
+import ResultModal from './ResultModal'; // <-- make sure the path is correct
 
 type Item = {
   id: string;
-  prompt?: string;
   answer: string;
   points?: number;
   alsoAccept?: string[];
+};
+
+type ReviewItem = {
+  question: string;
+  yourAnswer: string;
+  isCorrect: boolean;
+  correctAnswer?: string;
 };
 
 type Props = {
@@ -48,9 +55,10 @@ const shuffle = <T,>(arr: T[]) => {
 export default function SentenceConstructionQuiz({ onProgressChange, levelId }: Props) {
   const insets = useSafeAreaInsets();
 
+  // ---- DATA ----
   const bankEasy1: Item[] = [
-    { id: 'e1-1', prompt: "Hint: Start with 'The'", answer: 'The cat is sleeping.' },
-    { id: 'e1-2', prompt: "Hint: Start with 'The'", answer: 'The dog is playing.' },
+    { id: 'e1-1', answer: 'The cat is sleeping.' },
+    { id: 'e1-2', answer: 'The dog is playing.' },
     { id: 'e1-3', answer: 'She likes mangoes.' },
   ];
   const items: Item[] = useMemo(() => bankEasy1, [levelId]);
@@ -59,11 +67,17 @@ export default function SentenceConstructionQuiz({ onProgressChange, levelId }: 
   const [index, setIndex] = useState(0);
   const current = items[index];
 
+  // ---- QUIZ STATE ----
   const [pool, setPool] = useState<string[]>([]);
   const [selected, setSelected] = useState<string[]>([]);
   const [locked, setLocked] = useState(false);
   const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
-  const [score, setScore] = useState(0);
+  const [score, setScore] = useState(0); // points (separate from correctCount)
+
+  // ---- MODAL STATE ----
+  const [showModal, setShowModal] = useState(false);
+  const [review, setReview] = useState<ReviewItem[]>([]);
+  const [correctCount, setCorrectCount] = useState(0);
 
   useEffect(() => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
@@ -72,7 +86,7 @@ export default function SentenceConstructionQuiz({ onProgressChange, levelId }: 
     setLocked(false);
     setIsCorrect(null);
     onProgressChange?.({ current: index, total });
-  }, [index]);
+  }, [index, total, current?.answer, onProgressChange]);
 
   const onPick = (tok: string, i: number) => {
     if (locked) return;
@@ -101,26 +115,58 @@ export default function SentenceConstructionQuiz({ onProgressChange, levelId }: 
 
   const check = () => {
     if (locked || selected.length === 0) return;
-    const guess = normalize(selected.join(' '));
+
+    const guessRaw = selected.join(' ');
+    const guess = normalize(guessRaw);
     const correct = normalize(current.answer);
     const alts = (current.alsoAccept ?? []).map(normalize);
     const ok = guess === correct || alts.includes(guess);
+
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setIsCorrect(ok);
     setLocked(true);
     if (ok) setScore((s) => s + (current.points ?? 12));
+
+    // for modal review
+    setCorrectCount((c) => (ok ? c + 1 : c));
+    setReview((r) => [
+      ...r,
+      {
+        question: 'Arrange the words to form a sentence',
+        yourAnswer: guessRaw,
+        isCorrect: ok,
+        correctAnswer: ok ? undefined : current.answer,
+      },
+    ]);
+
+    // OPTIONAL: Open modal immediately if this is the last item
+    // if (index === total - 1) setShowModal(true);
   };
 
   const next = () => {
     if (!locked) return;
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-    if (index < total - 1) setIndex((i) => i + 1);
-    else console.log('Finished. Score:', score);
+
+    if (index < total - 1) {
+      setIndex((i) => i + 1);
+    } else {
+      // LAST ITEM -> OPEN MODAL
+      setShowModal(true);
+    }
   };
 
   const actionLabel = locked ? (index < total - 1 ? 'Next Question' : 'Finish') : 'Check';
   const actionHandler = locked ? next : check;
   const actionDisabled = !locked && selected.length === 0;
+
+  const handleContinueFromModal = () => {
+    // Close modal and reset quiz (customize as needed)
+    setShowModal(false);
+    setIndex(0);
+    setScore(0);
+    setCorrectCount(0);
+    setReview([]);
+  };
 
   return (
     <View style={styles.screen}>
@@ -132,11 +178,6 @@ export default function SentenceConstructionQuiz({ onProgressChange, levelId }: 
             Arrange the words below to form a correct sentence. Tap words to add them to your
             sentence.
           </Text>
-          {!!current.prompt && (
-            <Text style={styles.hintLine}>
-              💡 <Text style={styles.hintLink}>{current.prompt}</Text>
-            </Text>
-          )}
         </View>
 
         {/* Your Sentence */}
@@ -160,7 +201,7 @@ export default function SentenceConstructionQuiz({ onProgressChange, levelId }: 
           </View>
         </View>
 
-        {/* Available Words + Reset (copied layout from FilipinoToEnglish: outer box + square reset) */}
+        {/* Available Words + Reset */}
         <View style={styles.card}>
           <Text style={styles.sectionTitle}>Available Words</Text>
 
@@ -205,16 +246,24 @@ export default function SentenceConstructionQuiz({ onProgressChange, levelId }: 
         <View style={{ height: 120 }} />
       </ScrollView>
 
+      {/* Bottom action */}
       <View style={[styles.bottomBar, { paddingBottom: insets.bottom + 70 }]}>
         <PrimaryButton label={actionLabel} onPress={actionHandler} disabled={actionDisabled} />
       </View>
+
+      {/* RESULT MODAL */}
+      <ResultModal
+        visible={showModal}
+        score={correctCount}
+        total={total}
+        review={review}
+        onContinue={handleContinueFromModal}
+        onRequestClose={() => setShowModal(false)}
+        title="🎉 Great job!"
+      />
     </View>
   );
 }
-
-const BORDER = '#E4E6EE';
-const TEXT_DARK = '#0F1728';
-const TEXT_MUTED = '#6B7280';
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: '#fff' },
@@ -222,18 +271,18 @@ const styles = StyleSheet.create({
 
   card: {
     borderWidth: 1,
-    borderColor: BORDER,
+    borderColor: '#E4E6EE',
     borderRadius: 12,
     backgroundColor: '#fff',
     padding: 14,
     marginBottom: 12,
+    minHeight: 135,
+    justifyContent: 'center',
   },
-  cardTitle: { fontSize: 16, fontWeight: '800', marginBottom: 6, color: TEXT_DARK },
-  cardBody: { color: TEXT_MUTED, fontSize: 13, lineHeight: 18 },
-  hintLine: { marginTop: 8, fontSize: 13, color: TEXT_MUTED },
-  hintLink: { color: '#3B82F6', textDecorationLine: 'underline' },
+  cardTitle: { fontSize: 16, fontWeight: '800', marginBottom: 6, color: '#0F1728' },
+  cardBody: { color: '#6B7280', fontSize: 13, lineHeight: 18 },
 
-  sectionTitle: { fontWeight: '800', marginBottom: 8, color: TEXT_DARK, fontSize: 15 },
+  sectionTitle: { fontWeight: '800', marginBottom: 8, color: '#0F1728', fontSize: 15 },
 
   dashedBox: {
     minHeight: 56,
@@ -297,7 +346,7 @@ const styles = StyleSheet.create({
   feedbackTitle: { fontWeight: '800', marginBottom: 6 },
   okText: { color: '#1F8F5F' },
   badText: { color: '#C43D3D' },
-  feedbackText: { color: TEXT_DARK },
+  feedbackText: { color: '#0F1728' },
 
   bottomBar: {
     position: 'absolute',
