@@ -136,7 +136,6 @@ export default function ProfileScreen() {
 
         <Text style={styles.sectionLabel}>Email</Text>
         <TextInput style={styles.inputReadOnly} value={email} editable={false} />
-        {/* ✅ email now comes from Firebase */}
 
         <Text style={styles.sectionLabel}>In-Game Name</Text>
         <TextInput style={styles.inputReadOnly} value="AstroBoy" editable={false} />

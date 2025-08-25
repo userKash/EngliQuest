@@ -4,12 +4,9 @@ import { View, TouchableOpacity, Text, StyleSheet } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 
 type Props = {
-  currentRoute?: string; // e.g. "Home"
+  currentRoute?: string;
   onNavigate: (name: 'Home' | 'Progress' | 'Profile') => void;
 };
-
-const BAR_HEIGHT = 85; // ← change height here
-const ACTIVE = '#5B6BEE';
 
 export default function BottomNav({ currentRoute, onNavigate }: Props) {
   const HIDE = ['Login', 'Register', 'InterestSelection', 'WordOfTheDay'];
@@ -22,9 +19,9 @@ export default function BottomNav({ currentRoute, onNavigate }: Props) {
         <Feather
           name={p.icon}
           size={20}
-          style={[styles.icon, active && { color: ACTIVE, opacity: 1 }]}
+          style={[styles.icon, active && { color: '#5B6BEE', opacity: 1 }]}
         />
-        <Text style={[styles.label, active && { color: ACTIVE, opacity: 1, fontWeight: '600' }]}>
+        <Text style={[styles.label, active && { color: '#5B6BEE', opacity: 1, fontWeight: '600' }]}>
           {p.label}
         </Text>
       </TouchableOpacity>
@@ -51,7 +48,7 @@ const styles = StyleSheet.create({
     zIndex: 1000,
   },
   bar: {
-    height: BAR_HEIGHT,
+    height: 85,
     backgroundColor: '#fff',
     borderTopLeftRadius: 18,
     borderTopRightRadius: 18,

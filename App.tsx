@@ -66,13 +66,12 @@ export default function App() {
             headerShadowVisible: false,
           }}>
           <Stack.Screen name="Login" component={LoginScreen} options={{ headerShown: false }} />
-          <Stack.Screen name="Home" component={HomeScreen} options={{ headerShown: false }} />
+          <Stack.Screen name="Register" component={RegistrationForm} />
           <Stack.Screen
             name="WordOfTheDay"
             component={WordOfTheDayScreen}
             options={{ headerShown: false }}
           />
-          <Stack.Screen name="Register" component={RegistrationForm} />
           <Stack.Screen name="InterestSelection" component={InterestSelectionScreen} />
           <Stack.Screen name="VocabularyBuilder" component={VocabularyBuilderScreen} />
           <Stack.Screen name="VocabularyGame" component={VocabularyGameScreen} />
@@ -87,12 +86,12 @@ export default function App() {
             name="SentenceConstructionGame"
             component={SentenceConstructionGameScreen}
           />
-          <Stack.Screen
-            name="Progress"
-            component={ProgressScreen}
-            options={{ headerShown: false }}
-          />
-          <Stack.Screen name="Profile" component={ProfileScreen} options={{ headerShown: false }} />
+
+          <Stack.Group screenOptions={{ animation: 'fade_from_bottom', headerShown: false }}>
+            <Stack.Screen name="Home" component={HomeScreen} />
+            <Stack.Screen name="Progress" component={ProgressScreen} />
+            <Stack.Screen name="Profile" component={ProfileScreen} />
+          </Stack.Group>
         </Stack.Navigator>
 
         <BottomNav
