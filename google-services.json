@@ -1,0 +1,54 @@
+{
+  "project_info": {
+    "project_number": "1072058760841",
+    "project_id": "engliquest-788b6",
+    "storage_bucket": "engliquest-788b6.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1072058760841:android:fab8bc8627f39155521058",
+        "android_client_info": {
+          "package_name": "com.Engliquest.myexpoapp"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1072058760841-cu3g7acqhvu93jboekpprphaqnuf15ov.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.Engliquest.myexpoapp",
+            "certificate_hash": "71e5270b6d871763b6af620d3a1c6e43c93521a5"
+          }
+        },
+        {
+          "client_id": "1072058760841-vhetqvhtgnvac8ta5dsv0rke7n7i9ijg.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBhsLpAp0TX53UCNaW0jWT1jQ_7rENpwow"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1072058760841-2b1oeadj22cf0usa0en4tq8al8e925ld.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "1072058760841-fgolrmt1orn8gjulltba0qk8nkd77det.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.alphs18.myexpoapp"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

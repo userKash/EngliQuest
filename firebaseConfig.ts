@@ -1,23 +1,59 @@
-import { initializeApp } from 'firebase/app';
-import { initializeAuth } from 'firebase/auth';
-import type { Persistence } from 'firebase/auth'; 
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import Constants from "expo-constants";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { GoogleSignin } from "@react-native-google-signin/google-signin";
 
+let auth: any = null;
+let db: any = null;
+let app: any = null;
 
-// @ts-expect-error: it's a hidden export but exists at runtime
-import { getReactNativePersistence } from 'firebase/auth';
+async function initFirebase() {
+  if (Constants.appOwnership === "expo") {
+    // ✅ Expo Go → Web Firebase SDK
+    console.log("Expo Go detected → using Firebase Web SDK");
 
-const firebaseConfig = {
-  apiKey: 'AIzaSyC7AMHG2pEDsqL91NyTWlisA8YEl3SBxCA',
-  authDomain: 'engliquest-788b6.firebaseapp.com',
-  projectId: 'engliquest-788b6',
-  storageBucket: 'engliquest-788b6.appspot.com',
-  messagingSenderId: '1072058760841',
-  appId: '1:1072058760841:web:664d901b651ba67d521058',
-};
+    const { initializeApp } = await import("firebase/app");
+    const { initializeAuth } = await import("firebase/auth");
+    const { getFirestore } = await import("firebase/firestore");
 
-const app = initializeApp(firebaseConfig);
+    const { getReactNativePersistence } = require("firebase/auth") as {
+      getReactNativePersistence: (storage: typeof AsyncStorage) => any;
+    };
 
-export const auth = initializeAuth(app, {
-  persistence: getReactNativePersistence(AsyncStorage) as Persistence,
-});
+    const firebaseConfig = {
+      apiKey: "AIzaSyC7AMHG2pEDsqL91NyTWlisA8YEl3SBxCA",
+      authDomain: "engliquest-788b6.firebaseapp.com",
+      projectId: "engliquest-788b6",
+      storageBucket: "engliquest-788b6.appspot.com",
+      messagingSenderId: "1072058760841",
+      appId: "1:1072058760841:web:664d901b651ba67d521058",
+    };
+
+    app = initializeApp(firebaseConfig);
+
+    auth = initializeAuth(app, {
+      persistence: getReactNativePersistence(AsyncStorage),
+    });
+
+    db = getFirestore(app);
+
+  } else if (Constants.appOwnership === "standalone") {
+    // ✅ Dev/Prod builds → Native Firebase SDK
+    console.log("Dev/Prod build detected → using React Native Firebase");
+
+    const authModule = (await import("@react-native-firebase/auth")).default;
+    const firestoreModule = (await import("@react-native-firebase/firestore")).default;
+
+    auth = authModule();
+    db = firestoreModule();
+
+    // ✅ Configure Google Sign-In
+    GoogleSignin.configure({
+      webClientId: "1072058760841-vhetqvhtgnvac8ta5dsv0rke7n7i9ijg.apps.googleusercontent.com", // must be Web client ID
+      offlineAccess: true,
+    });
+  }
+}
+
+initFirebase();
+
+export { auth, db, initFirebase, app };

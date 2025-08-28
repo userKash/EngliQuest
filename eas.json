@@ -1,0 +1,33 @@
+{
+  "cli": {
+    "version": ">= 15.0.12",
+    "appVersionSource": "remote"
+  },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk"   // ✅ Easier to sideload for testing
+      },
+      "ios": {
+        "simulator": true    // ✅ You can test on iOS simulator (no App Store install)
+      }
+    },
+    "preview": {
+      "distribution": "internal"
+    },
+    "production": {
+      "autoIncrement": true,
+      "android": {
+        "buildType": "app-bundle" // ✅ Required for Play Store
+      },
+      "ios": {
+        "simulator": false        // ✅ For real devices/App Store submission
+      }
+    }
+  },
+  "submit": {
+    "production": {}
+  }
+}
