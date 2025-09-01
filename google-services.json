@@ -14,15 +14,15 @@
       },
       "oauth_client": [
         {
-          "client_id": "1072058760841-cu3g7acqhvu93jboekpprphaqnuf15ov.apps.googleusercontent.com",
+          "client_id": "1072058760841-m1etg934ctag3g9b3b5616tvadmbbp5t.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
             "package_name": "com.Engliquest.myexpoapp",
-            "certificate_hash": "71e5270b6d871763b6af620d3a1c6e43c93521a5"
+            "certificate_hash": "af18b8c681ea291c1b5ec3d0ff7e2f0834da1191"
           }
         },
         {
-          "client_id": "1072058760841-vhetqvhtgnvac8ta5dsv0rke7n7i9ijg.apps.googleusercontent.com",
+          "client_id": "1072058760841-l2dfoc318glg28rlrubevsl0447alikd.apps.googleusercontent.com",
           "client_type": 3
         }
       ],

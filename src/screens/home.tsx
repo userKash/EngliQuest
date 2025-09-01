@@ -6,13 +6,14 @@ import type { RootStackParamList } from '../navigation/type';
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useEffect, useState } from 'react';
+import { initFirebase } from '../../firebaseConfig';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
 export default function HomeScreen() {
   const navigation = useNavigation<NavigationProp>();
-
   const [avatar, setAvatar] = useState<any>(require('../../assets/userProfile.png'));
+  const [userName, setUserName] = useState<string>('User');
 
   useEffect(() => {
     const loadAvatar = async () => {
@@ -25,7 +26,34 @@ export default function HomeScreen() {
         console.error('Error loading avatar:', err);
       }
     };
+
+    const loadUser = async () => {
+      try {
+        const { auth, db } = await initFirebase();
+        const user = auth.currentUser;
+        if (!user) return;
+
+        if (db.collection) {
+          // Native RNFirebase
+          const doc = await db.collection('users').doc(user.uid).get();
+          if (doc.exists) {
+            setUserName(doc.data().name || 'User');
+          }
+        } else {
+          // Expo Go Firestore Web SDK
+          const { doc, getDoc } = await import('firebase/firestore');
+          const userDoc = await getDoc(doc(db, 'users', user.uid));
+          if (userDoc.exists()) {
+            setUserName(userDoc.data().name || 'User');
+          }
+        }
+      } catch (err) {
+        console.error('Error fetching user data:', err);
+      }
+    };
+
     loadAvatar();
+    loadUser();
   }, []);
 
   // NOTE: replace these with your real values later
@@ -43,7 +71,7 @@ export default function HomeScreen() {
         <View style={styles.header}>
           <Image source={avatar} style={styles.avatar} />
           <View>
-            <Text style={styles.greeting}>Hello, Sebastian</Text>
+            <Text style={styles.greeting}>Hello, {userName}</Text>
             <Text style={styles.subtext}>Let's play, learn, and have fun</Text>
           </View>
         </View>

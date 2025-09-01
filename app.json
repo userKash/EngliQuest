@@ -39,7 +39,13 @@
     },
     "plugins": [
       "expo-font",
-      "expo-web-browser"
+      "expo-web-browser",
+      [
+        "@react-native-google-signin/google-signin",
+        {
+          "reservedClientId": "1072058760841-l2dfoc318glg28rlrubevsl0447alikd.apps.googleusercontent.com"
+        }
+      ]
     ]
   }
 }

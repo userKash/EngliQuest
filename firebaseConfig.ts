@@ -1,3 +1,4 @@
+// firebaseConfig.ts
 import Constants from "expo-constants";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { GoogleSignin } from "@react-native-google-signin/google-signin";
@@ -6,18 +7,27 @@ let auth: any = null;
 let db: any = null;
 let app: any = null;
 
-async function initFirebase() {
+/**
+ * Initializes Firebase depending on environment:
+ * - Expo Go → Firebase Web SDK
+ * - Native build (EAS Dev/Prod) → React Native Firebase
+ */
+export async function initFirebase() {
+  // ✅ Prevent re-initialization
+  if (auth && db) {
+    return { auth, db, app };
+  }
+
   if (Constants.appOwnership === "expo") {
-    // ✅ Expo Go → Web Firebase SDK
+    // ✅ Expo Go → Firebase Web SDK
     console.log("Expo Go detected → using Firebase Web SDK");
 
     const { initializeApp } = await import("firebase/app");
     const { initializeAuth } = await import("firebase/auth");
     const { getFirestore } = await import("firebase/firestore");
 
-    const { getReactNativePersistence } = require("firebase/auth") as {
-      getReactNativePersistence: (storage: typeof AsyncStorage) => any;
-    };
+    // ⚡️ Fix: cast to any so TS stops complaining
+    const { getReactNativePersistence } = require("firebase/auth") as any;
 
     const firebaseConfig = {
       apiKey: "AIzaSyC7AMHG2pEDsqL91NyTWlisA8YEl3SBxCA",
@@ -35,25 +45,28 @@ async function initFirebase() {
     });
 
     db = getFirestore(app);
-
-  } else if (Constants.appOwnership === "standalone") {
-    // ✅ Dev/Prod builds → Native Firebase SDK
-    console.log("Dev/Prod build detected → using React Native Firebase");
+  } else {
+    // ✅ Native builds → React Native Firebase
+    console.log("Native build detected → using React Native Firebase");
 
     const authModule = (await import("@react-native-firebase/auth")).default;
     const firestoreModule = (await import("@react-native-firebase/firestore")).default;
 
-    auth = authModule();
+    auth = authModule(); // never null
     db = firestoreModule();
+    app = "native"; // placeholder (so it's not null)
 
-    // ✅ Configure Google Sign-In
+    // ✅ Configure Google Sign-In (must be Web client ID, not Android/iOS)
     GoogleSignin.configure({
-      webClientId: "1072058760841-vhetqvhtgnvac8ta5dsv0rke7n7i9ijg.apps.googleusercontent.com", // must be Web client ID
+      webClientId:
+        "1072058760841-l2dfoc318glg28rlrubevsl0447alikd.apps.googleusercontent.com",
       offlineAccess: true,
+      forceCodeForRefreshToken: true,
     });
   }
+
+  return { auth, db, app };
 }
 
-initFirebase();
-
-export { auth, db, initFirebase, app };
+// Export accessors
+export { auth, db, app };

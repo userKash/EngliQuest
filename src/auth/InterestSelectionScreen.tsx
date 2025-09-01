@@ -12,12 +12,7 @@ import { Feather } from "@expo/vector-icons";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../navigation/type";
 import type { RouteProp } from "@react-navigation/native";
-import {
-  createUserWithEmailAndPassword,
-  updateProfile,
-} from "firebase/auth";
-import { auth, db } from "../../firebaseConfig";
-import { doc, setDoc } from "firebase/firestore";
+import { initFirebase } from "../../firebaseConfig";
 
 export default function InterestSelectionScreen() {
   const [selected, setSelected] = useState<string[]>([]);
@@ -26,107 +21,150 @@ export default function InterestSelectionScreen() {
       NativeStackNavigationProp<RootStackParamList, "InterestSelection">
     >();
   const route = useRoute<RouteProp<RootStackParamList, "InterestSelection">>();
-  const { fullName, email, password } = route.params;
+  const { fullName, email } = route.params;
 
   const toggleInterest = (title: string) => {
     setSelected((prev) =>
-      prev.includes(title)
-        ? prev.filter((i) => i !== title)
-        : [...prev, title]
+      prev.includes(title) ? prev.filter((i) => i !== title) : [...prev, title]
     );
   };
 
-  const handleCreateAccount = async () => {
-    if (selected.length < 3) {
-      Alert.alert(
-        "Selection Required",
-        "Please select at least 3 interests."
-      );
+const handleCreateAccount = async () => {
+  if (selected.length < 3) {
+    Alert.alert("Selection Required", "Please select at least 3 interests.");
+    return;
+  }
+
+  try {
+    const { auth, db } = await initFirebase();
+    const user = auth.currentUser;
+    if (!user) {
+      Alert.alert("Error", "No authenticated user found.");
       return;
     }
 
-    try {
-      // ✅ 1. Create user in Firebase Auth
-      const userCredential = await createUserWithEmailAndPassword(
-        auth,
-        email,
-        password
+    if (db.collection) {
+      await db.collection("users").doc(user.uid).set(
+        {
+          name: fullName,
+          email,
+          interests: selected,
+          createdAt: new Date().toISOString(),
+        },
+        { merge: true }
       );
-      const user = userCredential.user;
-
-      // ✅ 2. Update displayName in Auth profile
-      await updateProfile(user, { displayName: fullName });
-
-      // ✅ 3. Save user data in Firestore
-      await setDoc(doc(db, "users", user.uid), {
-        fullName,
-        email,
-        interests: selected,
-        createdAt: new Date().toISOString(),
-      });
-
-      Alert.alert("Success", "Account created successfully!");
-      navigation.navigate("Login");
-    } catch (err: any) {
-      console.error(err);
-      Alert.alert("Error", err.message || "Something went wrong.");
+    } else {
+      const { doc, setDoc, serverTimestamp } = await import(
+        "firebase/firestore"
+      );
+      await setDoc(
+        doc(db, "users", user.uid),
+        {
+          name: fullName,
+          email,
+          interests: selected,
+          createdAt: serverTimestamp(),
+        },
+        { merge: true }
+      );
     }
-  };
+
+    Alert.alert("Welcome!", "Your account has been created successfully.");
+    navigation.reset({
+      index: 0,
+      routes: [{ name: "WordOfTheDay" }],
+    });
+  } catch (err: any) {
+    console.error("Firestore save error:", err);
+    Alert.alert("Error", err.message || "Something went wrong.");
+  }
+};
+
 
   return (
     <View style={{ flex: 1, backgroundColor: "#fff" }}>
-      <ScrollView
-        contentContainerStyle={styles.container}
-        showsVerticalScrollIndicator={false}
-      >
+      <ScrollView contentContainerStyle={styles.container}>
         <Text style={styles.header}>What interests you?</Text>
         <Text style={styles.subtext}>
-          Select at least 3 topics you enjoy. We'll create personalized
-          stories and lessons just for you!
+          Select at least 3 topics you enjoy. We'll create personalized stories
+          and lessons just for you!
         </Text>
 
-        {/* Example interests */}
         <View style={styles.row}>
-          <TouchableOpacity
-            style={[
-              styles.card,
-              selected.includes("Adventure Stories") &&
-                styles.cardSelected,
-            ]}
-            onPress={() => toggleInterest("Adventure Stories")}
-          >
-            <Feather
-              name="compass"
-              size={24}
-              color="#FAA030"
-              style={{ marginBottom: 8 }}
-            />
-            <Text style={styles.title}>Adventure Stories</Text>
-            <Text style={styles.description}>
-              Exciting journeys and quests
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[
-              styles.card,
-              selected.includes("Friendship") && styles.cardSelected,
-            ]}
-            onPress={() => toggleInterest("Friendship")}
-          >
-            <Feather
-              name="users"
-              size={24}
-              color="#F59E0B"
-              style={{ marginBottom: 8 }}
-            />
-            <Text style={styles.title}>Friendship</Text>
-            <Text style={styles.description}>
-              Stories about bonds and relationships
-            </Text>
-          </TouchableOpacity>
+          <InterestCard
+            title="Adventure Stories"
+            description="Exciting journeys and quests"
+            icon="compass"
+            color="#FAA030"
+            selected={selected}
+            toggle={toggleInterest}
+          />
+          <InterestCard
+            title="Friendship"
+            description="Stories about bonds and relationships"
+            icon="users"
+            color="#F59E0B"
+            selected={selected}
+            toggle={toggleInterest}
+          />
         </View>
 
-        {/* ... (keep rest of your cards the same) ... */}
+        <View style={styles.row}>
+          <InterestCard
+            title="Fantasy & Magic"
+            description="Spells and mythical creatures"
+            icon="star"
+            color="#8B5CF6"
+            selected={selected}
+            toggle={toggleInterest}
+          />
+          <InterestCard
+            title="Music & Arts"
+            description="Creative expression and performance"
+            icon="music"
+            color="#10B981"
+            selected={selected}
+            toggle={toggleInterest}
+          />
+        </View>
+
+        <View style={styles.row}>
+          <InterestCard
+            title="Sports & Games"
+            description="Athletic activities and competition"
+            icon="activity"
+            color="#3B82F6"
+            selected={selected}
+            toggle={toggleInterest}
+          />
+          <InterestCard
+            title="Nature & Animals"
+            description="Wildlife and environmental themes"
+            icon="globe"
+            color="#22C55E"
+            selected={selected}
+            toggle={toggleInterest}
+          />
+        </View>
+
+        <View style={styles.row}>
+          <InterestCard
+            title="Filipino Culture"
+            description="Traditional stories and customs"
+            icon="flag"
+            color="#EC4899"
+            selected={selected}
+            toggle={toggleInterest}
+          />
+          <InterestCard
+            title="Family Values"
+            description="Family bonds and traditions"
+            icon="heart"
+            color="#EF4444"
+            selected={selected}
+            toggle={toggleInterest}
+          />
+        </View>
       </ScrollView>
 
       <View style={styles.buttonWrapper}>
@@ -138,12 +176,36 @@ export default function InterestSelectionScreen() {
   );
 }
 
+function InterestCard({
+  title,
+  description,
+  icon,
+  color,
+  selected,
+  toggle,
+}: {
+  title: string;
+  description: string;
+  icon: any;
+  color: string;
+  selected: string[];
+  toggle: (title: string) => void;
+}) {
+  const isSelected = selected.includes(title);
+  return (
+    <TouchableOpacity
+      style={[styles.card, isSelected && styles.cardSelected]}
+      onPress={() => toggle(title)}
+    >
+      <Feather name={icon} size={24} color={color} style={{ marginBottom: 8 }} />
+      <Text style={styles.title}>{title}</Text>
+      <Text style={styles.description}>{description}</Text>
+    </TouchableOpacity>
+  );
+}
+
 const styles = StyleSheet.create({
-  container: {
-    padding: 20,
-    paddingBottom: 120,
-    backgroundColor: "#fff",
-  },
+  container: { padding: 20, paddingBottom: 120, backgroundColor: "#fff" },
   header: {
     fontSize: 18,
     fontWeight: "bold",
@@ -171,36 +233,15 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
     alignItems: "center",
   },
-  cardSelected: {
-    borderColor: "#5E67CC",
-    backgroundColor: "#eef2ff",
-  },
-  title: {
-    fontWeight: "600",
-    fontSize: 15,
-    marginBottom: 6,
-    textAlign: "center",
-  },
-  description: {
-    fontSize: 12,
-    color: "#666",
-    textAlign: "center",
-  },
-  buttonWrapper: {
-    position: "absolute",
-    bottom: 34,
-    left: 24,
-    right: 24,
-  },
+  cardSelected: { borderColor: "#5E67CC", backgroundColor: "#eef2ff" },
+  title: { fontWeight: "600", fontSize: 15, marginBottom: 6, textAlign: "center" },
+  description: { fontSize: 12, color: "#666", textAlign: "center" },
+  buttonWrapper: { position: "absolute", bottom: 34, left: 24, right: 24 },
   createBtn: {
     backgroundColor: "#5E67CC",
     paddingVertical: 14,
     borderRadius: 10,
     alignItems: "center",
   },
-  createText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "bold",
-  },
+  createText: { color: "#fff", fontSize: 16, fontWeight: "bold" },
 });
