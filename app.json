@@ -43,7 +43,7 @@
       [
         "@react-native-google-signin/google-signin",
         {
-          "reservedClientId": "1072058760841-l2dfoc318glg28rlrubevsl0447alikd.apps.googleusercontent.com"
+          "reservedClientId": "com.googleusercontent.apps.1072058760841-fgolrmt1orn8gjulltba0qk8nkd77det"
         }
       ]
     ]
