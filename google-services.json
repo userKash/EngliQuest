@@ -14,6 +14,14 @@
       },
       "oauth_client": [
         {
+          "client_id": "1072058760841-cu3g7acqhvu93jboekpprphaqnuf15ov.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.Engliquest.myexpoapp",
+            "certificate_hash": "71e5270b6d871763b6af620d3a1c6e43c93521a5"
+          }
+        },
+        {
           "client_id": "1072058760841-m1etg934ctag3g9b3b5616tvadmbbp5t.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {

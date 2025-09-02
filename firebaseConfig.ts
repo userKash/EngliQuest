@@ -1,11 +1,11 @@
 // firebaseConfig.ts
 import Constants from "expo-constants";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { GoogleSignin } from "@react-native-google-signin/google-signin";
 
 let auth: any = null;
 let db: any = null;
 let app: any = null;
+let googleConfigured = false;
 
 /**
  * Initializes Firebase depending on environment:
@@ -13,20 +13,18 @@ let app: any = null;
  * - Native build (EAS Dev/Prod) → React Native Firebase
  */
 export async function initFirebase() {
-  // ✅ Prevent re-initialization
-  if (auth && db) {
-    return { auth, db, app };
-  }
+  // Prevent re-initialization
+  if (auth && db) return { auth, db, app };
 
   if (Constants.appOwnership === "expo") {
-    // ✅ Expo Go → Firebase Web SDK
+    // Expo Go → Firebase Web SDK
     console.log("Expo Go detected → using Firebase Web SDK");
 
     const { initializeApp } = await import("firebase/app");
     const { initializeAuth } = await import("firebase/auth");
     const { getFirestore } = await import("firebase/firestore");
 
-    // ⚡️ Fix: cast to any so TS stops complaining
+    // Fix TypeScript warning for persistence
     const { getReactNativePersistence } = require("firebase/auth") as any;
 
     const firebaseConfig = {
@@ -46,26 +44,38 @@ export async function initFirebase() {
 
     db = getFirestore(app);
   } else {
-    // ✅ Native builds → React Native Firebase
+    // Native builds → React Native Firebase
     console.log("Native build detected → using React Native Firebase");
 
     const authModule = (await import("@react-native-firebase/auth")).default;
     const firestoreModule = (await import("@react-native-firebase/firestore")).default;
 
-    auth = authModule(); // never null
+    auth = authModule();
     db = firestoreModule();
-    app = "native"; // placeholder (so it's not null)
+    app = "native"; // placeholder
 
-    // ✅ Configure Google Sign-In (must be Web client ID, not Android/iOS)
-    GoogleSignin.configure({
-      webClientId:
-        "1072058760841-l2dfoc318glg28rlrubevsl0447alikd.apps.googleusercontent.com",
-      offlineAccess: true,
-      forceCodeForRefreshToken: true,
-    });
+    // ⚡️ Do NOT configure Google here anymore; use configureGoogleSignin() instead
   }
 
   return { auth, db, app };
+}
+
+/**
+ * Configures Google Sign-In for Native builds.
+ * Must be called before calling GoogleSignin.signIn()
+ */
+export async function configureGoogleSignin() {
+  if (googleConfigured || Constants.appOwnership === "expo") return;
+
+  const { GoogleSignin } = await import("@react-native-google-signin/google-signin");
+
+  GoogleSignin.configure({
+    webClientId: "1072058760841-l2dfoc318glg28rlrubevsl0447alikd.apps.googleusercontent.com",
+    offlineAccess: true,
+    forceCodeForRefreshToken: true,
+  });
+
+  googleConfigured = true;
 }
 
 // Export accessors

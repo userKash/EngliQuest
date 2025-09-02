@@ -15,7 +15,7 @@ import { useNavigation } from "@react-navigation/native";
 import type { RootStackParamList } from "../navigation/type";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 
-import { auth, initFirebase } from "../../firebaseConfig"; 
+import { auth, configureGoogleSignin, initFirebase } from "../../firebaseConfig"; 
 import Constants from "expo-constants";
 import * as GoogleAuthSession from "expo-auth-session/providers/google";
 import * as WebBrowser from "expo-web-browser";
@@ -79,32 +79,23 @@ export default function LoginScreen() {
 // ✅ Native (APK / IPA) flow
 const handleNativeGoogleLogin = async () => {
   try {
+    await initFirebase();           // ensure auth/db are ready
+    await configureGoogleSignin();  // ensure GoogleSignin is configured
+
     await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
     const { idToken } = await GoogleSignin.signIn();
 
-    if (!idToken) {
-      throw new Error("No ID token returned. Check Firebase SHA-1/256 config.");
-    }
+    if (!idToken) throw new Error("No ID token returned. Check Firebase SHA-1/256 config.");
 
-    // Import Firebase helpers dynamically (keeps compat with Expo Go + Native)
     const { GoogleAuthProvider, signInWithCredential } = await import("firebase/auth");
-
-    const googleCredential = GoogleAuthProvider.credential(idToken);
-
-    // Use your initialized Firebase auth instance
-    const userCredential = await signInWithCredential(auth, googleCredential);
+    const credential = GoogleAuthProvider.credential(idToken);
+    const userCredential = await signInWithCredential(auth, credential);
 
     console.log("✅ Google Sign-In (Native):", userCredential.user);
     navigation.navigate("WordOfTheDay");
-  } catch (error) {
-    let message = "An unknown error occurred";
-    if (error instanceof Error) {
-      message = error.message;
-    } else if (typeof error === "string") {
-      message = error;
-    }
+  } catch (error: any) {
     console.error("❌ Native Google Sign-In Error:", error);
-    Alert.alert("Google Sign-In Failed", message);
+    Alert.alert("Google Sign-In Failed", error.message || "Something went wrong.");
   }
 };
 
