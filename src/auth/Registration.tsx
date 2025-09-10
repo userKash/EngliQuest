@@ -13,7 +13,7 @@ import { useNavigation } from "@react-navigation/native";
 import type { RootStackParamList } from "../navigation/type";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 
-import { initFirebase } from "../../firebaseConfig"; // ✅ same as LoginScreen
+import { initFirebase } from "../../firebaseConfig"; 
 import Constants from "expo-constants";
 
 export default function RegistrationForm() {

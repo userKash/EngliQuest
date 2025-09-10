@@ -15,6 +15,14 @@ export default function HomeScreen() {
   const [avatar, setAvatar] = useState<any>(require('../../assets/userProfile.png'));
   const [userName, setUserName] = useState<string>('User');
 
+  // ✅ topic progress states
+  const [vocabPct, setVocabPct] = useState(0);
+  const [grammarPct, setGrammarPct] = useState(0);
+  const [readingPct, setReadingPct] = useState(0);
+  const [translationPct, setTranslationPct] = useState(0);
+  const [sentencePct, setSentencePct] = useState(0);
+  const [overallPct, setOverallPct] = useState(0);
+
   useEffect(() => {
     const loadAvatar = async () => {
       try {
@@ -33,36 +41,84 @@ export default function HomeScreen() {
         const user = auth.currentUser;
         if (!user) return;
 
+        // ✅ get user profile
         if (db.collection) {
-          // Native RNFirebase
           const doc = await db.collection('users').doc(user.uid).get();
           if (doc.exists) {
             setUserName(doc.data().name || 'User');
           }
         } else {
-          // Expo Go Firestore Web SDK
           const { doc, getDoc } = await import('firebase/firestore');
           const userDoc = await getDoc(doc(db, 'users', user.uid));
           if (userDoc.exists()) {
             setUserName(userDoc.data().name || 'User');
           }
         }
+
+        // ✅ get progress scores
+        let snap;
+        if (db.collection) {
+          snap = await db.collection('scores').where('userId', '==', user.uid).get();
+        } else {
+          const { collection, query, where, getDocs } = await import('firebase/firestore');
+          const q = query(collection(db, 'scores'), where('userId', '==', user.uid));
+          snap = await getDocs(q);
+        }
+
+        let vocab = 0,
+          grammar = 0,
+          reading = 0,
+          translation = 0,
+          sentence = 0;
+        let topicsAttempted = 0;
+
+        snap.forEach((doc: any) => {
+          const data = doc.data();
+          const pct = data.score ?? 0;
+
+          switch (data.quizType) {
+            case 'Vocabulary':
+              vocab = Math.max(vocab, pct);
+              break;
+            case 'Grammar':
+              grammar = Math.max(grammar, pct);
+              break;
+            case 'Reading':
+              reading = Math.max(reading, pct);
+              break;
+            case 'Translation':
+              translation = Math.max(translation, pct);
+              break;
+            case 'Sentence':
+              sentence = Math.max(sentence, pct);
+              break;
+          }
+        });
+
+        // count only attempted topics
+        const scores = [vocab, grammar, reading, translation, sentence];
+        topicsAttempted = scores.filter((s) => s > 0).length;
+
+        setVocabPct(vocab);
+        setGrammarPct(grammar);
+        setReadingPct(reading);
+        setTranslationPct(translation);
+        setSentencePct(sentence);
+
+        if (topicsAttempted > 0) {
+          const overall = Math.round(
+            scores.reduce((a, b) => a + b, 0) / topicsAttempted
+          );
+          setOverallPct(overall);
+        }
       } catch (err) {
-        console.error('Error fetching user data:', err);
+        console.error('Error fetching user/progress data:', err);
       }
     };
 
     loadAvatar();
     loadUser();
   }, []);
-
-  // NOTE: replace these with your real values later
-  const overallPct = 0;
-  const vocabPct = 0;
-  const grammarPct = 0;
-  const readingPct = 0;
-  const translationPct = 0;
-  const sentencePct = 0;
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' }}>
@@ -84,7 +140,6 @@ export default function HomeScreen() {
             <Text style={styles.cardTitle}>Overall Progress</Text>
             <Text style={styles.cardLabel}>Completion</Text>
 
-            {/* unified progress bar with percent */}
             <View style={styles.progressRow}>
               <View style={styles.progressBarBg}>
                 <View style={[styles.progressBarFill, { width: `${overallPct}%` }]} />
@@ -92,143 +147,93 @@ export default function HomeScreen() {
               <Text style={styles.progressPercent}>{overallPct}%</Text>
             </View>
 
-            <Text style={styles.totalQuizzes}>Total Quizzes: 1</Text>
+            <Text style={styles.totalQuizzes}>Total Quizzes: 5</Text>
           </View>
 
           <Text style={styles.sectionTitle}>Recommended topics</Text>
 
           {/* Vocabulary Builder */}
-          <View style={styles.topicCard}>
-            <View style={styles.topicLeft}>
-              <Image
-                source={require('../../assets/Vocabulary Builder.png')}
-                style={styles.topicIcon}
-              />
-              <View style={{ flex: 1 }}>
-                <Text style={styles.topicTitle}>Vocabulary Builder</Text>
-                <Text style={styles.topicDesc}>Learn new words with flashcards</Text>
-
-                <View style={styles.progressRow}>
-                  <View style={styles.progressBarBg}>
-                    <View style={[styles.progressBarFill, { width: `${vocabPct}%` }]} />
-                  </View>
-                  <Text style={styles.progressPercent}>{vocabPct}%</Text>
-                </View>
-              </View>
-            </View>
-            <TouchableOpacity
-              style={styles.startBtn}
-              onPress={() => navigation.navigate('VocabularyBuilder')}>
-              <Text style={styles.startText}>Start</Text>
-            </TouchableOpacity>
-          </View>
+          <TopicCard
+            title="Vocabulary Builder"
+            desc="Learn new words with flashcards"
+            progress={vocabPct}
+            onPress={() => navigation.navigate('VocabularyBuilder')}
+          />
 
           {/* Grammar Practice */}
-          <View style={styles.topicCard}>
-            <View style={styles.topicLeft}>
-              <Image
-                source={require('../../assets/Grammar Practice.png')}
-                style={styles.topicIcon}
-              />
-              <View style={{ flex: 1 }}>
-                <Text style={styles.topicTitle}>Grammar Practice</Text>
-                <Text style={styles.topicDesc}>Master English grammar rules</Text>
-
-                <View style={styles.progressRow}>
-                  <View style={styles.progressBarBg}>
-                    <View style={[styles.progressBarFill, { width: `${grammarPct}%` }]} />
-                  </View>
-                  <Text style={styles.progressPercent}>{grammarPct}%</Text>
-                </View>
-              </View>
-            </View>
-            <TouchableOpacity
-              style={styles.startBtn}
-              onPress={() => navigation.navigate('GrammarPractice')}>
-              <Text style={styles.startText}>Start</Text>
-            </TouchableOpacity>
-          </View>
+          <TopicCard
+            title="Grammar Practice"
+            desc="Master English grammar rules"
+            progress={grammarPct}
+            onPress={() => navigation.navigate('GrammarPractice')}
+          />
 
           {/* Reading Comprehension */}
-          <View style={styles.topicCard}>
-            <View style={styles.topicLeft}>
-              <Image
-                source={require('../../assets/Reading Comprehension.png')}
-                style={styles.topicIcon}
-              />
-              <View style={{ flex: 1 }}>
-                <Text style={styles.topicTitle}>Reading Comprehension</Text>
-                <Text style={styles.topicDesc}>Improve reading skills</Text>
-
-                <View style={styles.progressRow}>
-                  <View style={styles.progressBarBg}>
-                    <View style={[styles.progressBarFill, { width: `${readingPct}%` }]} />
-                  </View>
-                  <Text style={styles.progressPercent}>{readingPct}%</Text>
-                </View>
-              </View>
-            </View>
-            <TouchableOpacity
-              style={styles.startBtn}
-              onPress={() => navigation.navigate('ReadingComprehension')}>
-              <Text style={styles.startText}>Start</Text>
-            </TouchableOpacity>
-          </View>
+          <TopicCard
+            title="Reading Comprehension"
+            desc="Improve reading skills"
+            progress={readingPct}
+            onPress={() => navigation.navigate('ReadingComprehension')}
+          />
 
           {/* Filipino to English */}
-          <View style={styles.topicCard}>
-            <View style={styles.topicLeft}>
-              <Image
-                source={require('../../assets/Filipino to English.png')}
-                style={styles.topicIcon}
-              />
-              <View style={{ flex: 1 }}>
-                <Text style={styles.topicTitle}>Filipino to English</Text>
-                <Text style={styles.topicDesc}>Practice translation skills</Text>
-
-                <View style={styles.progressRow}>
-                  <View style={styles.progressBarBg}>
-                    <View style={[styles.progressBarFill, { width: `${translationPct}%` }]} />
-                  </View>
-                  <Text style={styles.progressPercent}>{translationPct}%</Text>
-                </View>
-              </View>
-            </View>
-            <TouchableOpacity
-              style={styles.startBtn}
-              onPress={() => navigation.navigate('FilipinoToEnglish')}>
-              <Text style={styles.startText}>Start</Text>
-            </TouchableOpacity>
-          </View>
+          <TopicCard
+            title="Filipino to English"
+            desc="Practice translation skills"
+            progress={translationPct}
+            onPress={() => navigation.navigate('FilipinoToEnglish')}
+          />
 
           {/* Sentence Construction */}
-          <View style={styles.topicCard}>
-            <View style={styles.topicLeft}>
-              <Image
-                source={require('../../assets/Sentence Construction.png')}
-                style={styles.topicIcon}
-              />
-              <View style={{ flex: 1 }}>
-                <Text style={styles.topicTitle}>Sentence Construction</Text>
-                <Text style={styles.topicDesc}>Arrange jumbled words</Text>
-
-                <View style={styles.progressRow}>
-                  <View style={styles.progressBarBg}>
-                    <View style={[styles.progressBarFill, { width: `${sentencePct}%` }]} />
-                  </View>
-                  <Text style={styles.progressPercent}>{sentencePct}%</Text>
-                </View>
-              </View>
-            </View>
-            <TouchableOpacity
-              style={styles.startBtn}
-              onPress={() => navigation.navigate('SentenceConstruction')}>
-              <Text style={styles.startText}>Start</Text>
-            </TouchableOpacity>
-          </View>
+          <TopicCard
+            title="Sentence Construction"
+            desc="Arrange jumbled words"
+            progress={sentencePct}
+            onPress={() => navigation.navigate('SentenceConstruction')}
+          />
         </ScrollView>
       </View>
     </SafeAreaView>
+  );
+}
+
+// ✅ extracted component for topic card
+function TopicCard({
+  title,
+  desc,
+  progress,
+  onPress,
+}: {
+  title: string;
+  desc: string;
+  progress: number;
+  onPress: () => void;
+}) {
+  return (
+    <View style={styles.topicCard}>
+      <View style={styles.topicLeft}>
+        <Image
+          source={require('../../assets/Vocabulary Builder.png')}
+          style={styles.topicIcon}
+        />
+        <View style={{ flex: 1 }}>
+          <Text style={styles.topicTitle}>{title}</Text>
+          <Text style={styles.topicDesc}>{desc}</Text>
+
+          <View style={styles.progressRow}>
+            <View style={styles.progressBarBg}>
+              <View style={[styles.progressBarFill, { width: `${progress}%` }]} />
+            </View>
+            <Text style={styles.progressPercent}>{progress}%</Text>
+          </View>
+        </View>
+      </View>
+      <TouchableOpacity style={styles.startBtn} onPress={onPress}>
+        <Text style={styles.startText}>
+          {progress >= 70 ? 'Review' : progress > 0 ? 'Continue' : 'Start'}
+        </Text>
+      </TouchableOpacity>
+    </View>
   );
 }
 
@@ -267,7 +272,6 @@ const styles = StyleSheet.create({
   },
   cardTitle: { fontSize: 14, fontWeight: 'bold', marginBottom: 8 },
   cardLabel: { fontSize: 12, color: '#666', marginBottom: 6 },
-
   progressRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -292,7 +296,6 @@ const styles = StyleSheet.create({
     textAlign: 'left',
     marginLeft: 2,
   },
-
   totalQuizzes: { fontSize: 10, color: '#999' },
   sectionTitle: { fontSize: 14, fontWeight: 'bold', marginBottom: 12 },
   topicCard: {

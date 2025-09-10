@@ -76,11 +76,10 @@ export default function LoginScreen() {
     }
   }, [response]);
 
-// ✅ Native (APK / IPA) flow
 const handleNativeGoogleLogin = async () => {
   try {
-    await initFirebase();           // ensure auth/db are ready
-    await configureGoogleSignin();  // ensure GoogleSignin is configured
+    await initFirebase();
+    await configureGoogleSignin();
 
     await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
     const { idToken } = await GoogleSignin.signIn();
@@ -99,9 +98,6 @@ const handleNativeGoogleLogin = async () => {
   }
 };
 
-
-
-  // ✅ Email/Password login
   const handleLogin = async () => {
     if (!email || !password) {
       Alert.alert("Missing Fields", "Please enter both email and password.");
@@ -135,7 +131,7 @@ const handleNativeGoogleLogin = async () => {
     <View style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContainer}>
         <Image source={require("../../assets/logo.png")} style={styles.logo} />
-        <Text style={styles.title}>Sign in</Text>
+        <Text style={styles.title}>Welcome! Sign in to continue learning</Text>
 
         {/* Email */}
         <Text style={styles.label}>Email</Text>
@@ -150,7 +146,6 @@ const handleNativeGoogleLogin = async () => {
           />
         </View>
 
-        {/* Password */}
         <Text style={styles.label}>Password</Text>
         <View style={styles.inputWrapper}>
           <Feather name="lock" size={18} color="gray" />
@@ -163,7 +158,6 @@ const handleNativeGoogleLogin = async () => {
           />
         </View>
 
-        {/* Google Sign-In button */}
         <TouchableOpacity
           style={styles.googleButton}
           disabled={isExpoGo ? !request : false}
@@ -178,12 +172,10 @@ const handleNativeGoogleLogin = async () => {
           <Text style={styles.googleButtonText}>Continue with Google</Text>
         </TouchableOpacity>
 
-        {/* Email/Password login button */}
         <TouchableOpacity style={styles.button} onPress={handleLogin}>
           <Text style={styles.buttonText}>Login</Text>
         </TouchableOpacity>
 
-        {/* ✅ Registration footer */}
         <View style={styles.footerContainer}>
           <Text style={styles.footerText}>Don't have an account? </Text>
           <TouchableOpacity onPress={() => navigation.navigate("Register")}>
@@ -198,8 +190,8 @@ const handleNativeGoogleLogin = async () => {
 const styles = StyleSheet.create({
   scrollContainer: { flexGrow: 1, alignItems: "center" },
   container: { flex: 1, backgroundColor: "#fff", paddingHorizontal: 20 },
-  logo: { width: 200, height: 100, marginTop: 80, marginBottom: 20 },
-  title: { fontSize: 20, fontWeight: "bold", marginBottom: 20 },
+  logo: { width: 300, height: 60, marginTop: 80, marginBottom: 20 },
+  title: { fontSize: 20, fontWeight: "medium", marginBottom: 20 },
   label: { color: "#374151", marginBottom: 4, alignSelf: "flex-start" },
   inputWrapper: {
     flexDirection: "row",

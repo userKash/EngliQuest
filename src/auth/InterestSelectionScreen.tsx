@@ -13,6 +13,7 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../navigation/type";
 import type { RouteProp } from "@react-navigation/native";
 import { initFirebase } from "../../firebaseConfig";
+import { createPersonalizedQuizClient } from "../../gemini.client";
 
 export default function InterestSelectionScreen() {
   const [selected, setSelected] = useState<string[]>([]);
@@ -29,7 +30,7 @@ export default function InterestSelectionScreen() {
     );
   };
 
-const handleCreateAccount = async () => {
+ const handleCreateAccount = async () => {
   if (selected.length < 3) {
     Alert.alert("Selection Required", "Please select at least 3 interests.");
     return;
@@ -43,22 +44,26 @@ const handleCreateAccount = async () => {
       return;
     }
 
+    const uid = user.uid;
+
     if (db.collection) {
-      await db.collection("users").doc(user.uid).set(
+      // ✅ RNFirebase
+      const firestore = db;
+      const { serverTimestamp } = firestore.constructor; // get FieldValue helpers
+      await firestore.collection("users").doc(uid).set(
         {
           name: fullName,
           email,
           interests: selected,
-          createdAt: new Date().toISOString(),
+          createdAt: serverTimestamp?.() ?? new Date(), // fallback if unavailable
         },
         { merge: true }
       );
     } else {
-      const { doc, setDoc, serverTimestamp } = await import(
-        "firebase/firestore"
-      );
+      // ✅ Firestore Web SDK
+      const { doc, setDoc, serverTimestamp } = await import("firebase/firestore");
       await setDoc(
-        doc(db, "users", user.uid),
+        doc(db, "users", uid),
         {
           name: fullName,
           email,
@@ -69,7 +74,40 @@ const handleCreateAccount = async () => {
       );
     }
 
-    Alert.alert("Welcome!", "Your account has been created successfully.");
+    // ✅ Generate personalized quiz via Gemini AI
+    const { quizId, questions } = await createPersonalizedQuizClient(
+      uid,
+      selected,
+      "Vocabulary",
+      "Easy"
+    );
+
+    if (db.collection) {
+      // ✅ RNFirebase
+      const firestore = db;
+      const { serverTimestamp } = firestore.constructor;
+      await firestore.collection("quizzes").doc(quizId).set({
+        quizId,
+        userId: uid,
+        gameMode: "Vocabulary",
+        difficulty: "Easy",
+        questions,
+        createdAt: serverTimestamp?.() ?? new Date(),
+      });
+    } else {
+      // ✅ Firestore Web SDK
+      const { doc, setDoc, serverTimestamp } = await import("firebase/firestore");
+      await setDoc(doc(db, "quizzes", quizId), {
+        quizId,
+        userId: uid,
+        gameMode: "Vocabulary",
+        difficulty: "Easy",
+        questions,
+        createdAt: serverTimestamp(),
+      });
+    }
+
+    Alert.alert("Welcome!", "Your account and quiz have been created successfully.");
     navigation.reset({
       index: 0,
       routes: [{ name: "WordOfTheDay" }],

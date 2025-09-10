@@ -143,7 +143,7 @@ export default function GrammarQuiz({ onFinish, onProgressChange }: Props) {
 
       {/* Sticky bottom button (same behavior/position as your Filipino→English quiz) */}
       {selected !== null && (
-        <View style={[styles.bottomBar, { paddingBottom: insets.bottom + 70 }]}>
+        <View style={[styles.bottomBar, { paddingBottom: insets.bottom + 100 }]}>
           <PrimaryButton label={last ? 'Finish' : 'Next Question'} onPress={handleNext} />
         </View>
       )}

@@ -245,13 +245,9 @@ export default function SentenceConstructionQuiz({ onProgressChange, levelId }: 
 
         <View style={{ height: 120 }} />
       </ScrollView>
-
-      {/* Bottom action */}
-      <View style={[styles.bottomBar, { paddingBottom: insets.bottom + 70 }]}>
+      <View style={[styles.bottomBar, { paddingBottom: insets.bottom + 120 }]}>
         <PrimaryButton label={actionLabel} onPress={actionHandler} disabled={actionDisabled} />
       </View>
-
-      {/* RESULT MODAL */}
       <ResultModal
         visible={showModal}
         score={correctCount}

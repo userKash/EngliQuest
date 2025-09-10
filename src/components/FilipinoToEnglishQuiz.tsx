@@ -53,8 +53,7 @@ export default function FilipinoToEnglishQuiz({ onProgressChange }: Props) {
   const [value, setValue] = useState('');
   const [locked, setLocked] = useState(false);
   const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
-  const [score, setScore] = useState(0); // points (kept if you use points elsewhere)
-
+  const [score, setScore] = useState(0);
   // Modal state
   const [showModal, setShowModal] = useState(false);
   const [review, setReview] = useState<ReviewItem[]>([]);
@@ -189,7 +188,7 @@ export default function FilipinoToEnglishQuiz({ onProgressChange }: Props) {
         </ScrollView>
 
         {/* Sticky button above bottom nav */}
-        <View style={[styles.bottomBar, { paddingBottom: insets.bottom + 70 }]}>
+        <View style={[styles.bottomBar, { paddingBottom: insets.bottom + 100 }]}>
           <PrimaryButton label={actionLabel} onPress={actionHandler} disabled={actionDisabled} />
         </View>
       </KeyboardAvoidingView>

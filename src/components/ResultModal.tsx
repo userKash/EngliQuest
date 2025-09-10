@@ -1,3 +1,5 @@
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import {
   Modal,
   View,
@@ -7,23 +9,22 @@ import {
   ScrollView,
   Pressable,
 } from 'react-native';
+import type { RootStackParamList } from '../navigation/type';
 
 type ReviewItem = {
   question: string;
   yourAnswer: string;
   isCorrect: boolean;
-  // optional correct answer if you ever want to show it
   correctAnswer?: string;
 };
 
 type ResultModalProps = {
   visible: boolean;
-  score: number; // e.g. 10
-  total: number; // e.g. 10
-  review: ReviewItem[]; // list of Q&A to render
-  onContinue: () => void; // press handler for button
-  onRequestClose?: () => void; // Android back / overlay press
-  title?: string; // default: "🎉 Congratulations!"
+  score: number;
+  total: number;
+  review: ReviewItem[];
+  onRequestClose?: () => void;
+  title?: string;
 };
 
 export default function ResultModal({
@@ -31,14 +32,28 @@ export default function ResultModal({
   score,
   total,
   review,
-  onContinue,
   onRequestClose,
   title = '🎉 Congratulations!',
 }: ResultModalProps) {
+  const navigation =
+    useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+
   const pct = Math.round((score / Math.max(total, 1)) * 100);
 
+  const handleContinue = () => {
+    navigation.reset({
+      index: 0,
+      routes: [{ name: 'Home' }], // ✅ safe, matches RootStackParamList
+    });
+  };
+
   return (
-    <Modal visible={visible} animationType="fade" transparent onRequestClose={onRequestClose}>
+    <Modal
+      visible={visible}
+      animationType="fade"
+      transparent
+      onRequestClose={onRequestClose}
+    >
       {/* Overlay */}
       <Pressable style={styles.overlay} onPress={onRequestClose} />
 
@@ -56,22 +71,30 @@ export default function ResultModal({
           <ScrollView
             style={styles.list}
             contentContainerStyle={{ paddingBottom: 8 }}
-            showsVerticalScrollIndicator={false}>
+            showsVerticalScrollIndicator={false}
+          >
             {review.map((item, idx) => (
               <View key={idx} style={styles.qaItem}>
                 <Text style={styles.qText}>{`Q${idx + 1}. ${item.question}`}</Text>
-                <Text style={[styles.aText, item.isCorrect ? styles.correct : styles.incorrect]}>
+                <Text
+                  style={[
+                    styles.aText,
+                    item.isCorrect ? styles.correct : styles.incorrect,
+                  ]}
+                >
                   Your answer: {item.yourAnswer} {item.isCorrect ? '✓' : '✗'}
                 </Text>
 
                 {!item.isCorrect && item.correctAnswer ? (
-                  <Text style={styles.correctRef}>Correct answer: {item.correctAnswer}</Text>
+                  <Text style={styles.correctRef}>
+                    Correct answer: {item.correctAnswer}
+                  </Text>
                 ) : null}
               </View>
             ))}
           </ScrollView>
 
-          <TouchableOpacity onPress={onContinue} style={styles.cta}>
+          <TouchableOpacity onPress={handleContinue} style={styles.cta}>
             <Text style={styles.ctaText}>Continue</Text>
           </TouchableOpacity>
         </View>

@@ -1,5 +1,5 @@
 import db from "./firebase-admin.js";
-import { createPersonalizedQuiz } from "./gemini.ts"; 
+import { createPersonalizedQuiz } from "../gemini.ts"; 
 
 async function runUserQuiz(userId: string) {
 try {

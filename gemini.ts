@@ -1,5 +1,5 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import db from "./firebase-admin.js";
+import db from "./node_scripts/firebase-admin.js";
 
 const GEMINI_API_KEY = "AIzaSyDAuUE91Dylc_wPOulknZBgGW--_YlZ_v4";
 const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
@@ -53,7 +53,7 @@ export async function generateQuiz(
         ]
     `;
 
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" }); //if error 503, just change the model
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" }); 
     const result = await model.generateContent(prompt);
 
     try {
