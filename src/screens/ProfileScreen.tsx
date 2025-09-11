@@ -1,3 +1,4 @@
+// src/screens/ProfileScreen.tsx
 import React, { useState, useCallback } from 'react';
 import {
   View,
@@ -12,12 +13,14 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons, Ionicons, Feather } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { signOut, onAuthStateChanged } from 'firebase/auth';
 import { auth } from '../../firebaseConfig';
-import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../navigation/type';
+
+import LogoutModal from '../components/LogoutModal';
+import ChangePasswordModal from '../components/ChangePasswordModal';
 
 const AVATARS = [
   require('../../assets/avatars/Ellipse1.png'),
@@ -37,6 +40,9 @@ type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'Profile'>;
 export default function ProfileScreen() {
   const [selectedAvatar, setSelectedAvatar] = useState<any>(AVATARS[0]);
   const [email, setEmail] = useState<string>('');
+  const [logoutVisible, setLogoutVisible] = useState(false);
+  const [changePassVisible, setChangePassVisible] = useState(false);
+
   const navigation = useNavigation<NavigationProp>();
 
   useFocusEffect(
@@ -72,23 +78,6 @@ export default function ProfileScreen() {
     }
   };
 
-  const handleLogout = async () => {
-    try {
-      await signOut(auth);
-      Alert.alert('Logout', 'You have been logged out.');
-      navigation.reset({
-        index: 0,
-        routes: [{ name: 'Login' }],
-      });
-    } catch (error: any) {
-      Alert.alert('Error', error.message || 'Logout failed.');
-    }
-  };
-
-  const handleChangePassword = () => {
-    Alert.alert('Change Password', 'Open change password flow (mock).');
-  };
-
   return (
     <View style={styles.screen}>
       <SafeAreaView edges={['top']} style={{ backgroundColor: '#fff' }}>
@@ -98,6 +87,7 @@ export default function ProfileScreen() {
       </SafeAreaView>
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        {/* Avatar Card */}
         <View style={styles.card}>
           <View style={styles.currentAvatarWrap}>
             <View style={styles.currentAvatarCircle}>
@@ -122,6 +112,7 @@ export default function ProfileScreen() {
           </View>
         </View>
 
+        {/* Chips */}
         <View style={styles.chipsRow}>
           <Chip icon={<Feather name="music" size={18} color="#3b82f6" />} label="Music" />
           <Chip
@@ -134,25 +125,67 @@ export default function ProfileScreen() {
           />
         </View>
 
+        {/* Profile Info */}
         <Text style={styles.sectionLabel}>Email</Text>
         <TextInput style={styles.inputReadOnly} value={email} editable={false} />
 
         <Text style={styles.sectionLabel}>In-Game Name</Text>
         <TextInput style={styles.inputReadOnly} value="AstroBoy" editable={false} />
 
+        {/* Password Settings */}
         <Text style={styles.sectionLabel}>Password Settings</Text>
-        <TouchableOpacity style={styles.actionButton} onPress={handleChangePassword}>
+        <TouchableOpacity style={styles.actionButton} onPress={() => setChangePassVisible(true)}>
           <MaterialIcons name="lock-reset" size={20} color="#ef4444" style={{ marginRight: 10 }} />
           <Text style={styles.actionButtonText}>Change Password</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={[styles.actionButton, styles.logout]} onPress={handleLogout}>
+        {/* Logout */}
+        <TouchableOpacity
+          style={[styles.actionButton, styles.logout]}
+          onPress={() => setLogoutVisible(true)}>
           <MaterialIcons name="logout" size={20} color="#ef4444" style={{ marginRight: 10 }} />
           <Text style={[styles.actionButtonText, { color: '#ef4444' }]}>Logout</Text>
         </TouchableOpacity>
 
         <View style={{ height: 90 }} />
       </ScrollView>
+
+      {/* Logout Modal */}
+      <LogoutModal
+        visible={logoutVisible}
+        onCancel={() => setLogoutVisible(false)}
+        onConfirm={async () => {
+          try {
+            await signOut(auth);
+            setLogoutVisible(false);
+            navigation.reset({
+              index: 0,
+              routes: [{ name: 'Login' }],
+            });
+          } catch (error: any) {
+            Alert.alert('Error', error.message || 'Logout failed.');
+          }
+        }}
+      />
+
+      {/* Change Password Modal */}
+      <ChangePasswordModal
+        visible={changePassVisible}
+        onCancel={() => setChangePassVisible(false)}
+        onConfirm={(current, newPass, confirmPass) => {
+          if (!current || !newPass || !confirmPass) {
+            Alert.alert('Error', 'Please fill in all fields.');
+            return;
+          }
+          if (newPass !== confirmPass) {
+            Alert.alert('Error', 'Passwords do not match.');
+            return;
+          }
+          // TODO: implement real password update with Firebase
+          Alert.alert('Success', 'Password updated successfully (mock).');
+          setChangePassVisible(false);
+        }}
+      />
     </View>
   );
 }

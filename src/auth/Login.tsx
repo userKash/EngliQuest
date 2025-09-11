@@ -5,20 +5,23 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  Alert,
   StyleSheet,
   ScrollView,
+  Alert,
+  Dimensions,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import Fontisto from "@expo/vector-icons/Fontisto";
 import { Feather } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import type { RootStackParamList } from "../navigation/type";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 
-import { auth, configureGoogleSignin, initFirebase } from "../../firebaseConfig"; 
+import { auth, configureGoogleSignin, initFirebase } from "../../firebaseConfig";
 import Constants from "expo-constants";
 import * as GoogleAuthSession from "expo-auth-session/providers/google";
 import * as WebBrowser from "expo-web-browser";
+import ErrorModal from "../components/ErrorModal";
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -30,12 +33,18 @@ if (Constants.executionEnvironment !== "storeClient") {
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, "Login">;
 
+const { width } = Dimensions.get("window");
+const scale = width / 375; // iPhone X base width
+
 export default function LoginScreen() {
   const navigation = useNavigation<NavigationProp>();
   const isExpoGo = Constants.appOwnership === "expo";
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+
+  const [errorVisible, setErrorVisible] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
 
   // ✅ Web (Expo Go) flow
   const [request, response, promptAsync] =
@@ -52,7 +61,8 @@ export default function LoginScreen() {
     if (isExpoGo && response?.type === "success") {
       const { id_token } = response.params;
       if (!id_token) {
-        Alert.alert("Google Sign-In Failed", "No ID token received.");
+        setErrorMessage("Google Sign-In Failed: No ID token received.");
+        setErrorVisible(true);
         return;
       }
 
@@ -70,37 +80,47 @@ export default function LoginScreen() {
           })
           .catch((error) => {
             console.error("❌ Firebase Google Sign-In Error:", error);
-            Alert.alert("Google Sign-In Failed", error.message);
+            setErrorMessage(getFirebaseErrorMessage(error));
+            setErrorVisible(true);
           });
       })();
     }
   }, [response]);
 
-const handleNativeGoogleLogin = async () => {
-  try {
-    await initFirebase();
-    await configureGoogleSignin();
+  const handleNativeGoogleLogin = async () => {
+    try {
+      await initFirebase();
+      await configureGoogleSignin();
 
-    await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
-    const { idToken } = await GoogleSignin.signIn();
+      await GoogleSignin.hasPlayServices({
+        showPlayServicesUpdateDialog: true,
+      });
+      const { idToken } = await GoogleSignin.signIn();
 
-    if (!idToken) throw new Error("No ID token returned. Check Firebase SHA-1/256 config.");
+      if (!idToken)
+        throw new Error(
+          "No ID token returned. Check Firebase SHA-1/256 config."
+        );
 
-    const { GoogleAuthProvider, signInWithCredential } = await import("firebase/auth");
-    const credential = GoogleAuthProvider.credential(idToken);
-    const userCredential = await signInWithCredential(auth, credential);
+      const { GoogleAuthProvider, signInWithCredential } = await import(
+        "firebase/auth"
+      );
+      const credential = GoogleAuthProvider.credential(idToken);
+      const userCredential = await signInWithCredential(auth, credential);
 
-    console.log("✅ Google Sign-In (Native):", userCredential.user);
-    navigation.navigate("WordOfTheDay");
-  } catch (error: any) {
-    console.error("❌ Native Google Sign-In Error:", error);
-    Alert.alert("Google Sign-In Failed", error.message || "Something went wrong.");
-  }
-};
+      console.log("✅ Google Sign-In (Native):", userCredential.user);
+      navigation.navigate("WordOfTheDay");
+    } catch (error: any) {
+      console.error("❌ Native Google Sign-In Error:", error);
+      setErrorMessage(getFirebaseErrorMessage(error));
+      setErrorVisible(true);
+    }
+  };
 
   const handleLogin = async () => {
     if (!email || !password) {
-      Alert.alert("Missing Fields", "Please enter both email and password.");
+      setErrorMessage("Please enter both email and password.");
+      setErrorVisible(true);
       return;
     }
     try {
@@ -123,76 +143,135 @@ const handleNativeGoogleLogin = async () => {
       navigation.navigate("WordOfTheDay");
     } catch (error: any) {
       console.error("❌ Email/Password login error:", error);
-      Alert.alert("Login Failed", error.message || "Something went wrong.");
+      setErrorMessage(getFirebaseErrorMessage(error));
+      setErrorVisible(true);
     }
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.safeArea}>
       <ScrollView contentContainerStyle={styles.scrollContainer}>
-        <Image source={require("../../assets/logo.png")} style={styles.logo} />
-        <Text style={styles.title}>Welcome! Sign in to continue learning</Text>
+        <View style={styles.inner}>
+          <Image source={require("../../assets/logo.png")} style={styles.logo} />
+          <Text style={styles.title}>Welcome! Sign in to continue learning</Text>
 
-        {/* Email */}
-        <Text style={styles.label}>Email</Text>
-        <View style={styles.inputWrapper}>
-          <Fontisto name="email" size={20} color="#A2A2A2" />
-          <TextInput
-            style={styles.inputField}
-            placeholder="Enter your email"
-            value={email}
-            onChangeText={setEmail}
-            autoCapitalize="none"
-          />
-        </View>
+          {/* Email */}
+          <Text style={styles.label}>Email</Text>
+          <View style={styles.inputWrapper}>
+            <Fontisto name="email" size={20} color="#A2A2A2" />
+            <TextInput
+              style={styles.inputField}
+              placeholder="Enter your email"
+              value={email}
+              onChangeText={setEmail}
+              autoCapitalize="none"
+            />
+          </View>
 
-        <Text style={styles.label}>Password</Text>
-        <View style={styles.inputWrapper}>
-          <Feather name="lock" size={18} color="gray" />
-          <TextInput
-            style={styles.inputField}
-            placeholder="Enter your password"
-            secureTextEntry
-            value={password}
-            onChangeText={setPassword}
-          />
-        </View>
+          <Text style={styles.label}>Password</Text>
+          <View style={styles.inputWrapper}>
+            <Feather name="lock" size={18} color="gray" />
+            <TextInput
+              style={styles.inputField}
+              placeholder="Enter your password"
+              secureTextEntry
+              value={password}
+              onChangeText={setPassword}
+            />
+          </View>
 
-        <TouchableOpacity
-          style={styles.googleButton}
-          disabled={isExpoGo ? !request : false}
-          onPress={() =>
-            isExpoGo ? promptAsync() : handleNativeGoogleLogin()
-          }
-        >
-          <Image
-            source={require("../../assets/googleIcon.png")}
-            style={styles.googleIcon}
-          />
-          <Text style={styles.googleButtonText}>Continue with Google</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.button} onPress={handleLogin}>
-          <Text style={styles.buttonText}>Login</Text>
-        </TouchableOpacity>
-
-        <View style={styles.footerContainer}>
-          <Text style={styles.footerText}>Don't have an account? </Text>
-          <TouchableOpacity onPress={() => navigation.navigate("Register")}>
-            <Text style={styles.linkText}>Sign up here</Text>
+          {/* Google login */}
+          <TouchableOpacity
+            style={styles.googleButton}
+            disabled={isExpoGo ? !request : false}
+            onPress={() => (isExpoGo ? promptAsync() : handleNativeGoogleLogin())}
+          >
+            <Image
+              source={require("../../assets/googleIcon.png")}
+              style={styles.googleIcon}
+            />
+            <Text style={styles.googleButtonText}>Continue with Google</Text>
           </TouchableOpacity>
+
+          {/* Email login */}
+          <TouchableOpacity style={styles.button} onPress={handleLogin}>
+            <Text style={styles.buttonText}>Login</Text>
+          </TouchableOpacity>
+
+          <View style={styles.footerContainer}>
+            <Text style={styles.footerText}>Don't have an account? </Text>
+            <TouchableOpacity onPress={() => navigation.navigate("Register")}>
+              <Text style={styles.linkText}>Sign up here</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </ScrollView>
-    </View>
+
+      {/* Error Modal */}
+      <ErrorModal
+        visible={errorVisible}
+        onClose={() => setErrorVisible(false)}
+        onRetry={() => setErrorVisible(false)} // just closes modal
+        onForgotPassword={() => {
+          setErrorVisible(false);
+          Alert.alert("Forgot Password", "Password reset feature coming soon!");
+        }}
+        message={errorMessage}
+      />
+    </SafeAreaView>
   );
 }
 
+function getFirebaseErrorMessage(error: any): string {
+  switch (error.code) {
+    case "auth/invalid-email":
+      return "The email address is not valid.";
+    case "auth/user-not-found":
+      return "No account found with this email.";
+    case "auth/wrong-password":
+      return "The password you entered is incorrect.";
+    case "auth/invalid-credential":
+      return "Your credentials are invalid or expired. Please try again.";
+    case "auth/network-request-failed":
+      return "Network error. Check your connection.";
+    default:
+      return "Something went wrong. Please try again.";
+  }
+}
+
 const styles = StyleSheet.create({
-  scrollContainer: { flexGrow: 1, alignItems: "center" },
-  container: { flex: 1, backgroundColor: "#fff", paddingHorizontal: 20 },
-  logo: { width: 300, height: 60, marginTop: 80, marginBottom: 20 },
-  title: { fontSize: 20, fontWeight: "medium", marginBottom: 20 },
-  label: { color: "#374151", marginBottom: 4, alignSelf: "flex-start" },
+  safeArea: { flex: 1, backgroundColor: "#fff" },
+  scrollContainer: {
+    flexGrow: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 20,
+  },
+  inner: {
+    width: "100%",
+    maxWidth: 400, // keeps form narrow on tablets
+    alignItems: "center",
+    paddingHorizontal: 20,
+  },
+  logo: {
+    width: width * 0.7,
+    height: width * 0.14,
+    resizeMode: "contain",
+    marginTop: 40,
+    marginBottom: 20,
+  },
+  title: {
+    fontSize: Math.round(20 * scale),
+    fontWeight: "500",
+    marginBottom: 20,
+    textAlign: "center",
+  },
+  label: {
+    color: "#374151",
+    marginBottom: 4,
+    alignSelf: "flex-start",
+    fontSize: Math.round(14 * scale),
+  },
   inputWrapper: {
     flexDirection: "row",
     alignItems: "center",
@@ -204,10 +283,16 @@ const styles = StyleSheet.create({
     height: 50,
     width: "100%",
   },
-  inputField: { flex: 1, fontSize: 16, color: "#111827", marginLeft: 10 },
+  inputField: {
+    flex: 1,
+    fontSize: Math.round(16 * scale),
+    color: "#111827",
+    marginLeft: 10,
+  },
   googleButton: {
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "center",
     borderWidth: 1,
     borderColor: "#ccc",
     borderRadius: 8,
@@ -215,9 +300,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     backgroundColor: "#fff",
     marginTop: 20,
+    width: "100%",
   },
   googleIcon: { width: 20, height: 20, marginRight: 10 },
-  googleButtonText: { color: "#111111" },
+  googleButtonText: { color: "#111111", fontSize: Math.round(14 * scale) },
   button: {
     backgroundColor: "#5E67CC",
     paddingVertical: 12,
@@ -225,12 +311,21 @@ const styles = StyleSheet.create({
     marginTop: 20,
     width: "100%",
   },
-  buttonText: { color: "#fff", textAlign: "center" },
+  buttonText: {
+    color: "#fff",
+    textAlign: "center",
+    fontSize: Math.round(16 * scale),
+    fontWeight: "600",
+  },
   footerContainer: {
     flexDirection: "row",
     justifyContent: "center",
     marginTop: 20,
   },
-  footerText: { color: "#1f2937", fontSize: 14 },
-  linkText: { color: "#2563eb", fontSize: 16, fontWeight: "600" },
+  footerText: { color: "#1f2937", fontSize: Math.round(14 * scale) },
+  linkText: {
+    color: "#2563eb",
+    fontSize: Math.round(16 * scale),
+    fontWeight: "600",
+  },
 });
