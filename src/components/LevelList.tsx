@@ -137,7 +137,7 @@ export default function LevelList({
     // Stop here if locked
     if (isLocked) return;
 
-    onStartSubLevel(subId); // delegate to parent (e.g., navigation)
+    onStartSubLevel(subId); 
   };
 
   return (
@@ -152,7 +152,6 @@ export default function LevelList({
             </Text>
           </View>
 
-          {/* Dots on the right */}
           <View
             style={styles.progressDots}
             accessible

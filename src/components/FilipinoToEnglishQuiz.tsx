@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import PrimaryButton from './PrimaryButton';
-import ResultModal from './ResultModal'; // <--- make sure path is correct
+import ResultModal from './ResultModal'; 
 
 type QA = {
   filipino: string;
@@ -54,7 +54,6 @@ export default function FilipinoToEnglishQuiz({ onProgressChange }: Props) {
   const [locked, setLocked] = useState(false);
   const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
   const [score, setScore] = useState(0);
-  // Modal state
   const [showModal, setShowModal] = useState(false);
   const [review, setReview] = useState<ReviewItem[]>([]);
   const [correctCount, setCorrectCount] = useState(0);
@@ -78,7 +77,6 @@ export default function FilipinoToEnglishQuiz({ onProgressChange }: Props) {
       setCorrectCount((c) => c + 1);
     }
 
-    // push review entry
     setReview((r) => [
       ...r,
       {
@@ -100,7 +98,6 @@ export default function FilipinoToEnglishQuiz({ onProgressChange }: Props) {
       setLocked(false);
       setIsCorrect(null);
     } else {
-      // FINISHED -> open modal
       setShowModal(true);
     }
   };
@@ -110,7 +107,7 @@ export default function FilipinoToEnglishQuiz({ onProgressChange }: Props) {
   const actionDisabled = locked ? false : value.trim().length === 0;
 
   const handleContinueFromModal = () => {
-    // Close modal and reset for replay (customize as needed)
+    // Close modal and reset for replay 
     setShowModal(false);
     setIndex(0);
     setValue('');

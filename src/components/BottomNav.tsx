@@ -1,4 +1,3 @@
-// src/components/BottomNav.tsx
 import React from 'react';
 import { View, TouchableOpacity, Text, StyleSheet } from 'react-native';
 import { Feather } from '@expo/vector-icons';
@@ -44,7 +43,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: 0,
     right: 0,
-    bottom: 0, // pinned to bottom (no floating)
+    bottom: 0, 
     zIndex: 1000,
   },
   bar: {

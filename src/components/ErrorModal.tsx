@@ -32,10 +32,9 @@ export default function ErrorModal({
     >
       <View style={styles.overlay}>
         <View style={styles.modal}>
-          {/* Replace Ionicons with Image */}
+
           <Image
-            source={require("../../assets/errorIcon.png")} // 👈 put your image here
-            style={styles.icon}
+            source={require("../../assets/errorIcon.png")} 
             resizeMode="contain"
           />
 

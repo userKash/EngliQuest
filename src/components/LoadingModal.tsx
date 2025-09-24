@@ -1,15 +1,13 @@
-// src/components/LoadingModal.tsx
 import React from "react";
 import { Modal, View, Text, ActivityIndicator, StyleSheet } from "react-native";
 
-// 🔹 Reusable loading modal component
 export default function LoadingModal({ visible, message }: { visible: boolean; message?: string }) {
   return (
     <Modal
       visible={visible}
       transparent
       animationType="fade"
-      onRequestClose={() => {}} // Prevent Android back dismiss
+      onRequestClose={() => {}} 
     >
       <View style={styles.overlay}>
         <View style={styles.content}>
