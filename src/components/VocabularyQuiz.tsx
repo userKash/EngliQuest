@@ -281,6 +281,6 @@ const styles = StyleSheet.create({
     right: 16,
     bottom: 0,
     paddingTop: 10,
-    backgroundColor: "#fff",
+    backgroundColor: "transparent",
   },
 });

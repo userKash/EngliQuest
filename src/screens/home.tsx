@@ -106,9 +106,7 @@ export default function HomeScreen() {
         setSentencePct(sentence);
 
         if (topicsAttempted > 0) {
-          const overall = Math.round(
-            scores.reduce((a, b) => a + b, 0) / topicsAttempted
-          );
+          const overall = Math.round(scores.reduce((a, b) => a + b, 0) / topicsAttempted);
           setOverallPct(overall);
         }
       } catch (err) {
@@ -157,6 +155,7 @@ export default function HomeScreen() {
             title="Vocabulary Builder"
             desc="Learn new words with flashcards"
             progress={vocabPct}
+            icon={require('../../assets/Vocabulary Builder.png')}
             onPress={() => navigation.navigate('VocabularyBuilder')}
           />
 
@@ -165,6 +164,7 @@ export default function HomeScreen() {
             title="Grammar Practice"
             desc="Master English grammar rules"
             progress={grammarPct}
+            icon={require('../../assets/Grammar Practice.png')}
             onPress={() => navigation.navigate('GrammarPractice')}
           />
 
@@ -173,6 +173,7 @@ export default function HomeScreen() {
             title="Reading Comprehension"
             desc="Improve reading skills"
             progress={readingPct}
+            icon={require('../../assets/Reading Comprehension.png')}
             onPress={() => navigation.navigate('ReadingComprehension')}
           />
 
@@ -181,6 +182,7 @@ export default function HomeScreen() {
             title="Filipino to English"
             desc="Practice translation skills"
             progress={translationPct}
+            icon={require('../../assets/Filipino to English.png')}
             onPress={() => navigation.navigate('FilipinoToEnglish')}
           />
 
@@ -189,6 +191,7 @@ export default function HomeScreen() {
             title="Sentence Construction"
             desc="Arrange jumbled words"
             progress={sentencePct}
+            icon={require('../../assets/Sentence Construction.png')}
             onPress={() => navigation.navigate('SentenceConstruction')}
           />
         </ScrollView>
@@ -202,20 +205,19 @@ function TopicCard({
   title,
   desc,
   progress,
+  icon,
   onPress,
 }: {
   title: string;
   desc: string;
   progress: number;
+  icon: any;
   onPress: () => void;
 }) {
   return (
     <View style={styles.topicCard}>
       <View style={styles.topicLeft}>
-        <Image
-          source={require('../../assets/Vocabulary Builder.png')}
-          style={styles.topicIcon}
-        />
+        <Image source={icon} style={styles.topicIcon} />
         <View style={{ flex: 1 }}>
           <Text style={styles.topicTitle}>{title}</Text>
           <Text style={styles.topicDesc}>{desc}</Text>

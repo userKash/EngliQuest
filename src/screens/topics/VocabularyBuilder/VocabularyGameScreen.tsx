@@ -1,10 +1,20 @@
 import React, { useEffect, useState, useLayoutEffect } from "react";
-import { View, Text, StyleSheet, ActivityIndicator } from "react-native";
+import {
+  View,
+  Text,
+  StyleSheet,
+  ActivityIndicator,
+  BackHandler,
+  TouchableOpacity,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import InstructionCard from "../../../components/InstructionCard";
-import VocabularyQuiz from "../../../components/VocabularyQuiz"; 
-import {initFirebase } from "../../../../firebaseConfig";
+import VocabularyQuiz from "../../../components/VocabularyQuiz";
+import { initFirebase } from "../../../../firebaseConfig";
+import ExitQuizModal from "../../../components/ExitQuizModal";
+import BottomNav from "../../../components/BottomNav";
+import { Ionicons } from "@expo/vector-icons";
 
 type Question = {
   question: string;
@@ -22,6 +32,61 @@ export default function VocabularyGameScreen() {
   });
   const [questions, setQuestions] = useState<Question[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // 🚨 Exit warning modal
+  const [showExitModal, setShowExitModal] = useState(false);
+
+  // ✅ Handle Android hardware back
+  useEffect(() => {
+    const backAction = () => {
+      if (step === "quiz") {
+        setShowExitModal(true);
+        return true; // block default back
+      }
+      return false;
+    };
+
+    const backHandler = BackHandler.addEventListener(
+      "hardwareBackPress",
+      backAction
+    );
+
+    return () => backHandler.remove();
+  }, [step]);
+
+  // ✅ Handle navigation header + disable iOS swipe back
+  useLayoutEffect(() => {
+    if (step === "quiz") {
+      navigation.setOptions({
+        gestureEnabled: false, // disable swipe back on iOS
+        headerTitle: () => (
+          <View style={{ alignItems: "center" }}>
+            <Text style={{ fontSize: 18, fontWeight: "bold" }}>
+              Vocabulary Practice
+            </Text>
+            <Text style={{ fontSize: 12, color: "#555" }}>
+              Easy – Question {progress.current + 1} of {progress.total}
+            </Text>
+          </View>
+        ),
+    headerLeft: () => (
+      <TouchableOpacity
+        onPress={() => setShowExitModal(true)}
+        style={{ marginLeft: 12, flexDirection: "row", alignItems: "center" }}
+      >
+        <Ionicons name="arrow-back" size={24} />
+      </TouchableOpacity>
+    ),
+      });
+    } else {
+      navigation.setOptions({
+        gestureEnabled: true,
+        headerTitle: "Vocabulary Practice",
+        headerLeft: undefined,
+      });
+    }
+  }, [step, progress]);
+
 
   useEffect(() => {
     const loadQuiz = async () => {
@@ -101,24 +166,6 @@ export default function VocabularyGameScreen() {
 
     loadQuiz();
   }, []);
-  useLayoutEffect(() => {
-    if (step === "quiz") {
-      navigation.setOptions({
-        headerTitle: () => (
-          <View style={{ alignItems: "center" }}>
-            <Text style={{ fontSize: 18, fontWeight: "bold" }}>
-              Vocabulary Practice
-            </Text>
-            <Text style={{ fontSize: 12, color: "#555" }}>
-              Easy – Question {progress.current + 1} of {progress.total}
-            </Text>
-          </View>
-        ),
-      });
-    } else {
-      navigation.setOptions({ headerTitle: "Vocabulary Practice" });
-    }
-  }, [step, progress]);
 
   const instructions = {
     title: "Vocabulary Practice",
@@ -148,6 +195,8 @@ export default function VocabularyGameScreen() {
     );
   }
 
+  const currentRoute = (navigation as any).getState().routes.slice(-1)[0].name;
+
   return (
     <SafeAreaView style={styles.screen}>
       {step === "instructions" ? (
@@ -160,16 +209,32 @@ export default function VocabularyGameScreen() {
           onNext={() => setStep("quiz")}
         />
       ) : (
-      <VocabularyQuiz
-        questions={questions.map((q) => ({
-          prompt: q.question,      
-          choices: q.options,
-          correctIndex: q.correctIndex,
-          sentence: q.explanation, 
-        }))}
-        onProgressChange={setProgress}
-      />
+        <VocabularyQuiz
+          questions={questions.map((q) => ({
+            prompt: q.question,
+            choices: q.options,
+            correctIndex: q.correctIndex,
+            sentence: q.explanation,
+          }))}
+          onProgressChange={setProgress}
+        />
       )}
+
+      <ExitQuizModal
+        visible={showExitModal}
+        onCancel={() => setShowExitModal(false)}
+        onConfirm={() => {
+          setShowExitModal(false);
+          navigation.goBack(); // exit quiz
+        }}
+      />
+
+      <BottomNav
+        currentRoute={currentRoute}
+        onNavigate={(name) => navigation.navigate(name as never)}
+        inQuiz={step === "quiz"}
+        onBlockedNav={() => setShowExitModal(true)}
+      />
     </SafeAreaView>
   );
 }
@@ -181,8 +246,9 @@ const styles = StyleSheet.create({
     padding: 16,
     justifyContent: "space-between",
   },
-  center: { 
-    flex: 1, 
+  center: {
+    flex: 1,
     justifyContent: "center",
-    alignItems: "center" },
+    alignItems: "center",
+  },
 });

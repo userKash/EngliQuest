@@ -54,51 +54,66 @@ export default function App() {
   }
 
   return (
-    <NavigationContainer
-      ref={navRef}
-      onReady={() => setCurrentRoute(navRef.getCurrentRoute()?.name)}
-      onStateChange={() => setCurrentRoute(navRef.getCurrentRoute()?.name)}>
-      <View style={{ flex: 1 }}>
-        <Stack.Navigator
-          screenOptions={{
-            headerBackTitle: '',
-            headerTitleAlign: 'left',
-            headerShadowVisible: false,
-          }}>
-          <Stack.Screen name="Login" component={LoginScreen} options={{ headerShown: false }} />
-          <Stack.Screen name="Register" component={RegistrationForm} />
-          <Stack.Screen
-            name="WordOfTheDay"
-            component={WordOfTheDayScreen}
-            options={{ headerShown: false }}
-          />
-          <Stack.Screen name="InterestSelection" component={InterestSelectionScreen} />
-          <Stack.Screen name="VocabularyBuilder" component={VocabularyBuilderScreen} />
-          <Stack.Screen name="VocabularyGame" component={VocabularyGameScreen} />
-          <Stack.Screen name="GrammarPractice" component={GrammarPracticeScreen} />
-          <Stack.Screen name="GrammarGame" component={GrammarGameScreen} />
-          <Stack.Screen name="ReadingComprehension" component={ReadingComprehensionScreen} />
-          <Stack.Screen name="ReadingGame" component={ReadingGameScreen} />
-          <Stack.Screen name="FilipinoToEnglish" component={FilipinoToEnglishScreen} />
-          <Stack.Screen name="FilipinoToEnglishGame" component={FilipinoToEnglishGameScreen} />
-          <Stack.Screen name="SentenceConstruction" component={SentenceConstructionScreen} />
-          <Stack.Screen
-            name="SentenceConstructionGame"
-            component={SentenceConstructionGameScreen}
-          />
+<NavigationContainer
+  ref={navRef}
+  onReady={() => setCurrentRoute(navRef.getCurrentRoute()?.name)}
+  onStateChange={() => setCurrentRoute(navRef.getCurrentRoute()?.name)}
+>
+  <View style={{ flex: 1 }}>
+    {/* ✅ Navigator should only have Screen/Group inside */}
+    <Stack.Navigator
+      screenOptions={{
+        headerBackTitle: '',
+        headerTitleAlign: 'left',
+        headerShadowVisible: false,
+      }}
+    >
+      <Stack.Screen name="Login" component={LoginScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="Register" component={RegistrationForm} />
+      <Stack.Screen
+        name="WordOfTheDay"
+        component={WordOfTheDayScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen name="InterestSelection" component={InterestSelectionScreen} />
+      <Stack.Screen name="VocabularyBuilder" component={VocabularyBuilderScreen} />
+      <Stack.Screen name="VocabularyGame" component={VocabularyGameScreen} />
+      <Stack.Screen name="GrammarPractice" component={GrammarPracticeScreen} />
+      <Stack.Screen name="GrammarGame" component={GrammarGameScreen} />
+      <Stack.Screen name="ReadingComprehension" component={ReadingComprehensionScreen} />
+      <Stack.Screen name="ReadingGame" component={ReadingGameScreen} />
+      <Stack.Screen name="FilipinoToEnglish" component={FilipinoToEnglishScreen} />
+      <Stack.Screen name="FilipinoToEnglishGame" component={FilipinoToEnglishGameScreen} />
+      <Stack.Screen name="SentenceConstruction" component={SentenceConstructionScreen} />
+      <Stack.Screen
+        name="SentenceConstructionGame"
+        component={SentenceConstructionGameScreen}
+      />
 
-          <Stack.Group screenOptions={{ animation: 'fade_from_bottom', headerShown: false }}>
-            <Stack.Screen name="Home" component={HomeScreen} />
-            <Stack.Screen name="Progress" component={ProgressScreen} />
-            <Stack.Screen name="Profile" component={ProfileScreen} />
-          </Stack.Group>
-        </Stack.Navigator>
+      <Stack.Group screenOptions={{ animation: "fade_from_bottom", headerShown: false }}>
+        <Stack.Screen name="Home" component={HomeScreen} />
+        <Stack.Screen name="Progress" component={ProgressScreen} />
+        <Stack.Screen name="Profile" component={ProfileScreen} />
+      </Stack.Group>
+    </Stack.Navigator>
 
-        <BottomNav
-          currentRoute={currentRoute}
-          onNavigate={(name) => navRef.isReady() && navRef.navigate(name as never)}
-        />
-      </View>
-    </NavigationContainer>
+    {/* ✅ BottomNav lives outside the navigator */}
+    {![
+      "VocabularyGame",
+      "GrammarGame",
+      "ReadingGame",
+      "FilipinoToEnglishGame",
+      "SentenceConstructionGame",
+    ].includes(currentRoute ?? "") && (
+      <BottomNav
+        currentRoute={currentRoute}
+        onNavigate={(name) =>
+          navRef.isReady() && navRef.navigate(name as never)
+        }
+      />
+    )}
+  </View>
+</NavigationContainer>
+
   );
 }
