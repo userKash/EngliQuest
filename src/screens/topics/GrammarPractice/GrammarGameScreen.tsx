@@ -1,6 +1,12 @@
-<<<<<<< HEAD
-import React, { useEffect, useState, useLayoutEffect } from "react";
-import { View, Text, StyleSheet, ActivityIndicator } from "react-native";
+import React, { useEffect, useLayoutEffect, useState } from "react";
+import {
+  View,
+  Text,
+  StyleSheet,
+  ActivityIndicator,
+  TouchableOpacity,
+  BackHandler,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -9,6 +15,9 @@ import auth from "@react-native-firebase/auth";
 import InstructionCard from "../../../components/InstructionCard";
 import GrammarQuiz from "../../../components/GrammarQuiz";
 import { initFirebase } from "../../../../firebaseConfig";
+import { Ionicons } from "@expo/vector-icons";
+import BottomNav from "../../../components/BottomNav";
+import ExitQuizModal from "../../../components/ExitQuizModal";
 
 type Question = {
   question: string;
@@ -16,8 +25,6 @@ type Question = {
   correctIndex: number;
   explanation: string;
 };
-
-const PASSING = 70;
 
 const LEVEL_MAP: Record<string, string> = {
   "easy-1": "A1",
@@ -28,8 +35,12 @@ const LEVEL_MAP: Record<string, string> = {
   "hard-2": "C2",
 };
 
-// Save quiz progress
-async function saveQuizResult(subId: string, rawScore: number, totalQuestions: number) {
+// ✅ Save quiz result
+async function saveQuizResult(
+  subId: string,
+  rawScore: number,
+  totalQuestions: number
+) {
   const user = auth().currentUser;
   if (!user) return;
 
@@ -52,7 +63,8 @@ async function saveQuizResult(subId: string, rawScore: number, totalQuestions: n
 export default function GrammarGameScreen() {
   const navigation = useNavigation();
   const route = useRoute<any>();
-  const { levelId } = route.params; // e.g., "easy-1"
+  const { levelId } = route.params;
+
   const [step, setStep] = useState<"instructions" | "quiz">("instructions");
   const [progress, setProgress] = useState<{ current: number; total: number }>({
     current: 0,
@@ -60,7 +72,9 @@ export default function GrammarGameScreen() {
   });
   const [questions, setQuestions] = useState<Question[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showExitModal, setShowExitModal] = useState(false);
 
+  // ✅ Load grammar quiz from Firestore
   useEffect(() => {
     const loadQuiz = async () => {
       try {
@@ -76,19 +90,17 @@ export default function GrammarGameScreen() {
           return;
         }
 
-        // Exact same query pattern as VocabularyGameScreen
         let snapshot;
         try {
           snapshot = await db
             .collection("quizzes")
             .where("userId", "==", uid)
             .where("level", "==", firestoreLevel)
-            .where("gameMode", "==", "Grammar") // filter grammar
+            .where("gameMode", "==", "Grammar")
             .orderBy("createdAt", "desc")
             .limit(1)
             .get();
         } catch (err: any) {
-          // fallback if index not available
           if (String(err.message).includes("failed-precondition")) {
             snapshot = await db
               .collection("quizzes")
@@ -116,22 +128,6 @@ export default function GrammarGameScreen() {
 
     loadQuiz();
   }, [levelId]);
-=======
-import React, { useEffect, useLayoutEffect, useState } from "react";
-import { View, Text, StyleSheet, TouchableOpacity, BackHandler } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { useNavigation } from "@react-navigation/native";
-import InstructionCard from "../../../components/InstructionCard";
-import GrammarQuiz from "../../../components/GrammarQuiz";
-import { Ionicons } from "@expo/vector-icons";
-import BottomNav from "../../../components/BottomNav";
-import ExitQuizModal from "../../../components/ExitQuizModal"; // 👈 reuse the same modal
-
-export default function GrammarGameScreen() {
-  const navigation = useNavigation();
-  const [step, setStep] = useState<"instructions" | "quiz">("instructions");
-  const [progress, setProgress] = useState({ current: 0, total: 1 });
-  const [showExitModal, setShowExitModal] = useState(false);
 
   // ✅ Handle Android hardware back
   useEffect(() => {
@@ -142,25 +138,26 @@ export default function GrammarGameScreen() {
       }
       return false;
     };
-    const backHandler = BackHandler.addEventListener("hardwareBackPress", backAction);
+    const backHandler = BackHandler.addEventListener(
+      "hardwareBackPress",
+      backAction
+    );
     return () => backHandler.remove();
   }, [step]);
 
->>>>>>> 37d55d6a394be1f6446d1b68296697b4cdbc3ef4
-
+  // ✅ Handle navigation header
   useLayoutEffect(() => {
     if (step === "quiz") {
       navigation.setOptions({
         gestureEnabled: false,
         headerTitle: () => (
           <View style={{ alignItems: "center" }}>
-            <Text style={{ fontSize: 18, fontWeight: "bold" }}>Grammar Practice</Text>
+            <Text style={{ fontSize: 18, fontWeight: "bold" }}>
+              Grammar Practice
+            </Text>
             <Text style={{ fontSize: 12, color: "#555" }}>
-<<<<<<< HEAD
-              {levelId.toUpperCase()} – Question {progress.current + 1} of {progress.total}
-=======
-              Easy – Question {progress.current + 1} of {progress.total}
->>>>>>> 37d55d6a394be1f6446d1b68296697b4cdbc3ef4
+              {levelId.toUpperCase()} – Question {progress.current + 1} of{" "}
+              {progress.total}
             </Text>
           </View>
         ),
@@ -174,40 +171,26 @@ export default function GrammarGameScreen() {
         ),
       });
     } else {
-<<<<<<< HEAD
-      navigation.setOptions({ headerTitle: "Grammar Practice" });
-    }
-  }, [step, progress, levelId]);
-=======
       navigation.setOptions({
         gestureEnabled: true,
         headerTitle: "Grammar Practice",
         headerLeft: undefined,
       });
     }
-  }, [step, progress]);
->>>>>>> 37d55d6a394be1f6446d1b68296697b4cdbc3ef4
+  }, [step, progress, levelId]);
 
   const instructions = {
     title: "Grammar Practice",
     body:
       "Instruction:\n\n" +
-<<<<<<< HEAD
       "Read each question carefully and select the correct grammar choice.\n\n" +
       "Focus on verb forms, tenses, and sentence structure.\n\n" +
       "Only one choice is correct.",
     tip: "Think carefully before choosing the answer.",
-=======
-      "Read each sentence and choose the grammatically correct option.\n\n" +
-      "Focus on subject-verb agreement, verb tenses, and proper word order.\n\n" +
-      "Only one choice is correct.",
-    tip: "Scan for the subject and the verb first before checking modifiers.",
->>>>>>> 37d55d6a394be1f6446d1b68296697b4cdbc3ef4
     titleIcon: require("../../../../assets/Grammar Practice.png"),
     tipIcon: require("../../../../assets/flat-color-icons_idea.png"),
   };
 
-<<<<<<< HEAD
   if (loading) {
     return (
       <View style={styles.center}>
@@ -223,9 +206,8 @@ export default function GrammarGameScreen() {
       </View>
     );
   }
-=======
+
   const currentRoute = (navigation as any).getState().routes.slice(-1)[0].name;
->>>>>>> 37d55d6a394be1f6446d1b68296697b4cdbc3ef4
 
   return (
     <SafeAreaView style={styles.screen}>
@@ -262,6 +244,7 @@ export default function GrammarGameScreen() {
           navigation.goBack();
         }}
       />
+
       <BottomNav
         currentRoute={currentRoute}
         onNavigate={(name) => navigation.navigate(name as never)}
@@ -274,8 +257,5 @@ export default function GrammarGameScreen() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: "#fff" },
-<<<<<<< HEAD
   center: { flex: 1, justifyContent: "center", alignItems: "center" },
-=======
->>>>>>> 37d55d6a394be1f6446d1b68296697b4cdbc3ef4
 });

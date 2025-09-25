@@ -15,12 +15,9 @@ import auth from "@react-native-firebase/auth";
 import InstructionCard from "../../../components/InstructionCard";
 import VocabularyQuiz from "../../../components/VocabularyQuiz";
 import { initFirebase } from "../../../../firebaseConfig";
-<<<<<<< HEAD
-=======
 import ExitQuizModal from "../../../components/ExitQuizModal";
 import BottomNav from "../../../components/BottomNav";
 import { Ionicons } from "@expo/vector-icons";
->>>>>>> 37d55d6a394be1f6446d1b68296697b4cdbc3ef4
 
 type Question = {
   question: string;
@@ -28,7 +25,6 @@ type Question = {
   correctIndex: number;
   explanation: string;
 };
-
 
 const LEVEL_MAP: Record<string, string> = {
   "easy-1": "A1",
@@ -39,7 +35,11 @@ const LEVEL_MAP: Record<string, string> = {
   "hard-2": "C2",
 };
 
-async function saveQuizResult(subId: string, rawScore: number, totalQuestions: number) {
+async function saveQuizResult(
+  subId: string,
+  rawScore: number,
+  totalQuestions: number
+) {
   const user = auth().currentUser;
   if (!user) return;
 
@@ -62,7 +62,7 @@ async function saveQuizResult(subId: string, rawScore: number, totalQuestions: n
 export default function VocabularyGameScreen() {
   const navigation = useNavigation();
   const route = useRoute<any>();
-  const { levelId } = route.params; // 👈 comes from GrammarPracticeScreen
+  const { levelId } = route.params;
   const [step, setStep] = useState<"instructions" | "quiz">("instructions");
   const [progress, setProgress] = useState<{ current: number; total: number }>({
     current: 0,
@@ -71,7 +71,6 @@ export default function VocabularyGameScreen() {
   const [questions, setQuestions] = useState<Question[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // 🚨 Exit warning modal
   const [showExitModal, setShowExitModal] = useState(false);
 
   // ✅ Handle Android hardware back
@@ -79,7 +78,7 @@ export default function VocabularyGameScreen() {
     const backAction = () => {
       if (step === "quiz") {
         setShowExitModal(true);
-        return true; // block default back
+        return true;
       }
       return false;
     };
@@ -92,29 +91,30 @@ export default function VocabularyGameScreen() {
     return () => backHandler.remove();
   }, [step]);
 
-  // ✅ Handle navigation header + disable iOS swipe back
+  // ✅ Handle navigation header
   useLayoutEffect(() => {
     if (step === "quiz") {
       navigation.setOptions({
-        gestureEnabled: false, // disable swipe back on iOS
+        gestureEnabled: false,
         headerTitle: () => (
           <View style={{ alignItems: "center" }}>
             <Text style={{ fontSize: 18, fontWeight: "bold" }}>
               Vocabulary Practice
             </Text>
             <Text style={{ fontSize: 12, color: "#555" }}>
-              Easy – Question {progress.current + 1} of {progress.total}
+              {levelId.toUpperCase()} – Question {progress.current + 1} of{" "}
+              {progress.total}
             </Text>
           </View>
         ),
-    headerLeft: () => (
-      <TouchableOpacity
-        onPress={() => setShowExitModal(true)}
-        style={{ marginLeft: 12, flexDirection: "row", alignItems: "center" }}
-      >
-        <Ionicons name="arrow-back" size={24} />
-      </TouchableOpacity>
-    ),
+        headerLeft: () => (
+          <TouchableOpacity
+            onPress={() => setShowExitModal(true)}
+            style={{ marginLeft: 12, flexDirection: "row", alignItems: "center" }}
+          >
+            <Ionicons name="arrow-back" size={24} />
+          </TouchableOpacity>
+        ),
       });
     } else {
       navigation.setOptions({
@@ -123,9 +123,9 @@ export default function VocabularyGameScreen() {
         headerLeft: undefined,
       });
     }
-  }, [step, progress]);
+  }, [step, progress, levelId]);
 
-
+  // ✅ Load quiz
   useEffect(() => {
     const loadQuiz = async () => {
       try {
@@ -134,7 +134,7 @@ export default function VocabularyGameScreen() {
         if (!user) return;
 
         const uid = user.uid;
-        const firestoreLevel = LEVEL_MAP[levelId]; // 👈 map easy-2 → A2
+        const firestoreLevel = LEVEL_MAP[levelId];
 
         if (!firestoreLevel) {
           console.warn(`No mapping found for sublevel: ${levelId}`);
@@ -180,7 +180,7 @@ export default function VocabularyGameScreen() {
             q = query(
               collection(db, "quizzes"),
               where("userId", "==", uid),
-              where("level", "==", firestoreLevel), // 👈 dynamic level
+              where("level", "==", firestoreLevel),
               orderBy("createdAt", "desc"),
               limit(1)
             );
@@ -212,28 +212,7 @@ export default function VocabularyGameScreen() {
     };
 
     loadQuiz();
-<<<<<<< HEAD
   }, [levelId]);
-
-  useLayoutEffect(() => {
-    if (step === "quiz") {
-      navigation.setOptions({
-        headerTitle: () => (
-          <View style={{ alignItems: "center" }}>
-            <Text style={{ fontSize: 18, fontWeight: "bold" }}>Vocabulary Practice</Text>
-            <Text style={{ fontSize: 12, color: "#555" }}>
-              {levelId.toUpperCase()} – Question {progress.current + 1} of {progress.total}
-            </Text>
-          </View>
-        ),
-      });
-    } else {
-      navigation.setOptions({ headerTitle: "Vocabulary Practice" });
-    }
-  }, [step, progress, levelId]);
-=======
-  }, []);
->>>>>>> 37d55d6a394be1f6446d1b68296697b4cdbc3ef4
 
   const instructions = {
     title: "Vocabulary Practice",
@@ -285,13 +264,10 @@ export default function VocabularyGameScreen() {
             sentence: q.explanation,
           }))}
           onProgressChange={setProgress}
-<<<<<<< HEAD
           onFinish={async (rawScore: number) => {
             await saveQuizResult(levelId, rawScore, questions.length);
             navigation.goBack();
           }}
-=======
->>>>>>> 37d55d6a394be1f6446d1b68296697b4cdbc3ef4
         />
       )}
 
@@ -300,7 +276,7 @@ export default function VocabularyGameScreen() {
         onCancel={() => setShowExitModal(false)}
         onConfirm={() => {
           setShowExitModal(false);
-          navigation.goBack(); // exit quiz
+          navigation.goBack();
         }}
       />
 
@@ -308,26 +284,18 @@ export default function VocabularyGameScreen() {
         currentRoute={currentRoute}
         onNavigate={(name) => navigation.navigate(name as never)}
         inQuiz={step === "quiz"}
-        onBlockedNav={() => setShowExitModal(true)}
       />
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: "#fff" },
-<<<<<<< HEAD
-  center: { flex: 1, justifyContent: "center", alignItems: "center" },
-=======
-  scrollContent: {
-    flexGrow: 1,
-    padding: 16,
-    justifyContent: "space-between",
+  screen: {
+    flex: 1,
   },
   center: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
   },
->>>>>>> 37d55d6a394be1f6446d1b68296697b4cdbc3ef4
 });

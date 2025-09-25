@@ -1,11 +1,3 @@
-<<<<<<< HEAD
-import React, { useLayoutEffect, useState } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
-import InstructionCard from '../../../components/InstructionCard';
-import SentenceConstructionQuiz from '../../../components/SentenceConstructionQuiz';
-=======
 import React, { useEffect, useLayoutEffect, useState } from "react";
 import {
   View,
@@ -15,17 +7,12 @@ import {
   StyleSheet,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import {
-  useNavigation,
-  useRoute,
-  RouteProp,
-} from "@react-navigation/native";
+import { useNavigation, useRoute, RouteProp } from "@react-navigation/native";
 import InstructionCard from "../../../components/InstructionCard";
 import SentenceConstructionQuiz from "../../../components/SentenceConstructionQuiz";
 import { Ionicons } from "@expo/vector-icons";
 import BottomNav from "../../../components/BottomNav";
-import ExitQuizModal from "../../../components/ExitQuizModal"; // 👈 shared modal
->>>>>>> 37d55d6a394be1f6446d1b68296697b4cdbc3ef4
+import ExitQuizModal from "../../../components/ExitQuizModal";
 
 type ParamList = {
   SentenceConstructionGame: { levelId?: string };
@@ -97,34 +84,20 @@ export default function SentenceConstructionGameScreen() {
   const instructions = {
     title: "Sentence Construction",
     body:
-<<<<<<< HEAD
-      'Instruction:\n\n' +
-      'Arrange the given words to form a correct sentence.\n\n' +
-      'Some questions may have cultural or grammatical hints.\n\n' +
-      'Only one arrangement is correct.',
-    tip: 'Tip: Look for capital letters and punctuation clues!',
-    titleIcon: require('../../../../assets/Sentence Construction.png'),
-    tipIcon: require('../../../../assets/flat-color-icons_idea.png'),
-=======
       "Instruction:\n\n" +
-      "Read the word and choose the correct definition or meaning.\n\n" +
-      "Some questions may ask for synonyms or usage.\n\n" +
-      "Only one choice is correct.",
-    tip: " Tip: Look for capital letters and punctuation clues!",
+      "Arrange the given words to form a correct sentence.\n\n" +
+      "Some questions may have cultural or grammatical hints.\n\n" +
+      "Only one arrangement is correct.",
+    tip: "Tip: Look for capital letters and punctuation clues!",
     titleIcon: require("../../../../assets/Sentence Construction.png"),
     tipIcon: require("../../../../assets/flat-color-icons_idea.png"),
->>>>>>> 37d55d6a394be1f6446d1b68296697b4cdbc3ef4
   };
 
   const currentRoute = (navigation as any).getState().routes.slice(-1)[0].name;
 
   return (
     <SafeAreaView style={styles.screen}>
-<<<<<<< HEAD
-      {step === 'instructions' ? (
-=======
       {step === "instructions" ? (
->>>>>>> 37d55d6a394be1f6446d1b68296697b4cdbc3ef4
         <InstructionCard
           title={instructions.title}
           body={instructions.body}
@@ -160,9 +133,5 @@ export default function SentenceConstructionGameScreen() {
 }
 
 const styles = StyleSheet.create({
-<<<<<<< HEAD
-  screen: { flex: 1, backgroundColor: '#fff' },
-=======
   screen: { flex: 1, backgroundColor: "#fff" },
->>>>>>> 37d55d6a394be1f6446d1b68296697b4cdbc3ef4
 });

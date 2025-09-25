@@ -10,17 +10,10 @@ import {
   UIManager,
   LayoutAnimation,
   KeyboardAvoidingView,
-<<<<<<< HEAD
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import PrimaryButton from "./PrimaryButton";
 import ResultModal from "./ResultModal";
-=======
-} from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import PrimaryButton from './PrimaryButton';
-import ResultModal from './ResultModal'; 
->>>>>>> 37d55d6a394be1f6446d1b68296697b4cdbc3ef4
 
 type QA = {
   filipino: string;
@@ -108,8 +101,6 @@ export default function FilipinoToEnglishQuiz({ questions, onProgressChange, onF
   const actionHandler = locked ? next : check;
   const actionDisabled = locked ? false : value.trim().length === 0;
 
-<<<<<<< HEAD
-=======
   const handleContinueFromModal = () => {
     // Close modal and reset for replay 
     setShowModal(false);
@@ -122,7 +113,6 @@ export default function FilipinoToEnglishQuiz({ questions, onProgressChange, onF
     setReview([]);
   };
 
->>>>>>> 37d55d6a394be1f6446d1b68296697b4cdbc3ef4
   return (
     <View style={styles.screen}>
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : undefined}>

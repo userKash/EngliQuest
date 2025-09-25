@@ -101,52 +101,6 @@ useEffect(() => {
   loadUserAndProgress();
 }, []);
 
-
-<<<<<<< HEAD
-=======
-          switch (data.quizType) {
-            case 'Vocabulary':
-              vocab = Math.max(vocab, pct);
-              break;
-            case 'Grammar':
-              grammar = Math.max(grammar, pct);
-              break;
-            case 'Reading':
-              reading = Math.max(reading, pct);
-              break;
-            case 'Translation':
-              translation = Math.max(translation, pct);
-              break;
-            case 'Sentence':
-              sentence = Math.max(sentence, pct);
-              break;
-          }
-        });
-
-        // count only attempted topics
-        const scores = [vocab, grammar, reading, translation, sentence];
-        topicsAttempted = scores.filter((s) => s > 0).length;
-
-        setVocabPct(vocab);
-        setGrammarPct(grammar);
-        setReadingPct(reading);
-        setTranslationPct(translation);
-        setSentencePct(sentence);
-
-        if (topicsAttempted > 0) {
-          const overall = Math.round(scores.reduce((a, b) => a + b, 0) / topicsAttempted);
-          setOverallPct(overall);
-        }
-      } catch (err) {
-        console.error('Error fetching user/progress data:', err);
-      }
-    };
-
-    loadAvatar();
-    loadUser();
-  }, []);
->>>>>>> 37d55d6a394be1f6446d1b68296697b4cdbc3ef4
-
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' }}>
       <View style={styles.container}>
