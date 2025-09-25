@@ -1,11 +1,9 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import db from "./node_scripts/firebase-admin.js";
+// import db from "./node_scripts/firebase-admin.js";
+import { initFirebase } from "./firebaseConfig";
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// const GEMINI_API_KEY = "AIzaSyBTiE1WIPRv-nKAwkTf7FitzLi5qbLnKcQ";
-//const GEMINI_API_KEY = "AIzaSyBEtS5_bpEgcJ9KBxdeu9bQzwzlwJ5KOa4"
-
-
-const GEMINI_API_KEY = "AIzaSyBkVhiw_ld4fUVhokzOPi-iau0kwfSQiy4"
+const GEMINI_API_KEY = "AIzaSyDQc11ZcStQfUn6D-wSiZQNR6j7lwYRTW8"
 const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
 
 export interface Question {
@@ -320,6 +318,35 @@ function readingComprehensionPrompt(
   `;
 }
 
+export type WordData = {
+  word: string;
+  definition: string;
+};
+
+export function wordOfTheDayPrompt(seed: string): string {
+  return `
+    You are an English vocabulary assistant for EngliQuest.
+
+    Generate the word of the day in **strict JSON format only**.
+    Do not include any extra text, markdown, or code fences.
+
+    Rules:
+    1. Use the provided seed ("${seed}") to select the word.
+       - The same seed must always return the same word.
+       - Different seeds must return different words.
+    2. Choose a real English word suitable for learners (not slang, not overly technical).
+    3. Provide exactly one word and its definition.
+    4. Keep the definition simple, clear, and learner-friendly.
+    5. Return only valid JSON.
+
+    Example JSON:
+    {
+      "word": "Serendipity",
+      "definition": "The occurrence of events by chance in a happy or beneficial way."
+    }
+  `;
+}
+
 async function generateVocabularyQuiz(
     level: CEFRLevel,       
     interests: string[],
@@ -548,28 +575,31 @@ export async function createPersonalizedQuiz(
     difficulty: string,
     quiz?: Question[]       
 ): Promise<{ quizId: string; questions: Question[] }> {
+    // Initialize Firebase first
+    const { db } = await initFirebase();
+    
     let questions: Question[];
 
     if (quiz) {
-        // ✅ If caller already provides quiz, use it
         questions = quiz;
     } else {
-        // ✅ Otherwise, generate based on gameMode
+        // ... rest of your existing logic
         if (gameMode === "Grammar") {
             questions = await generateGrammarQuiz(level, interests, gameMode, difficulty);
-            } else if (gameMode === "Vocabulary") {
+        } else if (gameMode === "Vocabulary") {
             questions = await generateVocabularyQuiz(level, interests, gameMode, difficulty);
-            } else if (gameMode === "Sentence Construction") {
+        } else if (gameMode === "Sentence Construction") {
             questions = await generateSentenceQuiz(level, interests, gameMode, difficulty);
-            } else if (gameMode === "Reading Comprehension") {
+        } else if (gameMode === "Reading Comprehension") {
             questions = await generateReadingComprehensionQuiz(level, interests, gameMode, difficulty);
-            } else if (gameMode === "Translation") {
+        } else if (gameMode === "Translation") {
             questions = await generateTranslationQuiz(level, interests, gameMode, difficulty);
-            } else {
-        throw new Error(`Unsupported game mode: ${gameMode}`);
+        } else {
+            throw new Error(`Unsupported game mode: ${gameMode}`);
         }
     }
 
+    // Now use the initialized db
     const quizRef = await db.collection("quizzes").add({
         userId,
         level,
@@ -580,4 +610,65 @@ export async function createPersonalizedQuiz(
     });
 
     return { quizId: quizRef.id, questions };
+}
+
+export async function fetchWordOfTheDayFromGemini(userId: string): Promise<WordData> {
+  const { db } = await initFirebase();
+  const today = new Date().toDateString();
+  const docId = `${userId}_${today}`; 
+  
+  try {
+    const wordDoc = await db.collection('userDailyWords').doc(docId).get();
+    
+    if (wordDoc.exists()) {
+      console.log(`✅ Using cached word from Firestore for user ${userId}`);
+      const data = wordDoc.data();
+      return {
+        word: data?.word || "Serendipity",
+        definition: data?.definition || "The occurrence of events by chance in a happy or beneficial way."
+      };
+    }
+  } catch (firestoreError) {
+    console.log("Firestore read error:", firestoreError);
+  }
+  
+  console.log(`🆕 Generating new word for user ${userId}`);
+  
+  const seed = `${userId}_${today}`;
+  const prompt = wordOfTheDayPrompt(seed); 
+  
+  const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+  
+  try {
+    const result = await model.generateContent(prompt);
+    const rawText = result.response.text();
+    const cleaned = cleanJSONResponse(rawText);
+    const wordData = JSON.parse(cleaned);
+    
+    if (!wordData.word || !wordData.definition) {
+      throw new Error("Invalid word data structure");
+    }
+    
+    await db.collection('userDailyWords').doc(docId).set({
+      word: wordData.word,
+      definition: wordData.definition,
+      createdAt: new Date(),
+      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) 
+    });
+    
+    return wordData;
+  } catch (err) {
+    console.error("Error generating word from Gemini:", err);
+    
+    const fallbackWords = [
+      { word: "Serendipity", definition: "The occurrence of events by chance in a happy or beneficial way." },
+      { word: "Ephemeral", definition: "Lasting for a very short time; temporary." },
+      { word: "Resilience", definition: "The ability to recover quickly from difficulties." },
+      { word: "Wanderlust", definition: "A strong desire to travel and explore the world." },
+      { word: "Nostalgia", definition: "A sentimental longing for the past." }
+    ];
+    
+    const fallbackIndex = Math.abs(seed.charCodeAt(0)) % fallbackWords.length;
+    return fallbackWords[fallbackIndex];
+  }
 }
