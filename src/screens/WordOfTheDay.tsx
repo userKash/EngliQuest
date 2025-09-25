@@ -3,13 +3,10 @@ import { View, Text, StyleSheet, Image, TouchableOpacity, ActivityIndicator } fr
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../navigation/type';
 import { useNavigation } from '@react-navigation/native';
+import { fetchWordOfTheDayFromGemini, type WordData } from "../../gemini";
+import { initFirebase } from "../../firebaseConfig"; 
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'WordOfTheDay'>;
-
-type WordData = {
-  word: string;
-  definition: string;
-};
 
 export default function WordOfTheDayScreen() {
   const navigation = useNavigation<NavigationProp>();
@@ -17,15 +14,16 @@ export default function WordOfTheDayScreen() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Simulated API call
     const fetchWordOfTheDay = async () => {
       try {
-        // Replace this URL with your actual API
-        const response = await fetch('https://api.example.com/word-of-the-day');
-        const data = await response.json();
+        const { auth } = await initFirebase();
+        const currentUser = auth.currentUser;
+        const userId = currentUser?.uid ?? "guest"; 
+
+        const data = await fetchWordOfTheDayFromGemini(userId);
         setWordData(data);
       } catch (error) {
-        // fallback static data
+        console.error('Error fetching word of the day:', error);
         setWordData({
           word: 'Serendipity',
           definition: 'The occurrence of events by chance in a happy or beneficial way.',
