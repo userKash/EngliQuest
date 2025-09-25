@@ -1,4 +1,3 @@
-// src/components/LoadingModal.tsx
 import React from "react";
 import {
   Modal,
@@ -9,6 +8,7 @@ import {
   FlatList,
 } from "react-native";
 
+<<<<<<< HEAD
 interface QuizProgress {
   id: string;
   label: string; // e.g., "Grammar (A1)"
@@ -24,12 +24,19 @@ export default function LoadingModal({
   message?: string;
   progress?: QuizProgress[];
 }) {
+=======
+export default function LoadingModal({ visible, message }: { visible: boolean; message?: string }) {
+>>>>>>> 37d55d6a394be1f6446d1b68296697b4cdbc3ef4
   return (
     <Modal
       visible={visible}
       transparent
       animationType="fade"
+<<<<<<< HEAD
       onRequestClose={() => {}}
+=======
+      onRequestClose={() => {}} 
+>>>>>>> 37d55d6a394be1f6446d1b68296697b4cdbc3ef4
     >
       <View style={styles.overlay}>
         <View style={styles.content}>

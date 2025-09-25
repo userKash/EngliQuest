@@ -102,6 +102,50 @@ useEffect(() => {
 }, []);
 
 
+<<<<<<< HEAD
+=======
+          switch (data.quizType) {
+            case 'Vocabulary':
+              vocab = Math.max(vocab, pct);
+              break;
+            case 'Grammar':
+              grammar = Math.max(grammar, pct);
+              break;
+            case 'Reading':
+              reading = Math.max(reading, pct);
+              break;
+            case 'Translation':
+              translation = Math.max(translation, pct);
+              break;
+            case 'Sentence':
+              sentence = Math.max(sentence, pct);
+              break;
+          }
+        });
+
+        // count only attempted topics
+        const scores = [vocab, grammar, reading, translation, sentence];
+        topicsAttempted = scores.filter((s) => s > 0).length;
+
+        setVocabPct(vocab);
+        setGrammarPct(grammar);
+        setReadingPct(reading);
+        setTranslationPct(translation);
+        setSentencePct(sentence);
+
+        if (topicsAttempted > 0) {
+          const overall = Math.round(scores.reduce((a, b) => a + b, 0) / topicsAttempted);
+          setOverallPct(overall);
+        }
+      } catch (err) {
+        console.error('Error fetching user/progress data:', err);
+      }
+    };
+
+    loadAvatar();
+    loadUser();
+  }, []);
+>>>>>>> 37d55d6a394be1f6446d1b68296697b4cdbc3ef4
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' }}>
@@ -140,6 +184,7 @@ useEffect(() => {
             title="Vocabulary Builder"
             desc="Learn new words with flashcards"
             progress={vocabPct}
+            icon={require('../../assets/Vocabulary Builder.png')}
             onPress={() => navigation.navigate('VocabularyBuilder')}
           />
 
@@ -148,6 +193,7 @@ useEffect(() => {
             title="Grammar Practice"
             desc="Master English grammar rules"
             progress={grammarPct}
+            icon={require('../../assets/Grammar Practice.png')}
             onPress={() => navigation.navigate('GrammarPractice')}
           />
 
@@ -156,6 +202,7 @@ useEffect(() => {
             title="Reading Comprehension"
             desc="Improve reading skills"
             progress={readingPct}
+            icon={require('../../assets/Reading Comprehension.png')}
             onPress={() => navigation.navigate('ReadingComprehension')}
           />
 
@@ -164,6 +211,7 @@ useEffect(() => {
             title="Filipino to English"
             desc="Practice translation skills"
             progress={translationPct}
+            icon={require('../../assets/Filipino to English.png')}
             onPress={() => navigation.navigate('FilipinoToEnglish')}
           />
 
@@ -172,6 +220,7 @@ useEffect(() => {
             title="Sentence Construction"
             desc="Arrange jumbled words"
             progress={sentencePct}
+            icon={require('../../assets/Sentence Construction.png')}
             onPress={() => navigation.navigate('SentenceConstruction')}
           />
         </ScrollView>
@@ -185,20 +234,19 @@ function TopicCard({
   title,
   desc,
   progress,
+  icon,
   onPress,
 }: {
   title: string;
   desc: string;
   progress: number;
+  icon: any;
   onPress: () => void;
 }) {
   return (
     <View style={styles.topicCard}>
       <View style={styles.topicLeft}>
-        <Image
-          source={require('../../assets/Vocabulary Builder.png')}
-          style={styles.topicIcon}
-        />
+        <Image source={icon} style={styles.topicIcon} />
         <View style={{ flex: 1 }}>
           <Text style={styles.topicTitle}>{title}</Text>
           <Text style={styles.topicDesc}>{desc}</Text>

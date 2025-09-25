@@ -1,5 +1,12 @@
 import React, { useEffect, useState, useLayoutEffect } from "react";
-import { View, Text, StyleSheet, ActivityIndicator } from "react-native";
+import {
+  View,
+  Text,
+  StyleSheet,
+  ActivityIndicator,
+  BackHandler,
+  TouchableOpacity,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -8,6 +15,12 @@ import auth from "@react-native-firebase/auth";
 import InstructionCard from "../../../components/InstructionCard";
 import VocabularyQuiz from "../../../components/VocabularyQuiz";
 import { initFirebase } from "../../../../firebaseConfig";
+<<<<<<< HEAD
+=======
+import ExitQuizModal from "../../../components/ExitQuizModal";
+import BottomNav from "../../../components/BottomNav";
+import { Ionicons } from "@expo/vector-icons";
+>>>>>>> 37d55d6a394be1f6446d1b68296697b4cdbc3ef4
 
 type Question = {
   question: string;
@@ -57,6 +70,61 @@ export default function VocabularyGameScreen() {
   });
   const [questions, setQuestions] = useState<Question[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // 🚨 Exit warning modal
+  const [showExitModal, setShowExitModal] = useState(false);
+
+  // ✅ Handle Android hardware back
+  useEffect(() => {
+    const backAction = () => {
+      if (step === "quiz") {
+        setShowExitModal(true);
+        return true; // block default back
+      }
+      return false;
+    };
+
+    const backHandler = BackHandler.addEventListener(
+      "hardwareBackPress",
+      backAction
+    );
+
+    return () => backHandler.remove();
+  }, [step]);
+
+  // ✅ Handle navigation header + disable iOS swipe back
+  useLayoutEffect(() => {
+    if (step === "quiz") {
+      navigation.setOptions({
+        gestureEnabled: false, // disable swipe back on iOS
+        headerTitle: () => (
+          <View style={{ alignItems: "center" }}>
+            <Text style={{ fontSize: 18, fontWeight: "bold" }}>
+              Vocabulary Practice
+            </Text>
+            <Text style={{ fontSize: 12, color: "#555" }}>
+              Easy – Question {progress.current + 1} of {progress.total}
+            </Text>
+          </View>
+        ),
+    headerLeft: () => (
+      <TouchableOpacity
+        onPress={() => setShowExitModal(true)}
+        style={{ marginLeft: 12, flexDirection: "row", alignItems: "center" }}
+      >
+        <Ionicons name="arrow-back" size={24} />
+      </TouchableOpacity>
+    ),
+      });
+    } else {
+      navigation.setOptions({
+        gestureEnabled: true,
+        headerTitle: "Vocabulary Practice",
+        headerLeft: undefined,
+      });
+    }
+  }, [step, progress]);
+
 
   useEffect(() => {
     const loadQuiz = async () => {
@@ -144,6 +212,7 @@ export default function VocabularyGameScreen() {
     };
 
     loadQuiz();
+<<<<<<< HEAD
   }, [levelId]);
 
   useLayoutEffect(() => {
@@ -162,6 +231,9 @@ export default function VocabularyGameScreen() {
       navigation.setOptions({ headerTitle: "Vocabulary Practice" });
     }
   }, [step, progress, levelId]);
+=======
+  }, []);
+>>>>>>> 37d55d6a394be1f6446d1b68296697b4cdbc3ef4
 
   const instructions = {
     title: "Vocabulary Practice",
@@ -191,6 +263,8 @@ export default function VocabularyGameScreen() {
     );
   }
 
+  const currentRoute = (navigation as any).getState().routes.slice(-1)[0].name;
+
   return (
     <SafeAreaView style={styles.screen}>
       {step === "instructions" ? (
@@ -211,17 +285,49 @@ export default function VocabularyGameScreen() {
             sentence: q.explanation,
           }))}
           onProgressChange={setProgress}
+<<<<<<< HEAD
           onFinish={async (rawScore: number) => {
             await saveQuizResult(levelId, rawScore, questions.length);
             navigation.goBack();
           }}
+=======
+>>>>>>> 37d55d6a394be1f6446d1b68296697b4cdbc3ef4
         />
       )}
+
+      <ExitQuizModal
+        visible={showExitModal}
+        onCancel={() => setShowExitModal(false)}
+        onConfirm={() => {
+          setShowExitModal(false);
+          navigation.goBack(); // exit quiz
+        }}
+      />
+
+      <BottomNav
+        currentRoute={currentRoute}
+        onNavigate={(name) => navigation.navigate(name as never)}
+        inQuiz={step === "quiz"}
+        onBlockedNav={() => setShowExitModal(true)}
+      />
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: "#fff" },
+<<<<<<< HEAD
   center: { flex: 1, justifyContent: "center", alignItems: "center" },
+=======
+  scrollContent: {
+    flexGrow: 1,
+    padding: 16,
+    justifyContent: "space-between",
+  },
+  center: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+>>>>>>> 37d55d6a394be1f6446d1b68296697b4cdbc3ef4
 });

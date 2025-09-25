@@ -43,7 +43,7 @@ export default function ResultModal({
   const handleContinue = () => {
     navigation.reset({
       index: 0,
-      routes: [{ name: 'Home' }], // ✅ safe, matches RootStackParamList
+      routes: [{ name: 'Home' }], 
     });
   };
 

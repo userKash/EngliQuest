@@ -1,4 +1,5 @@
 import React, { useEffect, useLayoutEffect, useState } from "react";
+<<<<<<< HEAD
 import { View, Text, StyleSheet, ActivityIndicator } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation, useRoute } from "@react-navigation/native";
@@ -144,23 +145,92 @@ export default function FilipinoToEnglishGameScreen() {
 
     loadQuiz();
   }, [levelId]);
+=======
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  BackHandler,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { useNavigation } from "@react-navigation/native";
+import InstructionCard from "../../../components/InstructionCard";
+import FilipinoToEnglishQuiz from "../../../components/FilipinoToEnglishQuiz";
+import { Ionicons } from "@expo/vector-icons";
+import BottomNav from "../../../components/BottomNav";
+import ExitQuizModal from "../../../components/ExitQuizModal"; // 👈 shared modal
 
+export default function FilipinoToEnglishGameScreen() {
+  const navigation = useNavigation();
+  const [step, setStep] = useState<"instructions" | "quiz">("instructions");
+  const [progress, setProgress] = useState<{ current: number; total: number }>(
+    { current: 0, total: 1 }
+  );
+>>>>>>> 37d55d6a394be1f6446d1b68296697b4cdbc3ef4
+
+  const [showExitModal, setShowExitModal] = useState(false);
+
+  // ✅ Handle Android hardware back
+  useEffect(() => {
+    const backAction = () => {
+      if (step === "quiz") {
+        setShowExitModal(true);
+        return true;
+      }
+      return false;
+    };
+    const backHandler = BackHandler.addEventListener(
+      "hardwareBackPress",
+      backAction
+    );
+    return () => backHandler.remove();
+  }, [step]);
+
+  // ✅ Handle navigation header
   useLayoutEffect(() => {
     if (step === "quiz") {
       navigation.setOptions({
+        gestureEnabled: false,
         headerTitle: () => (
           <View style={{ alignItems: "center" }}>
+<<<<<<< HEAD
             <Text style={{ fontSize: 18, fontWeight: "bold" }}>Filipino → English</Text>
             <Text style={{ fontSize: 12, color: "#555" }}>
               {String(levelId).toUpperCase()} – Question {progress.current + 1} of {progress.total}
+=======
+            <Text style={{ fontSize: 18, fontWeight: "bold" }}>
+              Filipino to English
+            </Text>
+            <Text style={{ fontSize: 12, color: "#555" }}>
+              Easy – Question {progress.current + 1} of {progress.total}
+>>>>>>> 37d55d6a394be1f6446d1b68296697b4cdbc3ef4
             </Text>
           </View>
         ),
+        headerLeft: () => (
+          <TouchableOpacity
+            onPress={() => setShowExitModal(true)}
+            style={{ marginLeft: 12, flexDirection: "row", alignItems: "center" }}
+          >
+            <Ionicons name="arrow-back" size={24} />
+          </TouchableOpacity>
+        ),
       });
     } else {
+<<<<<<< HEAD
       navigation.setOptions({ headerTitle: "Filipino to English" });
     }
   }, [step, progress, levelId]);
+=======
+      navigation.setOptions({
+        gestureEnabled: true,
+        headerTitle: "Filipino to English",
+        headerLeft: undefined,
+      });
+    }
+  }, [step, progress]);
+>>>>>>> 37d55d6a394be1f6446d1b68296697b4cdbc3ef4
 
   const instructions = {
     title: "Filipino to English",
@@ -174,6 +244,7 @@ export default function FilipinoToEnglishGameScreen() {
     tipIcon: require("../../../../assets/flat-color-icons_idea.png"),
   };
 
+<<<<<<< HEAD
   if (loading) {
     return (
       <View style={styles.center}>
@@ -189,6 +260,9 @@ export default function FilipinoToEnglishGameScreen() {
       </View>
     );
   }
+=======
+  const currentRoute = (navigation as any).getState().routes.slice(-1)[0].name;
+>>>>>>> 37d55d6a394be1f6446d1b68296697b4cdbc3ef4
 
   return (
     <SafeAreaView style={styles.screen}>
@@ -200,7 +274,10 @@ export default function FilipinoToEnglishGameScreen() {
           titleIcon={instructions.titleIcon}
           tipIcon={instructions.tipIcon}
           onNext={() => setStep("quiz")}
+<<<<<<< HEAD
           nextLabel="Start Quiz"
+=======
+>>>>>>> 37d55d6a394be1f6446d1b68296697b4cdbc3ef4
         />
       ) : (
         <FilipinoToEnglishQuiz
@@ -211,11 +288,30 @@ export default function FilipinoToEnglishGameScreen() {
           }}
         />
       )}
+
+      <ExitQuizModal
+        visible={showExitModal}
+        onCancel={() => setShowExitModal(false)}
+        onConfirm={() => {
+          setShowExitModal(false);
+          navigation.goBack();
+        }}
+      />
+
+      <BottomNav
+        currentRoute={currentRoute}
+        onNavigate={(name) => navigation.navigate(name as never)}
+        inQuiz={step === "quiz"}
+        onBlockedNav={() => setShowExitModal(true)}
+      />
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: "#fff" },
+<<<<<<< HEAD
   center: { flex: 1, justifyContent: "center", alignItems: "center" },
+=======
+>>>>>>> 37d55d6a394be1f6446d1b68296697b4cdbc3ef4
 });

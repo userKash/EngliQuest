@@ -1,4 +1,3 @@
-// src/components/LogoutModal.tsx
 import React from "react";
 import {
   Modal,
@@ -20,7 +19,6 @@ export default function LogoutModal({ visible, onCancel, onConfirm }: Props) {
     <Modal visible={visible} transparent animationType="fade">
       <View style={styles.overlay}>
         <View style={styles.container}>
-          {/* 🚀 Illustration (replace with your own asset if needed) */}
           <Image
             source={require("../../assets/logoutIcon.png")} 
             style={styles.image}

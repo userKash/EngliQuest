@@ -1,4 +1,3 @@
-// src/components/PrimaryButton.tsx
 import React from 'react';
 import { TouchableOpacity, Text, StyleSheet, GestureResponderEvent } from 'react-native';
 

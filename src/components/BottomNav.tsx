@@ -1,27 +1,51 @@
-// src/components/BottomNav.tsx
-import React from 'react';
-import { View, TouchableOpacity, Text, StyleSheet } from 'react-native';
-import { Feather } from '@expo/vector-icons';
+import React from "react";
+import { View, TouchableOpacity, Text, StyleSheet } from "react-native";
+import { Feather } from "@expo/vector-icons";
 
 type Props = {
   currentRoute?: string;
-  onNavigate: (name: 'Home' | 'Progress' | 'Profile') => void;
+  onNavigate: (name: "Home" | "Progress" | "Profile") => void;
+  inQuiz?: boolean; 
+  onBlockedNav?: () => void; 
 };
 
-export default function BottomNav({ currentRoute, onNavigate }: Props) {
-  const HIDE = ['Login', 'Register', 'InterestSelection', 'WordOfTheDay'];
+export default function BottomNav({
+  currentRoute,
+  onNavigate,
+  inQuiz,
+  onBlockedNav,
+}: Props) {
+  const HIDE = ["Login", "Register", "InterestSelection", "WordOfTheDay"];
   if (!currentRoute || HIDE.includes(currentRoute)) return null;
 
-  const Tab = (p: { name: 'Home' | 'Progress' | 'Profile'; label: string; icon: any }) => {
+  const Tab = (p: {
+    name: "Home" | "Progress" | "Profile";
+    label: string;
+    icon: any;
+  }) => {
     const active = currentRoute === p.name;
     return (
-      <TouchableOpacity style={styles.tab} onPress={() => onNavigate(p.name)}>
+      <TouchableOpacity
+        style={styles.tab}
+        onPress={() => {
+          if (inQuiz) {
+            onBlockedNav?.(); 
+          } else {
+            onNavigate(p.name);
+          }
+        }}
+      >
         <Feather
           name={p.icon}
           size={20}
-          style={[styles.icon, active && { color: '#5B6BEE', opacity: 1 }]}
+          style={[styles.icon, active && { color: "#5B6BEE", opacity: 1 }]}
         />
-        <Text style={[styles.label, active && { color: '#5B6BEE', opacity: 1, fontWeight: '600' }]}>
+        <Text
+          style={[
+            styles.label,
+            active && { color: "#5B6BEE", opacity: 1, fontWeight: "600" },
+          ]}
+        >
           {p.label}
         </Text>
       </TouchableOpacity>
@@ -41,32 +65,32 @@ export default function BottomNav({ currentRoute, onNavigate }: Props) {
 
 const styles = StyleSheet.create({
   wrap: {
-    position: 'absolute',
+    position: "absolute",
     left: 0,
     right: 0,
-    bottom: 0, // pinned to bottom (no floating)
+    bottom: 0,
     zIndex: 1000,
   },
   bar: {
     height: 85,
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     borderTopLeftRadius: 18,
     borderTopRightRadius: 18,
     borderWidth: StyleSheet.hairlineWidth,
     borderBottomWidth: 0,
-    borderColor: '#E5E7EB',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-around',
+    borderColor: "#E5E7EB",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-around",
     paddingHorizontal: 12,
-    overflow: 'hidden',
+    overflow: "hidden",
   },
   tab: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    height: '100%',
+    alignItems: "center",
+    justifyContent: "center",
+    height: "100%",
   },
-  icon: { color: '#000', opacity: 0.8 },
-  label: { marginTop: 4, fontSize: 13, color: '#000', opacity: 0.8 },
+  icon: { color: "#000", opacity: 0.8 },
+  label: { marginTop: 4, fontSize: 13, color: "#000", opacity: 0.8 },
 });

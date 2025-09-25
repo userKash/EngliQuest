@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import React, { useEffect, useMemo, useState } from "react";
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -6,6 +7,13 @@ import ResultModal from "../components/ResultModal";
 import { initFirebase } from "../../firebaseConfig";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRoute } from "@react-navigation/native";
+=======
+import React, { useEffect, useMemo, useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import PrimaryButton from './PrimaryButton';
+import ResultModal from '../components/ResultModal';
+>>>>>>> 37d55d6a394be1f6446d1b68296697b4cdbc3ef4
 
 const STORAGE_KEY = "GrammarProgress"; // per-user progress key
 

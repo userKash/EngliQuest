@@ -34,7 +34,7 @@ if (Constants.executionEnvironment !== "storeClient") {
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, "Login">;
 
 const { width } = Dimensions.get("window");
-const scale = width / 375; // iPhone X base width
+const scale = width / 375; 
 
 export default function LoginScreen() {
   const navigation = useNavigation<NavigationProp>();
@@ -46,7 +46,7 @@ export default function LoginScreen() {
   const [errorVisible, setErrorVisible] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
 
-  // ✅ Web (Expo Go) flow
+
   const [request, response, promptAsync] =
     GoogleAuthSession.useIdTokenAuthRequest({
       webClientId:
@@ -211,7 +211,7 @@ export default function LoginScreen() {
       <ErrorModal
         visible={errorVisible}
         onClose={() => setErrorVisible(false)}
-        onRetry={() => setErrorVisible(false)} // just closes modal
+        onRetry={() => setErrorVisible(false)} 
         onForgotPassword={() => {
           setErrorVisible(false);
           Alert.alert("Forgot Password", "Password reset feature coming soon!");
@@ -249,7 +249,7 @@ const styles = StyleSheet.create({
   },
   inner: {
     width: "100%",
-    maxWidth: 400, // keeps form narrow on tablets
+    maxWidth: 400, 
     alignItems: "center",
     paddingHorizontal: 20,
   },
