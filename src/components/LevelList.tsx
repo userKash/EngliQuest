@@ -17,8 +17,8 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
 
-// types you can reuse from any screen
-export type TopLevel = 'easy' | 'medium' | 'hard'; // types
+
+export type TopLevel = 'easy' | 'medium' | 'hard'; 
 export type SubLevel = { id: string; title: string };
 
 // Structure for each difficulty
@@ -43,6 +43,7 @@ type Props = {
   passing?: number; // default 70
   onStartSubLevel: (subId: string) => void; // parent handles navigation
   Footer?: React.ReactNode; // optional footer (tips, etc.)
+  isUnlocked?: (subId: string) => boolean;
 };
 
 // helpers (kept here so the component is portable)
@@ -65,7 +66,7 @@ function isSubLevelUnlocked(
   if (subIndex === 0) return true;
   const prevId = def.sublevels[subIndex - 1].id;
   const prevScore = progress[prevId]?.score ?? 0;
-  return prevScore >= PASSING; // Unlock if previous is passed
+  return prevScore >= PASSING; 
 }
 
 export default function LevelList({

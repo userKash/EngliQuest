@@ -1,17 +1,19 @@
 {
   "expo": {
-    "name": "my-expo-app",
+    "name": "Engliquest",
     "slug": "my-expo-app",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/Engliquest Logo.png",
     "userInterfaceStyle": "light",
     "splash": {
       "image": "./assets/splash.png",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
-    "assetBundlePatterns": ["**/*"],
+    "assetBundlePatterns": [
+      "**/*"
+    ],
     "web": {
       "favicon": "./assets/favicon.png"
     },
@@ -37,17 +39,17 @@
         "projectId": "ea72d93d-9b33-4811-8cdf-77b8cbf70121"
       }
     },
-"plugins": [
-  "expo-font",
-  "expo-web-browser",
-  [
-    "@react-native-google-signin/google-signin",
-    {
-      "reservedClientId": "com.googleusercontent.apps.1072058760841-fgolrmt1orn8gjulltba0qk8nkd77det",
-      "iosUrlScheme": "com.googleusercontent.apps.1072058760841-fgolrmt1orn8gjulltba0qk8nkd77det"
-    }
-  ]
-]
-
+    "plugins": [
+      "expo-font",
+      "expo-web-browser",
+      [
+        "@react-native-google-signin/google-signin",
+        {
+          "reservedClientId": "com.googleusercontent.apps.1072058760841-fgolrmt1orn8gjulltba0qk8nkd77det",
+          "iosUrlScheme": "com.googleusercontent.apps.1072058760841-fgolrmt1orn8gjulltba0qk8nkd77det"
+        }
+      ]
+    ],
+    "owner": "alphs18"
   }
 }

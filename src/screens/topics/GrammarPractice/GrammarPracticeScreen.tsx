@@ -1,105 +1,154 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage'; // to save progress
-import { useNavigation } from '@react-navigation/native';
+import React, { useEffect, useState, useCallback } from "react";
+import { View, Text, ActivityIndicator } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useNavigation, useFocusEffect } from "@react-navigation/native";
+import auth from "@react-native-firebase/auth";
 
-// import the reusable component + types
-import LevelList, { LevelDef, ProgressState } from '../../../components/LevelList'; // <-- adjust path if needed
+import LevelList, { LevelDef, ProgressState } from "../../../components/LevelList";
 
-const STORAGE_KEY = 'grammarProgress'; // key for storage
 const PASSING = 70;
 
-//  Difficulty and Sublevel definition (Grammar)
 const LEVELS: LevelDef[] = [
   {
-    key: 'easy',
+    key: "easy",
     order: 1,
-    title: 'Easy',
-    description: 'Basic grammar',
+    title: "Easy",
+    description: "Basic grammar",
     sublevels: [
-      { id: 'easy-1', title: 'Level 1' },
-      { id: 'easy-2', title: 'Level 2' },
+      { id: "easy-1", title: "Level 1" },
+      { id: "easy-2", title: "Level 2" },
     ],
   },
   {
-    key: 'medium',
+    key: "medium",
     order: 2,
-    title: 'Medium',
-    description: 'Intermediate grammar',
+    title: "Medium",
+    description: "Intermediate grammar",
     sublevels: [
-      { id: 'medium-1', title: 'Level 1' },
-      { id: 'medium-2', title: 'Level 2' },
+      { id: "medium-1", title: "Level 1" },
+      { id: "medium-2", title: "Level 2" },
     ],
   },
   {
-    key: 'hard',
+    key: "hard",
     order: 3,
-    title: 'Hard',
-    description: 'Advanced grammar',
+    title: "Hard",
+    description: "Advanced grammar",
     sublevels: [
-      { id: 'hard-1', title: 'Level 1' },
-      { id: 'hard-2', title: 'Level 2' },
+      { id: "hard-1", title: "Level 1" },
+      { id: "hard-2", title: "Level 2" },
     ],
   },
 ];
 
-// Start with an empty progress object for new users
+// Start fresh
 function makeInitialProgress(): ProgressState {
   return {};
 }
 
 export default function GrammarPracticeScreen() {
   const navigation = useNavigation<any>();
-  const [progress, setProgress] = useState<ProgressState>({}); // Track all progress
+  const [progress, setProgress] = useState<ProgressState>({});
+  const [storageKey, setStorageKey] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  // On first load, get saved progress from AsyncStorage.
-  // If none is found, start with empty progress.
+  // Load storageKey once per user
   useEffect(() => {
-    (async () => {
-      try {
-        const stored = await AsyncStorage.getItem(STORAGE_KEY);
-        setProgress(stored ? (JSON.parse(stored) as ProgressState) : makeInitialProgress());
-      } catch {
-        setProgress(makeInitialProgress());
-      }
-    })();
+    const user = auth().currentUser;
+    if (!user) return;
+    setStorageKey(`GrammarProgress_${user.uid}`);
   }, []);
 
-  // Starts the selected sublevel if it’s unlocked; otherwise, does nothing
-  const onStartSubLevel = (subId: string) => {
-    navigation.navigate('GrammarGame', { levelId: subId });
+  // Reload progress whenever screen is focused
+  useFocusEffect(
+    useCallback(() => {
+      if (!storageKey) return;
+      let isActive = true;
+
+      const loadProgress = async () => {
+        setLoading(true);
+        try {
+          const stored = await AsyncStorage.getItem(storageKey);
+          if (isActive) {
+            setProgress(stored ? JSON.parse(stored) : makeInitialProgress());
+          }
+        } catch {
+          if (isActive) setProgress(makeInitialProgress());
+        } finally {
+          if (isActive) setLoading(false);
+        }
+      };
+
+      loadProgress();
+      return () => {
+        isActive = false;
+      };
+    }, [storageKey])
+  );
+
+  // Save automatically when progress changes
+  useEffect(() => {
+    if (!storageKey) return;
+    AsyncStorage.setItem(storageKey, JSON.stringify(progress));
+  }, [progress, storageKey]);
+
+  // 🔹 Unlock rules: pass ≥ 70% in the previous sublevel
+  const isUnlocked = (subId: string): boolean => {
+    const order = ["easy-1", "easy-2", "medium-1", "medium-2", "hard-1", "hard-2"];
+    const idx = order.indexOf(subId);
+    if (idx === -1) return false;
+    if (idx === 0) return true; // first level always unlocked
+
+    const prevId = order[idx - 1];
+    const prevScore = progress[prevId]?.score ?? 0;
+    return prevScore >= PASSING;
   };
 
+  // 🔹 Start or preview a sublevel
+  const onStartSubLevel = (subId: string) => {
+    if (!isUnlocked(subId)) return;
+    navigation.navigate("GrammarGame", { levelId: subId, gameMode: "Grammar" });
+  };
+
+  if (loading) {
+    return (
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+        <ActivityIndicator size="large" />
+        <Text style={{ marginTop: 10 }}>Loading progress...</Text>
+      </View>
+    );
+  }
+
   return (
-    <View style={{ flex: 1, backgroundColor: '#fff' }}>
+    <View style={{ flex: 1, backgroundColor: "#fff" }}>
       <LevelList
         levels={LEVELS}
         progress={progress}
         passing={PASSING}
         onStartSubLevel={onStartSubLevel}
+        isUnlocked={isUnlocked}
         Footer={
           <View
             style={{
               marginTop: 20,
-              backgroundColor: '#F6F4FF',
+              backgroundColor: "#F6F4FF",
               borderRadius: 10,
               padding: 14,
               borderWidth: 1,
-              borderColor: '#D0C4F7',
-            }}>
-            {/* Tips */}
-            <Text style={{ fontSize: 13, marginBottom: 10, color: '#444' }}>
-              Complete each level in order. Pass Easy, Medium, and Hard with {PASSING}% to unlock
-              the next level.
+              borderColor: "#D0C4F7",
+            }}
+          >
+            <Text style={{ fontSize: 13, marginBottom: 10, color: "#444" }}>
+              Complete each level in order. Pass with {PASSING}% to unlock the next one.
             </Text>
-            <Text style={{ fontSize: 13, color: '#555', marginBottom: 6 }}>💡 Learning Tips</Text>
-            <Text style={{ fontSize: 13, color: '#555', marginBottom: 6 }}>
+            <Text style={{ fontSize: 13, color: "#555", marginBottom: 6 }}>💡 Learning Tips</Text>
+            <Text style={{ fontSize: 13, color: "#555", marginBottom: 6 }}>
               • Focus on one rule at a time
             </Text>
-            <Text style={{ fontSize: 13, color: '#555', marginBottom: 6 }}>
+            <Text style={{ fontSize: 13, color: "#555", marginBottom: 6 }}>
               • Practice with short examples
             </Text>
-            <Text style={{ fontSize: 13, color: '#555', marginBottom: 6 }}>
+            <Text style={{ fontSize: 13, color: "#555", marginBottom: 6 }}>
               • Review mistakes to learn faster
             </Text>
           </View>

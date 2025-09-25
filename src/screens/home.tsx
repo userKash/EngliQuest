@@ -23,102 +23,85 @@ export default function HomeScreen() {
   const [sentencePct, setSentencePct] = useState(0);
   const [overallPct, setOverallPct] = useState(0);
 
-  useEffect(() => {
-    const loadAvatar = async () => {
-      try {
-        const saved = await AsyncStorage.getItem('selectedAvatar');
-        if (saved) {
-          setAvatar(JSON.parse(saved));
+  function calculateOrderedProgress(progressData: Record<string, { score: number }>, order: string[], passing = 70) {
+  let totalScore = 0;
+  let levelsCompleted = 0;
+
+  for (let i = 0; i < order.length; i++) {
+    const id = order[i];
+    const score = progressData[id]?.score ?? 0;
+
+
+    if (i === 0 || (progressData[order[i - 1]]?.score ?? 0) >= passing) {
+      totalScore += score;
+      levelsCompleted++;
+    } else {
+      break; 
+    }
+  }
+
+  return levelsCompleted ? Math.round(totalScore / levelsCompleted) : 0;
+}
+
+
+useEffect(() => {
+  const loadUserAndProgress = async () => {
+    try {
+      const { auth, db } = await initFirebase();
+      const user = auth.currentUser;
+      if (!user) return;
+
+      const savedAvatar = await AsyncStorage.getItem('selectedAvatar');
+      if (savedAvatar) setAvatar(JSON.parse(savedAvatar));
+      const userDoc = await db.collection('users').doc(user.uid).get();
+      if (userDoc.exists) setUserName(userDoc.data().name || 'User');
+      const vocabKey = `VocabularyProgress_${user.uid}`;
+      let vocabProgress: Record<string, { score: number }> = {};
+      const storedVocab = await AsyncStorage.getItem(vocabKey);
+      if (storedVocab) vocabProgress = JSON.parse(storedVocab);
+
+      const vocabOrder = ['easy-1','easy-2','medium-1','medium-2','hard-1','hard-2'];
+      const vocab = calculateOrderedProgress(vocabProgress, vocabOrder);
+      const snap = await db.collection('scores').where('userId', '==', user.uid).get();
+      let grammarProgress: Record<string, { score: number }> = {};
+      snap.forEach((doc: any) => {
+        const data = doc.data();
+        if (data.quizType === 'Grammar') grammarProgress[data.levelId] = { score: data.score ?? 0 };
+      });
+      const grammarOrder = ['easy-1','easy-2','medium-1','medium-2','hard-1','hard-2'];
+      const grammar = calculateOrderedProgress(grammarProgress, grammarOrder);
+      let reading = 0, translation = 0, sentence = 0;
+      snap.forEach((doc: any) => {
+        const data = doc.data();
+        const pct = data.score ?? 0;
+        switch (data.quizType) {
+          case 'Reading': reading = Math.max(reading, pct); break;
+          case 'Translation': translation = Math.max(translation, pct); break;
+          case 'Sentence': sentence = Math.max(sentence, pct); break;
         }
-      } catch (err) {
-        console.error('Error loading avatar:', err);
-      }
-    };
+      });
 
-    const loadUser = async () => {
-      try {
-        const { auth, db } = await initFirebase();
-        const user = auth.currentUser;
-        if (!user) return;
+      // --- Overall ---
+      const scores = [vocab, grammar, reading, translation, sentence];
+      const attempted = scores.filter((s) => s > 0);
+      const overall = attempted.length ? Math.round(scores.reduce((a,b)=>a+b,0)/attempted.length) : 0;
 
-        // ✅ get user profile
-        if (db.collection) {
-          const doc = await db.collection('users').doc(user.uid).get();
-          if (doc.exists) {
-            setUserName(doc.data().name || 'User');
-          }
-        } else {
-          const { doc, getDoc } = await import('firebase/firestore');
-          const userDoc = await getDoc(doc(db, 'users', user.uid));
-          if (userDoc.exists()) {
-            setUserName(userDoc.data().name || 'User');
-          }
-        }
+      setVocabPct(vocab);
+      setGrammarPct(grammar);
+      setReadingPct(reading);
+      setTranslationPct(translation);
+      setSentencePct(sentence);
+      setOverallPct(overall);
 
-        // ✅ get progress scores
-        let snap;
-        if (db.collection) {
-          snap = await db.collection('scores').where('userId', '==', user.uid).get();
-        } else {
-          const { collection, query, where, getDocs } = await import('firebase/firestore');
-          const q = query(collection(db, 'scores'), where('userId', '==', user.uid));
-          snap = await getDocs(q);
-        }
+    } catch (err) {
+      console.error('Error loading user/progress:', err);
+    }
+  };
 
-        let vocab = 0,
-          grammar = 0,
-          reading = 0,
-          translation = 0,
-          sentence = 0;
-        let topicsAttempted = 0;
+  loadUserAndProgress();
+}, []);
 
-        snap.forEach((doc: any) => {
-          const data = doc.data();
-          const pct = data.score ?? 0;
 
-          switch (data.quizType) {
-            case 'Vocabulary':
-              vocab = Math.max(vocab, pct);
-              break;
-            case 'Grammar':
-              grammar = Math.max(grammar, pct);
-              break;
-            case 'Reading':
-              reading = Math.max(reading, pct);
-              break;
-            case 'Translation':
-              translation = Math.max(translation, pct);
-              break;
-            case 'Sentence':
-              sentence = Math.max(sentence, pct);
-              break;
-          }
-        });
-
-        // count only attempted topics
-        const scores = [vocab, grammar, reading, translation, sentence];
-        topicsAttempted = scores.filter((s) => s > 0).length;
-
-        setVocabPct(vocab);
-        setGrammarPct(grammar);
-        setReadingPct(reading);
-        setTranslationPct(translation);
-        setSentencePct(sentence);
-
-        if (topicsAttempted > 0) {
-          const overall = Math.round(
-            scores.reduce((a, b) => a + b, 0) / topicsAttempted
-          );
-          setOverallPct(overall);
-        }
-      } catch (err) {
-        console.error('Error fetching user/progress data:', err);
-      }
-    };
-
-    loadAvatar();
-    loadUser();
-  }, []);
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' }}>

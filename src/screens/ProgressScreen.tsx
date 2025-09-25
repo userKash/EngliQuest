@@ -1,5 +1,6 @@
 // src/screens/ProgressScreen.tsx
-import React, { useMemo, useState } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -156,19 +157,49 @@ const BADGES: Badge[] = [
 ];
 
 export default function ProgressScreen() {
-  const [unlocked] = useState<Set<string>>(new Set());
+  const [unlocked, setUnlocked] = useState<Set<string>>(new Set());
   const [selected, setSelected] = useState<Badge | null>(null);
+
+  const { width } = Dimensions.get('window');
+  const CARD_W = Math.floor((width - 16 * 2 - 12) / 2);
+
+  // --- Load progress from AsyncStorage ---
+  useEffect(() => {
+    (async () => {
+      try {
+        const stored = await AsyncStorage.getItem('VocabularyProgress');
+        const progress = stored ? JSON.parse(stored) : {};
+
+        const unlockedSet = new Set<string>();
+
+        // Unlock badges based on score ≥70%
+        if (progress['vocab_easy']?.score >= 70) unlockedSet.add('vocab_easy');
+        if (progress['vocab_med']?.score >= 70) unlockedSet.add('vocab_med');
+        if (progress['vocab_hard']?.score >= 70) unlockedSet.add('vocab_hard');
+
+        // Champion badge unlocked if all three completed
+        if (
+          unlockedSet.has('vocab_easy') &&
+          unlockedSet.has('vocab_med') &&
+          unlockedSet.has('vocab_hard')
+        ) {
+          unlockedSet.add('vocab_champ');
+        }
+
+        setUnlocked(unlockedSet);
+      } catch (err) {
+        console.error('❌ Failed to load vocabulary progress:', err);
+      }
+    })();
+  }, []);
 
   const progressPct = useMemo(
     () => Math.round((unlocked.size / BADGES.length) * 100),
     [unlocked.size]
   );
 
-  const { width } = Dimensions.get('window');
-  const CARD_W = Math.floor((width - 16 * 2 - 12) / 2);
-
-  const unlockedList: Badge[] = [];
-  const lockedList: Badge[] = BADGES;
+  const unlockedList = BADGES.filter((b) => unlocked.has(b.id));
+  const lockedList = BADGES.filter((b) => !unlocked.has(b.id));
 
   const FAMILY_COLORS: Record<string, string> = {
     vocab: '#7C83FF',
@@ -192,26 +223,16 @@ export default function ProgressScreen() {
         <TouchableOpacity
           activeOpacity={0.85}
           onPress={() => setSelected(item)}
-          style={[
-            styles.badgeCard,
-            { width: CARD_W, borderColor },
-            lockedMode && styles.badgeCardLocked,
-          ]}>
+          style={[styles.badgeCard, { width: CARD_W, borderColor }, lockedMode && styles.badgeCardLocked]}>
           <View style={styles.badgeRowTop}>
-            <Image
-              source={item.image}
-              resizeMode="contain"
-              style={[styles.badgeImg, lockedMode && { opacity: 0.25 }]}
-            />
+            <Image source={item.image} resizeMode="contain" style={[styles.badgeImg, lockedMode && { opacity: 0.25 }]} />
           </View>
           <View style={styles.badgeTextWrap}>
             <Text style={[styles.badgeTitle, lockedMode && { color: '#9AA1AC' }]} numberOfLines={1}>
               {item.title}
             </Text>
             {!!item.subtitle && (
-              <Text
-                style={[styles.badgeSubtitle, lockedMode && { color: '#B8C0CB' }]}
-                numberOfLines={1}>
+              <Text style={[styles.badgeSubtitle, lockedMode && { color: '#B8C0CB' }]} numberOfLines={1}>
                 {item.subtitle}
               </Text>
             )}
@@ -292,11 +313,7 @@ export default function ProgressScreen() {
       </ScrollView>
 
       {/* modal */}
-      <Modal
-        visible={!!selected}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setSelected(null)}>
+      <Modal visible={!!selected} transparent animationType="fade" onRequestClose={() => setSelected(null)}>
         <Pressable style={styles.backdrop} onPress={() => setSelected(null)}>
           <View style={styles.modalCard}>
             {!!selected && (
@@ -317,9 +334,9 @@ export default function ProgressScreen() {
   );
 }
 
+// --- Styles (same as before) ---
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: '#fff' },
-
   headerNoBack: {
     height: 50,
     flexDirection: 'row',
@@ -330,9 +347,7 @@ const styles = StyleSheet.create({
     borderBottomColor: '#e5e7eb',
   },
   headerTitle: { fontSize: 18, fontWeight: '700', color: '#111' },
-
   section: { paddingHorizontal: 16, marginTop: 8 },
-
   progressCard: {
     backgroundColor: '#F7F7FB',
     borderRadius: 14,
@@ -346,20 +361,12 @@ const styles = StyleSheet.create({
   progressPct: { fontWeight: '700', color: '#6B6EF9' },
   progressBarBg: { height: 8, borderRadius: 999, backgroundColor: '#E5E7EB', overflow: 'hidden' },
   progressBarFill: { height: '100%', backgroundColor: '#6B6EF9' },
-
   sectionHeader: { flexDirection: 'row', alignItems: 'center', paddingVertical: 8, marginTop: 8 },
   sectionIcon: { fontSize: 16, marginRight: 8 },
   sectionTitle: { fontSize: 14, fontWeight: '700', color: '#111827' },
-  sectionHeaderDim: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 8,
-    marginTop: 8,
-    opacity: 0.75,
-  },
+  sectionHeaderDim: { flexDirection: 'row', alignItems: 'center', paddingVertical: 8, marginTop: 8, opacity: 0.75 },
   sectionIconDim: { fontSize: 16, marginRight: 8 },
   sectionTitleDim: { fontSize: 14, fontWeight: '700', color: '#6B7280' },
-
   emptyWrap: {
     borderWidth: 1,
     borderColor: '#ECECF4',
@@ -370,7 +377,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   emptyText: { color: '#6B7280', fontSize: 12, fontWeight: '600' },
-
   badgeCard: {
     borderWidth: 2,
     borderRadius: 16,
@@ -378,43 +384,20 @@ const styles = StyleSheet.create({
     padding: 12,
     height: 138,
   },
-  badgeCardLocked: {
-    backgroundColor: '#FAFAFB',
-  },
-  badgeRowTop: {
-    flex: 1,
-    borderRadius: 12,
-    backgroundColor: '#F6F7FB',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
+  badgeCardLocked: { backgroundColor: '#FAFAFB' },
+  badgeRowTop: { flex: 1, borderRadius: 12, backgroundColor: '#F6F7FB', justifyContent: 'center', alignItems: 'center' },
   badgeImg: { width: '80%', height: '80%' },
   badgeTextWrap: { marginTop: 8 },
   badgeTitle: { fontWeight: '700', color: '#111827', fontSize: 12 },
   badgeSubtitle: { color: '#6B7280', fontSize: 11, marginTop: 2 },
-
   lockOverlay: { position: 'absolute', inset: 0, justifyContent: 'center', alignItems: 'center' },
   lockEmoji: { fontSize: 24, opacity: 0.7 },
-
   backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'center', padding: 24 },
   modalCard: { backgroundColor: '#FFFFFF', borderRadius: 16, padding: 16 },
   modalImg: { width: 96, height: 96, alignSelf: 'center' },
-  modalTitle: {
-    marginTop: 10,
-    color: '#111827',
-    fontSize: 18,
-    fontWeight: '800',
-    textAlign: 'center',
-  },
+  modalTitle: { marginTop: 10, color: '#111827', fontSize: 18, fontWeight: '800', textAlign: 'center' },
   modalSub: { marginTop: 4, color: '#6B7280', fontSize: 13, textAlign: 'center' },
   modalHint: { marginTop: 10, color: '#374151', fontSize: 13, textAlign: 'center' },
-  modalBtn: {
-    marginTop: 14,
-    alignSelf: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 999,
-    backgroundColor: '#6B6EF9',
-  },
+  modalBtn: { marginTop: 14, alignSelf: 'center', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 999, backgroundColor: '#6B6EF9' },
   modalBtnText: { color: 'white', fontWeight: '700' },
 });

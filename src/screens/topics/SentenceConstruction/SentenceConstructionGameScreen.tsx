@@ -1,5 +1,5 @@
 import React, { useLayoutEffect, useState } from 'react';
-import { View, Text } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import InstructionCard from '../../../components/InstructionCard';
@@ -42,16 +42,16 @@ export default function SentenceConstructionGameScreen() {
     title: 'Sentence Construction',
     body:
       'Instruction:\n\n' +
-      'Read the word and choose the correct definition or meaning.\n\n' +
-      'Some questions may ask for synonyms or usage.\n\n' +
-      'Only one choice is correct.',
-    tip: ' Tip: Look for capital letters and punctuation clues!',
-    titleIcon: require('../../../../assets/Sentence Construction.png'), // update if you have a different filename
+      'Arrange the given words to form a correct sentence.\n\n' +
+      'Some questions may have cultural or grammatical hints.\n\n' +
+      'Only one arrangement is correct.',
+    tip: 'Tip: Look for capital letters and punctuation clues!',
+    titleIcon: require('../../../../assets/Sentence Construction.png'),
     tipIcon: require('../../../../assets/flat-color-icons_idea.png'),
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' }}>
+    <SafeAreaView style={styles.screen}>
       {step === 'instructions' ? (
         <InstructionCard
           title={instructions.title}
@@ -67,3 +67,7 @@ export default function SentenceConstructionGameScreen() {
     </SafeAreaView>
   );
 }
+
+const styles = StyleSheet.create({
+  screen: { flex: 1, backgroundColor: '#fff' },
+});

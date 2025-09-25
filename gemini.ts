@@ -1,12 +1,15 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import db from "./node_scripts/firebase-admin.js";
 
-// const GEMINI_API_KEY = "AIzaSyDAuUE91Dylc_wPOulknZBgGW--_YlZ_v4";
 // const GEMINI_API_KEY = "AIzaSyBTiE1WIPRv-nKAwkTf7FitzLi5qbLnKcQ";
-const GEMINI_API_KEY = "AIzaSyBEtS5_bpEgcJ9KBxdeu9bQzwzlwJ5KOa4"
+//const GEMINI_API_KEY = "AIzaSyBEtS5_bpEgcJ9KBxdeu9bQzwzlwJ5KOa4"
+
+
+const GEMINI_API_KEY = "AIzaSyBkVhiw_ld4fUVhokzOPi-iau0kwfSQiy4"
 const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
 
 export interface Question {
+    passage?: string;
     question: string;
     options: string[];
     correctIndex: number;
