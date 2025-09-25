@@ -266,7 +266,6 @@ export default function VocabularyGameScreen() {
           onProgressChange={setProgress}
           onFinish={async (rawScore: number) => {
             await saveQuizResult(levelId, rawScore, questions.length);
-            navigation.goBack();
           }}
         />
       )}
