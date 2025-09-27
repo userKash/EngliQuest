@@ -7,6 +7,7 @@ import {
   StyleSheet,
   FlatList,
 } from "react-native";
+import { Feather } from "@expo/vector-icons";
 
 interface QuizProgress {
   id: string;
@@ -23,6 +24,20 @@ export default function LoadingModal({
   message?: string;
   progress?: QuizProgress[];
 }) {
+  const renderStatusIcon = (status: string) => {
+    switch (status) {
+      case "success":
+        return <Feather name="check-circle" size={16} color="#22C55E" />;
+      case "in-progress":
+        return <ActivityIndicator size="small" color="#5E67CC" />;
+      case "failed":
+        return <Feather name="x-circle" size={16} color="#EF4444" />;
+      case "pending":
+      default:
+        return <ActivityIndicator size="small" color="#D1D5DB" />;
+    }
+  };
+
   return (
     <Modal
       visible={visible}
@@ -42,18 +57,9 @@ export default function LoadingModal({
               renderItem={({ item }) => (
                 <View style={styles.row}>
                   <Text style={styles.quizLabel}>{item.label}</Text>
-                  {item.status === "success" && (
-                    <Text style={styles.success}>✅</Text>
-                  )}
-                  {item.status === "failed" && (
-                    <Text style={styles.failed}>❌</Text>
-                  )}
-                  {item.status === "in-progress" && (
-                    <Text style={styles.inProgress}>⏳</Text>
-                  )}
-                  {item.status === "pending" && (
-                    <Text style={styles.pending}>•</Text>
-                  )}
+                  <View style={styles.iconContainer}>
+                    {renderStatusIcon(item.status)}
+                  </View>
                 </View>
               )}
             />
@@ -90,8 +96,9 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: "row",
     justifyContent: "space-between",
+    alignItems: "center",
     width: "100%",
-    paddingVertical: 4,
+    paddingVertical: 6,
     borderBottomWidth: 0.5,
     borderColor: "#ddd",
   },
@@ -100,8 +107,10 @@ const styles = StyleSheet.create({
     color: "#333",
     flex: 1,
   },
-  success: { color: "green", fontSize: 18 },
-  failed: { color: "red", fontSize: 18 },
-  inProgress: { color: "#5E67CC", fontSize: 18 },
-  pending: { color: "#aaa", fontSize: 18 },
+  iconContainer: {
+    width: 24,
+    height: 24,
+    justifyContent: "center",
+    alignItems: "center",
+  },
 });
