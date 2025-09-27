@@ -37,6 +37,26 @@ export default function InterestSelectionScreen() {
     );
   };
 
+  // Helper function to format quiz labels
+  const formatQuizLabel = (gameMode: string, level: string, difficulty: string) => {
+    const levelNames: Record<string, string> = {
+      "A1": "Level 1",
+      "A2": "Level 2", 
+      "B1": "Level 1",
+      "B2": "Level 2",
+      "C1": "Level 1",
+      "C2": "Level 2"
+    };
+
+    const difficultyNames: Record<string, string> = {
+      "easy": "Easy",
+      "medium": "Medium", 
+      "hard": "Hard"
+    };
+
+    return `${gameMode} - ${difficultyNames[difficulty]} - ${levelNames[level]}`;
+  };
+
   const handleCreateAccount = async () => {
     if (selected.length < 3) {
       Alert.alert("Selection Required", "Please select at least 3 interests.");
@@ -57,7 +77,6 @@ export default function InterestSelectionScreen() {
 
       const uid = user.uid;
 
-      // Save user profile
       if (db.collection) {
         const firestore = db;
         const { serverTimestamp } = firestore.constructor;
@@ -84,7 +103,7 @@ export default function InterestSelectionScreen() {
         );
       }
 
-      // Define 30 quizzes
+      // Define the quiz plan to match the order in gemini.client
       const quizPlan = [
         { level: "A1", difficulty: "easy", gameMode: "Vocabulary" },
         { level: "A2", difficulty: "easy", gameMode: "Vocabulary" },
@@ -118,26 +137,44 @@ export default function InterestSelectionScreen() {
         { level: "C2", difficulty: "hard", gameMode: "Reading Comprehension" },
       ];
 
-      // Init progress
+      // Initialize progress with detailed labels
       setProgress(
-        quizPlan.map((q, idx) => ({
-          id: `${q.gameMode}-${q.level}`,
-          label: `${idx + 1}. ${q.gameMode} (${q.level})`,
-          status: "pending",
+        quizPlan.map((quiz, idx) => ({
+          id: `${quiz.gameMode}-${quiz.level}`,
+          label: formatQuizLabel(quiz.gameMode, quiz.level, quiz.difficulty),
+          status: "pending" as const,
         }))
       );
 
-      // Save helper
-      const saveQuiz = async (quizId: string, level: string, gameMode: string, difficulty: string, questions: any[]) => {
+      const { generateAllQuizzes } = await import("../../gemini.client");
+      
+      const allQuizzes = await generateAllQuizzes(
+        uid,
+        selected,
+        (completed, total) => {
+          setLoadingMessage(`We're crafting your personalized learning journey. Generated ${completed}/${total} quizzes...`);
+          
+          setProgress(prev => 
+            prev.map((p, idx) => ({
+              ...p,
+              status: idx < completed ? "success" : idx === completed ? "in-progress" : "pending"
+            }))
+          );
+        }
+      );
+
+      setLoadingMessage("Saving quizzes to database...");
+      
+      const savePromises = allQuizzes.map(async ({ quizId, questions, metadata }) => {
         if (db.collection) {
           const firestore = db;
           const { serverTimestamp } = firestore.constructor;
           await firestore.collection("quizzes").doc(quizId).set({
             quizId,
             userId: uid,
-            level,
-            gameMode,
-            difficulty,
+            level: metadata.level,
+            gameMode: metadata.gameMode,
+            difficulty: metadata.difficulty,
             questions,
             createdAt: serverTimestamp?.() ?? new Date(),
           });
@@ -146,47 +183,16 @@ export default function InterestSelectionScreen() {
           await setDoc(doc(db, "quizzes", quizId), {
             quizId,
             userId: uid,
-            level,
-            gameMode,
-            difficulty,
+            level: metadata.level,
+            gameMode: metadata.gameMode,
+            difficulty: metadata.difficulty,
             questions,
             createdAt: serverTimestamp(),
           });
         }
-      };
+      });
 
-      // Run all in parallel
-      await Promise.all(
-        quizPlan.map(async ({ level, difficulty, gameMode }, idx) => {
-          const quizLabel = `${gameMode}-${level}`;
-
-          setProgress((prev) =>
-            prev.map((p) => (p.id === quizLabel ? { ...p, status: "in-progress" } : p))
-          );
-
-          setLoadingMessage(`Generating quiz ${idx + 1} of 30: ${gameMode} (${level})...`);
-
-          try {
-            const { quizId, questions } = await createPersonalizedQuizClient(
-              uid,
-              level as any,
-              selected,
-              gameMode,
-              difficulty
-            );
-            await saveQuiz(quizId, level, gameMode, difficulty, questions);
-
-            setProgress((prev) =>
-              prev.map((p) => (p.id === quizLabel ? { ...p, status: "success" } : p))
-            );
-          } catch (err) {
-            console.error(`❌ Failed ${gameMode} (${level}):`, err);
-            setProgress((prev) =>
-              prev.map((p) => (p.id === quizLabel ? { ...p, status: "failed" } : p))
-            );
-          }
-        })
-      );
+      await Promise.all(savePromises);
 
       setLoading(false);
       Alert.alert("Welcome!", "Your account and all 30 quizzes have been created successfully.");
@@ -195,13 +201,11 @@ export default function InterestSelectionScreen() {
         routes: [{ name: "WordOfTheDay" }],
       });
     } catch (err: any) {
-      console.error("❌ Firestore save error:", err);
+      console.error("Quiz generation error:", err);
       setLoading(false);
-      Alert.alert("Error", err.message || "Something went wrong.");
+      Alert.alert("Error", err.message || "Something went wrong creating your quizzes.");
     }
   };
-
-
 
   return (
     <>
@@ -297,7 +301,6 @@ export default function InterestSelectionScreen() {
         </View>
       </View>
 
-      {/* 🔹 Show loading modal with progress */}
       <LoadingModal visible={loading} message={loadingMessage} progress={progress} />
     </>
   );
