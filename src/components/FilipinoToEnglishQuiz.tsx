@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from "react";
+// src/components/FilipinoToEnglishQuiz.tsx
+import React, { useEffect, useState, useMemo } from "react";
 import {
   View,
   Text,
@@ -10,16 +11,24 @@ import {
   UIManager,
   LayoutAnimation,
   KeyboardAvoidingView,
+  Modal,
+  Pressable,
+  Image,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useNavigation, useRoute } from "@react-navigation/native";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+
 import PrimaryButton from "./PrimaryButton";
 import ResultModal from "./ResultModal";
+import { unlockBadge } from "../../badges_utility/badgesutil";
+import { BADGES } from "../screens/ProgressScreen";
+import type { RootStackParamList } from "../navigation/type";
 
 type QA = {
   filipino: string;
   note?: string;
   accepts: string[];
-  points?: number;
 };
 
 type ReviewItem = {
@@ -30,10 +39,11 @@ type ReviewItem = {
 };
 
 type Props = {
-  questions: QA[]; // ✅ passed from Firestore
+  questions: QA[];
   onProgressChange?: (p: { current: number; total: number }) => void;
-  onFinish?: (finalScore: number) => void;
+  onFinish?: (percentage: number) => void; 
 };
+
 
 if (Platform.OS === "android" && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -41,22 +51,35 @@ if (Platform.OS === "android" && UIManager.setLayoutAnimationEnabledExperimental
 
 export default function FilipinoToEnglishQuiz({ questions, onProgressChange, onFinish }: Props) {
   const insets = useSafeAreaInsets();
-  const total = questions.length;
+  const navigation =
+    useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const route = useRoute<any>();
+  const { levelId, progress } = route.params || {};
 
   const [index, setIndex] = useState(0);
   const [value, setValue] = useState("");
   const [locked, setLocked] = useState(false);
   const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
-  const [score, setScore] = useState(0);
-  const [showModal, setShowModal] = useState(false);
+  const [score, setScore] = useState(0); // ✅ +10 per correct
+  const [showResult, setShowResult] = useState(false);
   const [review, setReview] = useState<ReviewItem[]>([]);
-  const [correctCount, setCorrectCount] = useState(0);
+
+  // ✅ Badge state
+  const [newBadges, setNewBadges] = useState<string[]>([]);
+  const [badgeModal, setBadgeModal] = useState<string | null>(null);
+
+  const total = questions.length;
+  const last = index === total - 1;
+  const current = questions[index];
 
   useEffect(() => {
     onProgressChange?.({ current: index, total });
-  }, [index, total, onProgressChange]);
+  }, [index, total]);
 
-  const current = questions[index];
+  useEffect(() => {
+    setBadgeModal(newBadges.length > 0 ? newBadges[0] : null);
+  }, [newBadges]);
+
   const normalize = (s: string) => s.toLowerCase().trim().replace(/\s+/g, " ");
 
   const check = () => {
@@ -66,10 +89,8 @@ export default function FilipinoToEnglishQuiz({ questions, onProgressChange, onF
     const ok = current.accepts.some((a) => normalize(a) === normalize(value));
     setIsCorrect(ok);
     setLocked(true);
-    if (ok) {
-      setScore((s) => s + (current.points ?? 12));
-      setCorrectCount((c) => c + 1);
-    }
+
+    if (ok) setScore((s) => s + 10);
 
     setReview((r) => [
       ...r,
@@ -82,36 +103,50 @@ export default function FilipinoToEnglishQuiz({ questions, onProgressChange, onF
     ]);
   };
 
-  const next = () => {
-    if (!locked) return;
-    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+const next = async () => {
+  if (!locked) return;
+  LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
 
-    if (index < total - 1) {
-      setIndex((i) => i + 1);
-      setValue("");
-      setLocked(false);
-      setIsCorrect(null);
-    } else {
-      setShowModal(true);
-      onFinish?.(correctCount);
+  if (!last) {
+    setIndex((i) => i + 1);
+    setValue("");
+    setLocked(false);
+    setIsCorrect(null);
+  } else {
+    setShowResult(true);
+    const correctAnswers = score / 10;
+    const percentage = Math.round((correctAnswers / total) * 100);
+    if (/-2$/.test(levelId)) {
+      const unlocked = await unlockBadge("trans", levelId, progress || {});
+      if (unlocked.length > 0) setNewBadges(unlocked);
     }
-  };
 
-  const actionLabel = locked ? (index < total - 1 ? "Next Question" : "Finish") : "Check";
+    onFinish?.(percentage); 
+  }
+};
+
+
+  const reviewData = useMemo(() => review, [review]);
+
+  const actionLabel = locked ? (last ? "Finish" : "Next Question") : "Check";
   const actionHandler = locked ? next : check;
   const actionDisabled = locked ? false : value.trim().length === 0;
 
-  const handleContinueFromModal = () => {
-    // Close modal and reset for replay 
-    setShowModal(false);
-    setIndex(0);
-    setValue('');
-    setLocked(false);
-    setIsCorrect(null);
-    setScore(0);
-    setCorrectCount(0);
-    setReview([]);
+  const handleBadgeContinue = () => {
+    if (newBadges.length > 1) {
+      setNewBadges(newBadges.slice(1));
+    } else {
+      setNewBadges([]);
+      navigation.reset({
+        index: 0,
+        routes: [{ name: "Home" as keyof RootStackParamList }],
+      });
+    }
   };
+
+  const badgeData = badgeModal
+    ? BADGES.find((b: { id: string }) => b.id === badgeModal)
+    : null;
 
   return (
     <View style={styles.screen}>
@@ -154,7 +189,7 @@ export default function FilipinoToEnglishQuiz({ questions, onProgressChange, onF
             {isCorrect !== null && (
               <View style={[styles.feedbackBox, isCorrect ? styles.correctBox : styles.wrongBox]}>
                 <Text style={[styles.feedbackTitle, isCorrect ? styles.correctText : styles.wrongText]}>
-                  {isCorrect ? `✅ Correct: +${current.points ?? 12} points` : "❌ Incorrect"}
+                  {isCorrect ? `✅ Correct: +10 points` : "❌ Incorrect"}
                 </Text>
                 {!isCorrect && (
                   <Text style={styles.feedbackDetail}>
@@ -167,19 +202,45 @@ export default function FilipinoToEnglishQuiz({ questions, onProgressChange, onF
 
           <View style={{ height: 120 }} />
         </ScrollView>
+
         <View style={[styles.bottomBar, { paddingBottom: insets.bottom + 100 }]}>
           <PrimaryButton label={actionLabel} onPress={actionHandler} disabled={actionDisabled} />
         </View>
       </KeyboardAvoidingView>
 
       <ResultModal
-        visible={showModal}
-        score={correctCount}
+        visible={showResult}
+        score={score / 10}
         total={total}
-        review={review}
-        onRequestClose={() => setShowModal(false)}
+        review={reviewData}
+        onRequestClose={() => setShowResult(false)}
         title="🎉 Great job!"
+        onContinue={() => {
+          setShowResult(false);
+          if (newBadges.length === 0) {
+            navigation.reset({
+              index: 0,
+              routes: [{ name: "Home" as keyof RootStackParamList }],
+            });
+          }
+        }}
       />
+
+      <Modal visible={!!badgeData} transparent animationType="fade" onRequestClose={handleBadgeContinue}>
+        <Pressable style={styles.overlay} onPress={handleBadgeContinue}>
+          <View style={styles.modalCard}>
+            {badgeData && (
+              <>
+                <Image source={badgeData.image} style={styles.modalImg} />
+                <Text style={styles.modalTitle}>{badgeData.title}</Text>
+                {badgeData.subtitle && <Text style={styles.modalSub}>{badgeData.subtitle}</Text>}
+                <Text style={styles.modalHint}>Unlocked! 🎉</Text>
+                <PrimaryButton label="Continue" onPress={handleBadgeContinue} />
+              </>
+            )}
+          </View>
+        </Pressable>
+      </Modal>
     </View>
   );
 }
@@ -197,7 +258,14 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   cardTitle: { fontWeight: "700", textAlign: "center", marginBottom: 8 },
-  word: { fontSize: 36, fontWeight: "800", textAlign: "center", marginBottom: 4, color: "#5E67CC", marginVertical: 30 },
+  word: {
+    fontSize: 36,
+    fontWeight: "800",
+    textAlign: "center",
+    marginBottom: 4,
+    color: "#5E67CC",
+    marginVertical: 30,
+  },
   note: { textAlign: "center", color: "#666", marginBottom: 8, marginVertical: 30 },
   outerInputBox: {
     flexDirection: "row",
@@ -248,4 +316,26 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: -2 },
     elevation: 6,
   },
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0,0,0,0.45)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  modalCard: {
+    backgroundColor: "#fff",
+    borderRadius: 16,
+    padding: 20,
+    alignItems: "center",
+    width: "80%",
+  },
+  modalImg: { width: 96, height: 96, marginBottom: 12, resizeMode: "contain" },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    textAlign: "center",
+    marginBottom: 6,
+  },
+  modalSub: { fontSize: 14, textAlign: "center", marginBottom: 8, color: "#555" },
+  modalHint: { fontSize: 14, color: "#111", marginBottom: 12 },
 });

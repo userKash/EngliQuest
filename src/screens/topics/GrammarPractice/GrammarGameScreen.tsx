@@ -221,18 +221,18 @@ export default function GrammarGameScreen() {
           onNext={() => setStep("quiz")}
         />
       ) : (
-        <GrammarQuiz
-          questions={questions.map((q) => ({
-            prompt: q.question,
-            choices: q.options,
-            correctIndex: q.correctIndex,
-            explanation: q.explanation,
-          }))}
-          onProgressChange={setProgress}
-          onFinish={async (rawScore: number) => {
-            await saveQuizResult(levelId, rawScore, questions.length);
-          }}
-        />
+      <GrammarQuiz
+        questions={questions.map((q) => ({
+          prompt: q.question,
+          choices: q.options,
+          correctIndex: q.correctIndex,
+          explanation: q.explanation,
+        }))}
+        onProgressChange={setProgress}
+        onFinish={async (rawScore: number) => {
+          await saveQuizResult(levelId, rawScore, questions.length);
+        }}
+      />
       )}
 
       <ExitQuizModal

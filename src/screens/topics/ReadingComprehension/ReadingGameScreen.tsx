@@ -36,30 +36,25 @@ const LEVEL_MAP: Record<string, string> = {
 };
 
 // ✅ Save quiz result locally & to Firestore
-async function saveReadingResult(
-  subId: string,
-  rawScore: number,
-  total: number
-) {
+async function saveReadingResult(subId: string, percentage: number) {
   const user = auth().currentUser;
   if (!user) return;
 
-  const AsyncStorage = (
-    await import("@react-native-async-storage/async-storage")
-  ).default;
+  const AsyncStorage = (await import("@react-native-async-storage/async-storage")).default;
   const key = `ReadingProgress_${user.uid}`;
   const stored = await AsyncStorage.getItem(key);
   const progress = stored ? JSON.parse(stored) : {};
 
-  const percentage = Math.round((rawScore / total) * 100);
+  // clamp percentage between 0–100
+  const finalPct = Math.min(100, Math.max(0, Math.round(percentage)));
 
   progress[subId] = {
-    score: Math.max(progress[subId]?.score ?? 0, percentage),
+    score: Math.max(progress[subId]?.score ?? 0, finalPct),
     attempted: true,
   };
 
   await AsyncStorage.setItem(key, JSON.stringify(progress));
-  console.log(`✅ Saved Reading ${percentage}% locally for ${subId}`);
+  console.log(`✅ Saved Reading ${finalPct}% locally for ${subId}`);
 
   try {
     const { db } = await initFirebase();
@@ -67,7 +62,7 @@ async function saveReadingResult(
       userId: user.uid,
       levelId: subId,
       quizType: "Reading",
-      score: percentage,
+      score: finalPct,
       totalscore: 100,
       createdAt: (
         await import("@react-native-firebase/firestore")
@@ -141,8 +136,7 @@ export default function ReadingGameScreen() {
           const normalizedQuestions: Question[] = qArr.map((q: any) => ({
             question: q.question ?? "",
             options: Array.isArray(q.options) ? q.options : [],
-            correctIndex:
-              typeof q.correctIndex === "number" ? q.correctIndex : 0,
+            correctIndex: typeof q.correctIndex === "number" ? q.correctIndex : 0,
             explanation: q.explanation ?? "",
             passage: q.passage ?? "",
           }));
@@ -170,10 +164,7 @@ export default function ReadingGameScreen() {
       }
       return false;
     };
-    const backHandler = BackHandler.addEventListener(
-      "hardwareBackPress",
-      backAction
-    );
+    const backHandler = BackHandler.addEventListener("hardwareBackPress", backAction);
     return () => backHandler.remove();
   }, [step]);
 
@@ -184,12 +175,9 @@ export default function ReadingGameScreen() {
         gestureEnabled: false,
         headerTitle: () => (
           <View style={{ alignItems: "center" }}>
-            <Text style={{ fontSize: 18, fontWeight: "bold" }}>
-              Reading Comprehension
-            </Text>
+            <Text style={{ fontSize: 18, fontWeight: "bold" }}>Reading Comprehension</Text>
             <Text style={{ fontSize: 12, color: "#555" }}>
-              {String(levelId).toUpperCase()} – Question {progress.current + 1}{" "}
-              of {progress.total}
+              {String(levelId).toUpperCase()} – Question {progress.current + 1} of {progress.total}
             </Text>
           </View>
         ),
@@ -262,8 +250,8 @@ export default function ReadingGameScreen() {
           }))}
           passageTitle="Passage"
           onProgressChange={setProgress}
-          onFinish={async (rawCorrectCount: number) => {
-            await saveReadingResult(levelId, rawCorrectCount, questions.length);
+          onFinish={async (percentage: number) => {
+            await saveReadingResult(levelId, percentage);
           }}
         />
       )}

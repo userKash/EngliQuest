@@ -22,6 +22,7 @@ export default function PrimaryButton({ label, onPress, disabled }: Props) {
 const styles = StyleSheet.create({
   btn: {
     height: 48,
+    width: '100%',
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',

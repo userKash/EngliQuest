@@ -19,7 +19,7 @@ import PrimaryButton from "./PrimaryButton";
 import ResultModal from "../components/ResultModal";
 import { initFirebase } from "../../firebaseConfig";
 import { unlockBadge } from "../../badges_utility/badgesutil";
-import { BADGES } from "../screens/ProgressScreen"; // ✅ exported in ProgressScreen
+import { BADGES } from "../screens/ProgressScreen"; 
 import type { RootStackParamList } from "../navigation/type";
 
 const STORAGE_KEY = "VocabularyProgress";
@@ -93,31 +93,29 @@ export default function VocabularyQuiz({
     }
   }, [newBadges]);
 
-  async function saveProgress(finalScore: number, totalQuestions: number) {
-    try {
-      const correctAnswers = finalScore / 10;
-      const percentage = Math.round((correctAnswers / totalQuestions) * 100);
+// --- saveProgress just saves local progress, no badges ---
+async function saveProgress(finalScore: number, totalQuestions: number) {
+  try {
+    const correctAnswers = finalScore / 10;
+    const percentage = Math.round((correctAnswers / totalQuestions) * 100);
 
-      const stored = await AsyncStorage.getItem(STORAGE_KEY);
-      let progress = stored ? JSON.parse(stored) : {};
+    const stored = await AsyncStorage.getItem(STORAGE_KEY);
+    let progress = stored ? JSON.parse(stored) : {};
 
-      progress[levelId] = {
-        score: Math.max(progress[levelId]?.score ?? 0, percentage),
-        attempted: true,
-      };
+    progress[levelId] = {
+      score: Math.max(progress[levelId]?.score ?? 0, percentage),
+      attempted: true,
+    };
 
-      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(progress));
-      console.log("✅ Progress saved locally:", progress);
+    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(progress));
+    console.log("✅ Progress saved locally:", progress);
 
-      // unlock badge(s)
-      const unlocked = await unlockBadge("vocab", levelId, progress);
-      if (unlocked.length > 0) {
-        setNewBadges(unlocked); // triggers useEffect → opens modal
-      }
-    } catch (err) {
-      console.error("❌ Error saving progress:", err);
-    }
+    // 🚫 badges removed from here
+  } catch (err) {
+    console.error("❌ Error saving progress:", err);
   }
+}
+
 
   async function saveScoreToFirestore(
     finalScore: number,
@@ -301,28 +299,45 @@ export default function VocabularyQuiz({
           />
         </View>
       )}
+    <ResultModal
+      visible={showResult}
+      score={score / 10}
+      total={questions.length}
+      review={review}
+      onRequestClose={() => setShowResult(false)}
+      title="🎉 Congratulations!"
+      onContinue={async () => {
+        setShowResult(false);
 
-      <ResultModal
-        visible={showResult}
-        score={score / 10}
-        total={questions.length}
-        review={review}
-        onRequestClose={() => setShowResult(false)}
-        title="🎉 Congratulations!"
-        onContinue={() => {
-          setShowResult(false);
-          setTimeout(() => {
-            console.log("👉 Continue pressed. newBadges:", newBadges);
-            if (newBadges.length === 0) {
-              console.log("🏠 Navigating home, no badges.");
-              navigation.reset({
-                index: 0,
-                routes: [{ name: "Home" as keyof RootStackParamList }],
-              });
+        const finalScore = score;
+        const correctAnswers = finalScore / 10;
+        const percentage = Math.round((correctAnswers / questions.length) * 100);
+
+        if (percentage >= 70) {
+          console.log("✅ Passed quiz, unlocking badges...");
+          try {
+            const stored = await AsyncStorage.getItem(STORAGE_KEY);
+            const progress = stored ? JSON.parse(stored) : {};
+            const unlocked = await unlockBadge("vocab", levelId, progress);
+            if (unlocked.length > 0) {
+              setNewBadges(unlocked); // triggers badge modal(s)
+              return; // 🚫 stop here, let badge modal handle navigation
             }
-          }, 300);
-        }}
-      />
+          } catch (err) {
+            console.error("❌ Error unlocking badge after result:", err);
+          }
+        } else {
+          console.log("❌ Quiz failed — no badges unlocked");
+        }
+
+        // ✅ if no badges, go home right away
+        navigation.reset({
+          index: 0,
+          routes: [{ name: "Home" as keyof RootStackParamList }],
+        });
+      }}
+    />
+
 
       <Modal
         visible={!!badgeData}

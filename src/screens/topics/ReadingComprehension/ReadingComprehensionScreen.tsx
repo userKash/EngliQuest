@@ -1,9 +1,10 @@
-// src/screens/Reading/ReadingComprehensionScreen.tsx
+// src/screens/SentenceConstruction/SentenceConstructionBuilderScreen.tsx
 import React, { useEffect, useState, useCallback } from "react";
 import { View, Text, ActivityIndicator } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import auth from "@react-native-firebase/auth";
+import firestore from "@react-native-firebase/firestore";
 
 import LevelList, { LevelDef, ProgressState } from "../../../components/LevelList";
 
@@ -14,32 +15,41 @@ const LEVELS: LevelDef[] = [
     key: "easy",
     order: 1,
     title: "Easy",
-    description: "Basic comprehension",
+    description: "Basic sentence construction",
     sublevels: [
-      { id: "read-easy-1", title: "Level 1" },
-      { id: "read-easy-2", title: "Level 2" },
+      { id: "trans-easy-1", title: "Level 1" },
+      { id: "trans-easy-2", title: "Level 2" },
     ],
   },
   {
     key: "medium",
     order: 2,
     title: "Medium",
-    description: "Intermediate comprehension",
+    description: "Intermediate sentence construction",
     sublevels: [
-      { id: "read-medium-1", title: "Level 1" },
-      { id: "read-medium-2", title: "Level 2" },
+      { id: "trans-medium-1", title: "Level 1" },
+      { id: "trans-medium-2", title: "Level 2" },
     ],
   },
   {
     key: "hard",
     order: 3,
     title: "Hard",
-    description: "Advanced comprehension",
+    description: "Advanced sentence construction",
     sublevels: [
-      { id: "read-hard-1", title: "Level 1" },
-      { id: "read-hard-2", title: "Level 2" },
+      { id: "trans-hard-1", title: "Level 1" },
+      { id: "trans-hard-2", title: "Level 2" },
     ],
   },
+];
+
+const SUBLEVELS = [
+  "trans-easy-1",
+  "trans-easy-2",
+  "trans-medium-1",
+  "trans-medium-2",
+  "trans-hard-1",
+  "trans-hard-2",
 ];
 
 // Start fresh
@@ -47,7 +57,25 @@ function makeInitialProgress(): ProgressState {
   return {};
 }
 
-export default function ReadingComprehensionScreen() {
+// 🔹 Migration helper (old keys → new)
+function migrateKeys(oldProgress: ProgressState): ProgressState {
+  const map: Record<string, string> = {
+    "sentence-easy-1": "trans-easy-1",
+    "sentence-easy-2": "trans-easy-2",
+    "sentence-medium-1": "trans-medium-1",
+    "sentence-medium-2": "trans-medium-2",
+    "sentence-hard-1": "trans-hard-1",
+    "sentence-hard-2": "trans-hard-2",
+  };
+  const migrated: ProgressState = {};
+  for (const [k, v] of Object.entries(oldProgress)) {
+    const newKey = map[k] || k;
+    migrated[newKey] = v;
+  }
+  return migrated;
+}
+
+export default function SentenceConstructionBuilderScreen() {
   const navigation = useNavigation<any>();
   const [progress, setProgress] = useState<ProgressState>({});
   const [storageKey, setStorageKey] = useState<string | null>(null);
@@ -57,10 +85,10 @@ export default function ReadingComprehensionScreen() {
   useEffect(() => {
     const user = auth().currentUser;
     if (!user) return;
-    setStorageKey(`ReadingProgress_${user.uid}`);
+    setStorageKey(`SentenceConstructionProgress_${user.uid}`);
   }, []);
 
-  // 🔹 Reload progress on screen focus
+  // 🔹 Reload progress on focus
   useFocusEffect(
     useCallback(() => {
       if (!storageKey) return;
@@ -69,11 +97,36 @@ export default function ReadingComprehensionScreen() {
       const loadProgress = async () => {
         setLoading(true);
         try {
+          // 1. Load from local storage
           const stored = await AsyncStorage.getItem(storageKey);
-          if (isActive) {
-            setProgress(stored ? JSON.parse(stored) : makeInitialProgress());
+          const parsed = stored ? JSON.parse(stored) : makeInitialProgress();
+          const migrated = migrateKeys(parsed);
+
+          // 2. Fetch Firestore best scores
+          const user = auth().currentUser;
+          if (user) {
+            const snap = await firestore()
+              .collection("scores")
+              .where("userId", "==", user.uid)
+              .where("quizType", "==", "Sentence Construction") // ✅ match saved quizType
+              .get();
+
+            snap.forEach((doc) => {
+              const data = doc.data();
+              const subId = data.difficulty; // ✅ same as reading: store difficulty
+              const score = data.userscore ?? 0; // percentage
+
+              if (!migrated[subId] || score > (migrated[subId].score ?? 0)) {
+                migrated[subId] = { score };
+              }
+            });
           }
-        } catch {
+
+          if (isActive) {
+            setProgress(migrated);
+            await AsyncStorage.setItem(storageKey, JSON.stringify(migrated));
+          }
+        } catch (e) {
           if (isActive) setProgress(makeInitialProgress());
         } finally {
           if (isActive) setLoading(false);
@@ -87,35 +140,49 @@ export default function ReadingComprehensionScreen() {
     }, [storageKey])
   );
 
-  // 🔹 Save whenever progress changes
+  // 🔹 Save progress automatically
   useEffect(() => {
     if (!storageKey) return;
     AsyncStorage.setItem(storageKey, JSON.stringify(progress));
   }, [progress, storageKey]);
 
-  // 🔹 Unlock rules (same as grammar)
+  // 🔹 Best score updater
+  const updateBestScore = (subId: string, newScore: number) => {
+    setProgress((prev) => {
+      const prevScore = prev[subId]?.score ?? 0;
+      if (newScore > prevScore) {
+        return { ...prev, [subId]: { score: newScore } };
+      }
+      return prev;
+    });
+  };
+
+  // 🔹 Unlock rules
   const isUnlocked = (subId: string): boolean => {
-    const order = [
-      "read-easy-1",
-      "read-easy-2",
-      "read-medium-1",
-      "read-medium-2",
-      "read-hard-1",
-      "read-hard-2",
-    ];
-    const idx = order.indexOf(subId);
+    const idx = SUBLEVELS.indexOf(subId);
     if (idx === -1) return false;
     if (idx === 0) return true;
 
-    const prevId = order[idx - 1];
+    const prevId = SUBLEVELS[idx - 1];
     const prevScore = progress[prevId]?.score ?? 0;
     return prevScore >= PASSING;
   };
 
-  // 🔹 Start Reading quiz
+  // 🔹 Overall progress
+  const contribution = 100 / SUBLEVELS.length;
+  const overallProgress = SUBLEVELS.reduce((sum, id) => {
+    const score = progress[id]?.score ?? 0;
+    return sum + (score / 100) * contribution;
+  }, 0);
+
+  // 🔹 Start Sentence Construction quiz
   const onStartSubLevel = (subId: string) => {
     if (!isUnlocked(subId)) return;
-    navigation.navigate("ReadingGame", { levelId: subId, gameMode: "Reading Comprehension" });
+    navigation.navigate("SentenceConstructionGame", {
+      levelId: subId,
+      gameMode: "Sentence Construction",
+      onFinish: (score: number) => updateBestScore(subId, score),
+    });
   };
 
   if (loading) {
@@ -133,6 +200,7 @@ export default function ReadingComprehensionScreen() {
         levels={LEVELS}
         progress={progress}
         passing={PASSING}
+        overallProgress={overallProgress}
         onStartSubLevel={onStartSubLevel}
         isUnlocked={isUnlocked}
         Footer={
@@ -149,10 +217,18 @@ export default function ReadingComprehensionScreen() {
             <Text style={{ fontSize: 13, marginBottom: 10, color: "#444" }}>
               Complete each level in order. Pass with {PASSING}% to unlock the next one.
             </Text>
-            <Text style={{ fontSize: 13, color: "#555", marginBottom: 6 }}>💡 Reading Tips</Text>
-            <Text style={{ fontSize: 13, color: "#555", marginBottom: 6 }}>• Read slowly and carefully</Text>
-            <Text style={{ fontSize: 13, color: "#555", marginBottom: 6 }}>• Highlight key ideas</Text>
-            <Text style={{ fontSize: 13, color: "#555", marginBottom: 6 }}>• Summarize what you read in your own words</Text>
+            <Text style={{ fontSize: 13, color: "#555", marginBottom: 6 }}>
+              💡 Sentence Construction Tips
+            </Text>
+            <Text style={{ fontSize: 13, color: "#555", marginBottom: 6 }}>
+              • Start with simple subjects and verbs
+            </Text>
+            <Text style={{ fontSize: 13, color: "#555", marginBottom: 6 }}>
+              • Pay attention to word order
+            </Text>
+            <Text style={{ fontSize: 13, color: "#555", marginBottom: 6 }}>
+              • Add objects and complements step by step
+            </Text>
           </View>
         }
       />

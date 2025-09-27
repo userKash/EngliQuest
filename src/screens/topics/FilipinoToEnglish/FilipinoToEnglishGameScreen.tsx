@@ -1,3 +1,4 @@
+// src/screens/Translation/FilipinoToEnglishGameScreen.tsx
 import React, { useEffect, useLayoutEffect, useState } from "react";
 import {
   View,
@@ -29,9 +30,9 @@ type QA = {
   filipino: string;
   note?: string;
   accepts: string[];
-  points?: number;
 };
 
+// 🔹 Map Firestore levels
 const LEVEL_MAP: Record<string, string> = {
   "easy-1": "A1",
   "easy-2": "A2",
@@ -41,31 +42,25 @@ const LEVEL_MAP: Record<string, string> = {
   "hard-2": "C2",
 };
 
-// ✅ Save quiz result
-async function saveTranslationResult(
-  subId: string,
-  rawScore: number,
-  total: number
-) {
+// ✅ Save quiz result (local + Firestore)
+async function saveTranslationResult(subId: string, percentage: number) {
   const user = auth().currentUser;
   if (!user) return;
 
-  const AsyncStorage = (
-    await import("@react-native-async-storage/async-storage")
-  ).default;
+  const AsyncStorage = (await import("@react-native-async-storage/async-storage")).default;
   const key = `TranslationProgress_${user.uid}`;
   const stored = await AsyncStorage.getItem(key);
   const progress = stored ? JSON.parse(stored) : {};
 
-  const percentage = Math.round((rawScore / total) * 100);
+  const finalPct = Math.min(100, Math.max(0, Math.round(percentage)));
 
   progress[subId] = {
-    score: Math.max(progress[subId]?.score ?? 0, percentage),
+    score: Math.max(progress[subId]?.score ?? 0, finalPct),
     attempted: true,
   };
 
   await AsyncStorage.setItem(key, JSON.stringify(progress));
-  console.log(`✅ Saved Translation ${percentage}% locally for ${subId}`);
+  console.log(`✅ Saved Translation ${finalPct}% locally for ${subId}`);
 
   try {
     const { db } = await initFirebase();
@@ -73,7 +68,7 @@ async function saveTranslationResult(
       userId: user.uid,
       levelId: subId,
       quizType: "Translation",
-      score: percentage,
+      score: finalPct,
       totalscore: 100,
       createdAt: (
         await import("@react-native-firebase/firestore")
@@ -147,14 +142,10 @@ export default function FilipinoToEnglishGameScreen() {
             ? data.questions
             : [];
 
-          // 🔄 transform Firestore → QA
           const normalizedQuestions: QA[] = qArr.map((q) => ({
             filipino: q.question,
             note: q.explanation ?? "",
-            accepts: q.options[q.correctIndex]
-              ? [q.options[q.correctIndex]]
-              : [],
-            points: 12,
+            accepts: q.options[q.correctIndex] ? [q.options[q.correctIndex]] : [],
           }));
 
           setQuestions(normalizedQuestions);
@@ -172,7 +163,7 @@ export default function FilipinoToEnglishGameScreen() {
     loadQuiz();
   }, [levelId]);
 
-  // ✅ Handle Android hardware back
+  // ✅ Handle Android back button
   useEffect(() => {
     const backAction = () => {
       if (step === "quiz") {
@@ -181,10 +172,7 @@ export default function FilipinoToEnglishGameScreen() {
       }
       return false;
     };
-    const backHandler = BackHandler.addEventListener(
-      "hardwareBackPress",
-      backAction
-    );
+    const backHandler = BackHandler.addEventListener("hardwareBackPress", backAction);
     return () => backHandler.remove();
   }, [step]);
 
@@ -195,12 +183,9 @@ export default function FilipinoToEnglishGameScreen() {
         gestureEnabled: false,
         headerTitle: () => (
           <View style={{ alignItems: "center" }}>
-            <Text style={{ fontSize: 18, fontWeight: "bold" }}>
-              Filipino → English
-            </Text>
+            <Text style={{ fontSize: 18, fontWeight: "bold" }}>Filipino → English</Text>
             <Text style={{ fontSize: 12, color: "#555" }}>
-              {String(levelId).toUpperCase()} – Question {progress.current + 1}{" "}
-              of {progress.total}
+              {String(levelId).toUpperCase()} – Question {progress.current + 1} of {progress.total}
             </Text>
           </View>
         ),
@@ -265,13 +250,13 @@ export default function FilipinoToEnglishGameScreen() {
           nextLabel="Start Quiz"
         />
       ) : (
-        <FilipinoToEnglishQuiz
-          questions={questions}
-          onProgressChange={setProgress}
-          onFinish={async (rawScore: number) => {
-            await saveTranslationResult(levelId, rawScore, questions.length);
-          }}
-        />
+      <FilipinoToEnglishQuiz
+        questions={questions}
+        onProgressChange={setProgress}
+        onFinish={async (percentage: number) => {
+          await saveTranslationResult(levelId, percentage);
+        }}
+      />
       )}
 
       <ExitQuizModal

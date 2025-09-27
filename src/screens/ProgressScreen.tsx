@@ -188,7 +188,18 @@ useEffect(() => {
         badgeDoc = snap.exists() ? snap.data() : {};
       }
 
-      const unlockedSet = new Set(Object.keys(badgeDoc).filter((k) => badgeDoc[k]));
+      // 🔑 Normalize keys so "reading_read-easy" → "reading_easy"
+      const normalize = (key: string) =>
+        key
+          .replace("read-easy", "easy")
+          .replace("read-med", "med")
+          .replace("read-hard", "hard");
+
+      const unlockedSet = new Set(
+        Object.keys(badgeDoc)
+          .filter((k) => badgeDoc[k])
+          .map(normalize)
+      );
 
       // --- Ultimate Badge (if all 5 hard unlocked) ---
       const hardIds = [
@@ -201,10 +212,17 @@ useEffect(() => {
       if (hardIds.every((id) => unlockedSet.has(id))) {
         unlockedSet.add("ultimate");
         if (db.collection) {
-          await db.collection("userbadges").doc(user.uid).set({ ultimate: true }, { merge: true });
+          await db
+            .collection("userbadges")
+            .doc(user.uid)
+            .set({ ultimate: true }, { merge: true });
         } else {
           const { doc, setDoc } = await import("firebase/firestore");
-          await setDoc(doc(db, "userbadges", user.uid), { ultimate: true }, { merge: true });
+          await setDoc(
+            doc(db, "userbadges", user.uid),
+            { ultimate: true },
+            { merge: true }
+          );
         }
       }
 
@@ -214,6 +232,7 @@ useEffect(() => {
     }
   })();
 }, []);
+
 
 
   const progressPct = useMemo(

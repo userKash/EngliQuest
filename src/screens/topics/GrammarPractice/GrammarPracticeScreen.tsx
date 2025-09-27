@@ -1,3 +1,4 @@
+// src/screens/Grammar/GrammarPracticeScreen.tsx
 import React, { useEffect, useState, useCallback } from "react";
 import { View, Text, ActivityIndicator } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -40,6 +41,8 @@ const LEVELS: LevelDef[] = [
     ],
   },
 ];
+
+const SUBLEVELS = ["easy-1", "easy-2", "medium-1", "medium-2", "hard-1", "hard-2"];
 
 // Start fresh
 function makeInitialProgress(): ProgressState {
@@ -92,22 +95,43 @@ export default function GrammarPracticeScreen() {
     AsyncStorage.setItem(storageKey, JSON.stringify(progress));
   }, [progress, storageKey]);
 
+  // 🔹 Best score updater
+  const updateBestScore = (subId: string, newScore: number) => {
+    setProgress((prev) => {
+      const prevScore = prev[subId]?.score ?? 0;
+      if (newScore > prevScore) {
+        return { ...prev, [subId]: { score: newScore } };
+      }
+      return prev;
+    });
+  };
+
   // 🔹 Unlock rules: pass ≥ 70% in the previous sublevel
   const isUnlocked = (subId: string): boolean => {
-    const order = ["easy-1", "easy-2", "medium-1", "medium-2", "hard-1", "hard-2"];
-    const idx = order.indexOf(subId);
+    const idx = SUBLEVELS.indexOf(subId);
     if (idx === -1) return false;
     if (idx === 0) return true; // first level always unlocked
 
-    const prevId = order[idx - 1];
+    const prevId = SUBLEVELS[idx - 1];
     const prevScore = progress[prevId]?.score ?? 0;
     return prevScore >= PASSING;
   };
 
+  // 🔹 Overall progress bar
+  const contribution = 100 / SUBLEVELS.length;
+  const overallProgress = SUBLEVELS.reduce((sum, id) => {
+    const score = progress[id]?.score ?? 0;
+    return sum + (score / 100) * contribution;
+  }, 0);
+
   // 🔹 Start or preview a sublevel
   const onStartSubLevel = (subId: string) => {
     if (!isUnlocked(subId)) return;
-    navigation.navigate("GrammarGame", { levelId: subId, gameMode: "Grammar" });
+    navigation.navigate("GrammarGame", {
+      levelId: subId,
+      gameMode: "Grammar",
+      onFinish: (score: number) => updateBestScore(subId, score), // ✅ record best score
+    });
   };
 
   if (loading) {
@@ -125,6 +149,7 @@ export default function GrammarPracticeScreen() {
         levels={LEVELS}
         progress={progress}
         passing={PASSING}
+        overallProgress={overallProgress} // ✅ progress bar fixed
         onStartSubLevel={onStartSubLevel}
         isUnlocked={isUnlocked}
         Footer={

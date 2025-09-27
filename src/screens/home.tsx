@@ -1,3 +1,4 @@
+// src/screens/HomeScreen.tsx
 import { View, Text, StyleSheet, Image, TouchableOpacity, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
@@ -15,91 +16,139 @@ export default function HomeScreen() {
   const [avatar, setAvatar] = useState<any>(require('../../assets/userProfile.png'));
   const [userName, setUserName] = useState<string>('User');
 
-  // ✅ topic progress states
-  const [vocabPct, setVocabPct] = useState(0);
-  const [grammarPct, setGrammarPct] = useState(0);
-  const [readingPct, setReadingPct] = useState(0);
-  const [translationPct, setTranslationPct] = useState(0);
-  const [sentencePct, setSentencePct] = useState(0);
-  const [overallPct, setOverallPct] = useState(0);
+  // topic progress states (one decimal accuracy)
+  const [vocabPct, setVocabPct] = useState<number>(0);
+  const [grammarPct, setGrammarPct] = useState<number>(0);
+  const [readingPct, setReadingPct] = useState<number>(0);
+  const [translationPct, setTranslationPct] = useState<number>(0);
+  const [sentencePct, setSentencePct] = useState<number>(0);
+  const [overallPct, setOverallPct] = useState<number>(0);
 
-  function calculateOrderedProgress(progressData: Record<string, { score: number }>, order: string[], passing = 70) {
-  let totalScore = 0;
-  let levelsCompleted = 0;
-
-  for (let i = 0; i < order.length; i++) {
-    const id = order[i];
-    const score = progressData[id]?.score ?? 0;
-
-
-    if (i === 0 || (progressData[order[i - 1]]?.score ?? 0) >= passing) {
-      totalScore += score;
-      levelsCompleted++;
-    } else {
-      break; 
-    }
+  // helper to compute overall progress exactly like your builders:
+  function computeOverallProgress(progressData: Record<string, { score: number }>, sublevels: string[]) {
+    const contribution = 100 / sublevels.length;
+    const raw = sublevels.reduce((sum, id) => {
+      const score = progressData[id]?.score ?? 0;
+      return sum + (score / 100) * contribution;
+    }, 0);
+    // keep one decimal to match builder display like 95.5, 88.7, etc.
+    return Math.round(raw * 10) / 10;
   }
 
-  return levelsCompleted ? Math.round(totalScore / levelsCompleted) : 0;
-}
+  useEffect(() => {
+    const loadUserAndProgress = async () => {
+      try {
+        const { auth, db } = await initFirebase();
+        const user = auth.currentUser;
+        if (!user) return;
 
+        // Avatar + username
+        const savedAvatar = await AsyncStorage.getItem('selectedAvatar');
+        if (savedAvatar) setAvatar(JSON.parse(savedAvatar));
+        const userDoc = await db.collection('users').doc(user.uid).get();
+        if (userDoc.exists) setUserName(userDoc.data().name || 'User');
 
-useEffect(() => {
-  const loadUserAndProgress = async () => {
-    try {
-      const { auth, db } = await initFirebase();
-      const user = auth.currentUser;
-      if (!user) return;
+        // Keys used by your builder screens:
+        const vocabKey = `VocabularyProgress_${user.uid}`;
+        const grammarKey = `GrammarProgress_${user.uid}`;
+        const readingKey = `ReadingProgress_${user.uid}`;
+        const translationKey = `TranslationProgress_${user.uid}`;
+        const sentenceKey = `SentenceConstructionProgress_${user.uid}`;
 
-      const savedAvatar = await AsyncStorage.getItem('selectedAvatar');
-      if (savedAvatar) setAvatar(JSON.parse(savedAvatar));
-      const userDoc = await db.collection('users').doc(user.uid).get();
-      if (userDoc.exists) setUserName(userDoc.data().name || 'User');
-      const vocabKey = `VocabularyProgress_${user.uid}`;
-      let vocabProgress: Record<string, { score: number }> = {};
-      const storedVocab = await AsyncStorage.getItem(vocabKey);
-      if (storedVocab) vocabProgress = JSON.parse(storedVocab);
+        // Load local progress objects (may be empty objects)
+        const [vocabRaw, grammarRaw, readingRaw, translationRaw, sentenceRaw] = await Promise.all([
+          AsyncStorage.getItem(vocabKey),
+          AsyncStorage.getItem(grammarKey),
+          AsyncStorage.getItem(readingKey),
+          AsyncStorage.getItem(translationKey),
+          AsyncStorage.getItem(sentenceKey),
+        ]);
 
-      const vocabOrder = ['easy-1','easy-2','medium-1','medium-2','hard-1','hard-2'];
-      const vocab = calculateOrderedProgress(vocabProgress, vocabOrder);
-      const snap = await db.collection('scores').where('userId', '==', user.uid).get();
-      let grammarProgress: Record<string, { score: number }> = {};
-      snap.forEach((doc: any) => {
-        const data = doc.data();
-        if (data.quizType === 'Grammar') grammarProgress[data.levelId] = { score: data.score ?? 0 };
-      });
-      const grammarOrder = ['easy-1','easy-2','medium-1','medium-2','hard-1','hard-2'];
-      const grammar = calculateOrderedProgress(grammarProgress, grammarOrder);
-      let reading = 0, translation = 0, sentence = 0;
-      snap.forEach((doc: any) => {
-        const data = doc.data();
-        const pct = data.score ?? 0;
-        switch (data.quizType) {
-          case 'Reading': reading = Math.max(reading, pct); break;
-          case 'Translation': translation = Math.max(translation, pct); break;
-          case 'Sentence': sentence = Math.max(sentence, pct); break;
-        }
-      });
+        const vocabProgress: Record<string, { score: number }> = vocabRaw ? JSON.parse(vocabRaw) : {};
+        const grammarProgress: Record<string, { score: number }> = grammarRaw ? JSON.parse(grammarRaw) : {};
+        const readingProgress: Record<string, { score: number }> = readingRaw ? JSON.parse(readingRaw) : {};
+        const translationProgress: Record<string, { score: number }> = translationRaw ? JSON.parse(translationRaw) : {};
+        const sentenceProgress: Record<string, { score: number }> = sentenceRaw ? JSON.parse(sentenceRaw) : {};
 
-      // --- Overall ---
-      const scores = [vocab, grammar, reading, translation, sentence];
-      const attempted = scores.filter((s) => s > 0);
-      const overall = attempted.length ? Math.round(scores.reduce((a,b)=>a+b,0)/attempted.length) : 0;
+        // Fetch Firestore scores and merge into the local objects
+        const snap = await db.collection('scores').where('userId', '==', user.uid).get();
 
-      setVocabPct(vocab);
-      setGrammarPct(grammar);
-      setReadingPct(reading);
-      setTranslationPct(translation);
-      setSentencePct(sentence);
-      setOverallPct(overall);
+        snap.forEach((doc: any) => {
+          const data = doc.data() || {};
+          const qtRaw = String(data.quizType ?? data.quiz_type ?? '').toLowerCase();
+          const subId = String(data.levelId ?? data.difficulty ?? data.level ?? data.sublevel ?? '') || '';
+          const score = Number(data.score ?? data.userscore ?? data.userscore ?? 0);
 
-    } catch (err) {
-      console.error('Error loading user/progress:', err);
-    }
-  };
+          if (!subId) return; // no level info -> skip
 
-  loadUserAndProgress();
-}, []);
+          // Decide which progress object to update based on quizType string
+          if (qtRaw.includes('vocab') || qtRaw.includes('vocabulary')) {
+            const prev = vocabProgress[subId]?.score ?? 0;
+            if (score > prev) vocabProgress[subId] = { score };
+          } else if (qtRaw.includes('grammar')) {
+            const prev = grammarProgress[subId]?.score ?? 0;
+            if (score > prev) grammarProgress[subId] = { score };
+          } else if (qtRaw.includes('read')) {
+            const prev = readingProgress[subId]?.score ?? 0;
+            if (score > prev) readingProgress[subId] = { score };
+          } else if (qtRaw.includes('trans') || qtRaw.includes('filipino') || qtRaw.includes('translation')) {
+            const prev = translationProgress[subId]?.score ?? 0;
+            if (score > prev) translationProgress[subId] = { score };
+          } else if (qtRaw.includes('sentence') || qtRaw.includes('sentence construction')) {
+            const prev = sentenceProgress[subId]?.score ?? 0;
+            if (score > prev) sentenceProgress[subId] = { score };
+          } else {
+            // unknown quizType — try to infer by subId prefix
+            if (subId.startsWith('trans-')) {
+              // translation / sentence topics use trans- prefixes — we can't be sure which,
+              // but leave them for the translators / sentence builders to pick up from their local store.
+              // Prefer to put into translationProgress and sentenceProgress won't be overwritten here.
+              const prev = translationProgress[subId]?.score ?? 0;
+              if (score > prev) translationProgress[subId] = { score };
+            } else {
+              // else map into reading by default (safe fallback)
+              const prev = readingProgress[subId]?.score ?? 0;
+              if (score > prev) readingProgress[subId] = { score };
+            }
+          }
+        });
+
+        // Save the merged results back to AsyncStorage so builder screens will see them too
+        await Promise.all([
+          AsyncStorage.setItem(vocabKey, JSON.stringify(vocabProgress)),
+          AsyncStorage.setItem(grammarKey, JSON.stringify(grammarProgress)),
+          AsyncStorage.setItem(readingKey, JSON.stringify(readingProgress)),
+          AsyncStorage.setItem(translationKey, JSON.stringify(translationProgress)),
+          AsyncStorage.setItem(sentenceKey, JSON.stringify(sentenceProgress)),
+        ]);
+
+        // Sublevel arrays must match those used in each builder screen
+        const baseSublevels = ['easy-1', 'easy-2', 'medium-1', 'medium-2', 'hard-1', 'hard-2'];
+        const transSublevels = ['trans-easy-1','trans-easy-2','trans-medium-1','trans-medium-2','trans-hard-1','trans-hard-2'];
+
+        const vocab = computeOverallProgress(vocabProgress, baseSublevels);
+        const grammar = computeOverallProgress(grammarProgress, baseSublevels);
+        const reading = computeOverallProgress(readingProgress, baseSublevels);
+        const translation = computeOverallProgress(translationProgress, transSublevels);
+        const sentence = computeOverallProgress(sentenceProgress, transSublevels);
+
+        // overall = average of the five game modes (keep one decimal)
+        const overall = Math.round(((vocab + grammar + reading + translation + sentence) / 5) * 10) / 10;
+
+        // Set states
+        setVocabPct(vocab);
+        setGrammarPct(grammar);
+        setReadingPct(reading);
+        setTranslationPct(translation);
+        setSentencePct(sentence);
+        setOverallPct(overall);
+      } catch (err) {
+        console.error('Error loading user/progress:', err);
+      }
+    };
+
+    loadUserAndProgress();
+  }, []);
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' }}>
@@ -128,7 +177,7 @@ useEffect(() => {
               <Text style={styles.progressPercent}>{overallPct}%</Text>
             </View>
 
-            <Text style={styles.totalQuizzes}>Total Quizzes: 5</Text>
+            <Text style={styles.totalQuizzes}>Game Modes: 5</Text>
           </View>
 
           <Text style={styles.sectionTitle}>Recommended topics</Text>
@@ -183,7 +232,7 @@ useEffect(() => {
   );
 }
 
-// ✅ extracted component for topic card
+// TopicCard component (unchanged)
 function TopicCard({
   title,
   desc,
@@ -234,16 +283,16 @@ const styles = StyleSheet.create({
   },
   avatar: { width: 48, height: 48, borderRadius: 24 },
   greeting: { fontSize: 14, color: '#333' },
-  subtext: { fontSize: 12, color: '#888', fontFamily: 'PoppinsRegular' },
+  subtext: { fontSize: 12, color: '#888', fontFamily: 'PoppinsRegular' as any },
   welcome: {
     fontSize: 24,
     color: '#5E67CC',
     textAlign: 'center',
-    fontFamily: 'PoppinsBoldItalic',
+    fontFamily: 'PoppinsBoldItalic' as any,
   },
   brand: {
     fontSize: 24,
-    fontFamily: 'PoppinsBoldItalic',
+    fontFamily: 'PoppinsBoldItalic' as any,
     textAlign: 'center',
     color: '#5E67CC',
     marginBottom: 20,

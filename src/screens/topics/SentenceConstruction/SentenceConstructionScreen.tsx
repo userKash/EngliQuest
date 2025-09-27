@@ -1,16 +1,14 @@
-// src/screens/SentenceConstruction/FilipinoToEnglishScreen.tsx
 import React, { useEffect, useState, useCallback } from "react";
 import { View, Text, ActivityIndicator } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import auth from "@react-native-firebase/auth";
+import firestore from "@react-native-firebase/firestore";
 
-// Reusable list component + types
-import LevelList, { LevelDef, ProgressState } from "../../../components/LevelList"; 
+import LevelList, { LevelDef, ProgressState } from "../../../components/LevelList";
 
 const PASSING = 70;
 
-// Difficulty + sublevels (IDs unique to this topic)
 const LEVELS: LevelDef[] = [
   {
     key: "easy",
@@ -44,9 +42,36 @@ const LEVELS: LevelDef[] = [
   },
 ];
 
+const SUBLEVELS = [
+  "trans-easy-1",
+  "trans-easy-2",
+  "trans-medium-1",
+  "trans-medium-2",
+  "trans-hard-1",
+  "trans-hard-2",
+];
+
 // Start fresh
 function makeInitialProgress(): ProgressState {
   return {};
+}
+
+// (optional) migration helper if you had old keys
+function migrateKeys(oldProgress: ProgressState): ProgressState {
+  const map: Record<string, string> = {
+    "sentence-easy-1": "trans-easy-1",
+    "sentence-easy-2": "trans-easy-2",
+    "sentence-medium-1": "trans-medium-1",
+    "sentence-medium-2": "trans-medium-2",
+    "sentence-hard-1": "trans-hard-1",
+    "sentence-hard-2": "trans-hard-2",
+  };
+  const migrated: ProgressState = {};
+  for (const [k, v] of Object.entries(oldProgress)) {
+    const newKey = map[k] || k;
+    migrated[newKey] = v;
+  }
+  return migrated;
 }
 
 export default function FilipinoToEnglishScreen() {
@@ -62,7 +87,7 @@ export default function FilipinoToEnglishScreen() {
     setStorageKey(`SentenceConstructionProgress_${user.uid}`);
   }, []);
 
-  // 🔹 Reload progress on screen focus
+  // 🔹 Reload progress on focus
   useFocusEffect(
     useCallback(() => {
       if (!storageKey) return;
@@ -71,9 +96,34 @@ export default function FilipinoToEnglishScreen() {
       const loadProgress = async () => {
         setLoading(true);
         try {
+          // 1. Load from local storage
           const stored = await AsyncStorage.getItem(storageKey);
+          const parsed = stored ? JSON.parse(stored) : makeInitialProgress();
+          const migrated = migrateKeys(parsed);
+
+          // 2. Fetch Firestore best scores
+          const user = auth().currentUser;
+          if (user) {
+            const snap = await firestore()
+              .collection("scores")
+              .where("userId", "==", user.uid)
+              .where("quizType", "==", "SentenceConstruction")
+              .get();
+
+            snap.forEach((doc) => {
+              const data = doc.data();
+              const subId = data.difficulty; // e.g. "trans-easy-1"
+              const score = data.userscore ?? 0;
+
+              if (!migrated[subId] || score > (migrated[subId].score ?? 0)) {
+                migrated[subId] = { score };
+              }
+            });
+          }
+
           if (isActive) {
-            setProgress(stored ? JSON.parse(stored) : makeInitialProgress());
+            setProgress(migrated);
+            await AsyncStorage.setItem(storageKey, JSON.stringify(migrated));
           }
         } catch {
           if (isActive) setProgress(makeInitialProgress());
@@ -95,24 +145,34 @@ export default function FilipinoToEnglishScreen() {
     AsyncStorage.setItem(storageKey, JSON.stringify(progress));
   }, [progress, storageKey]);
 
-  // 🔹 Unlock rules (linear progression)
+  // 🔹 Best score updater
+  const updateBestScore = (subId: string, newScore: number) => {
+    setProgress((prev) => {
+      const prevScore = prev[subId]?.score ?? 0;
+      if (newScore > prevScore) {
+        return { ...prev, [subId]: { score: newScore } };
+      }
+      return prev;
+    });
+  };
+
+  // 🔹 Unlock rules
   const isUnlocked = (subId: string): boolean => {
-    const order = [
-      "trans-easy-1",
-      "trans-easy-2",
-      "trans-medium-1",
-      "trans-medium-2",
-      "trans-hard-1",
-      "trans-hard-2",
-    ];
-    const idx = order.indexOf(subId);
+    const idx = SUBLEVELS.indexOf(subId);
     if (idx === -1) return false;
     if (idx === 0) return true;
 
-    const prevId = order[idx - 1];
+    const prevId = SUBLEVELS[idx - 1];
     const prevScore = progress[prevId]?.score ?? 0;
     return prevScore >= PASSING;
   };
+
+  // 🔹 Overall progress
+  const contribution = 100 / SUBLEVELS.length;
+  const overallProgress = SUBLEVELS.reduce((sum, id) => {
+    const score = progress[id]?.score ?? 0;
+    return sum + (score / 100) * contribution;
+  }, 0);
 
   // 🔹 Start Sentence Construction quiz
   const onStartSubLevel = (subId: string) => {
@@ -120,6 +180,7 @@ export default function FilipinoToEnglishScreen() {
     navigation.navigate("SentenceConstructionGame", {
       levelId: subId,
       gameMode: "Sentence Construction",
+      onFinish: (score: number) => updateBestScore(subId, score),
     });
   };
 
@@ -138,6 +199,7 @@ export default function FilipinoToEnglishScreen() {
         levels={LEVELS}
         progress={progress}
         passing={PASSING}
+        overallProgress={overallProgress}
         onStartSubLevel={onStartSubLevel}
         isUnlocked={isUnlocked}
         Footer={

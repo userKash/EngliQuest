@@ -1,13 +1,29 @@
 import React, { useEffect, useState } from "react";
 import {
-  View, Text, StyleSheet, TouchableOpacity, Platform,
-  UIManager, LayoutAnimation, ScrollView, ActivityIndicator,
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  Platform,
+  UIManager,
+  LayoutAnimation,
+  ScrollView,
+  ActivityIndicator,
+  Modal,
+  Image,
+  Pressable,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useNavigation } from "@react-navigation/native";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+
 import PrimaryButton from "./PrimaryButton";
 import ResultModal from "./ResultModal";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { initFirebase } from "../../firebaseConfig";
+import { unlockBadge } from "../../badges_utility/badgesutil";
+import { BADGES } from "../screens/ProgressScreen";
+import type { RootStackParamList } from "../navigation/type";
 
 type Item = {
   id: string;
@@ -25,10 +41,15 @@ type ReviewItem = {
 
 type Props = {
   onProgressChange?: (p: { current: number; total: number }) => void;
+  onFinish?: (percentage: number) => void; // ✅ just like ReadingQuiz
   levelId?: string;
 };
 
-if (Platform.OS === "android" && UIManager.setLayoutAnimationEnabledExperimental) {
+// Android layout animations
+if (
+  Platform.OS === "android" &&
+  UIManager.setLayoutAnimationEnabledExperimental
+) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
 
@@ -53,13 +74,39 @@ const LEVEL_MAP: Record<string, string> = {
   "hard-2": "C2",
 };
 
-export default function SentenceConstructionQuiz({ onProgressChange, levelId }: Props) {
+export default function SentenceConstructionQuiz({
+  onProgressChange,
+  onFinish,
+  levelId,
+}: Props) {
   const insets = useSafeAreaInsets();
+  const navigation =
+    useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
-  // ---- FIRESTORE FETCH ----
+  // 🔹 State
   const [items, setItems] = useState<Item[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const [index, setIndex] = useState(0);
+  const [pool, setPool] = useState<string[]>([]);
+  const [selected, setSelected] = useState<string[]>([]);
+  const [locked, setLocked] = useState(false);
+  const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
+  const [score, setScore] = useState(0);
+  const [correctCount, setCorrectCount] = useState(0);
+
+  const [review, setReview] = useState<ReviewItem[]>([]);
+  const [showResult, setShowResult] = useState(false);
+
+  // 🔹 Badge
+  const [newBadges, setNewBadges] = useState<string[]>([]);
+  const [badgeModal, setBadgeModal] = useState<string | null>(null);
+
+  const total = items.length;
+  const current = items[index];
+  const last = index === total - 1;
+
+  // 🔹 Load Firestore quiz
   useEffect(() => {
     const loadQuiz = async () => {
       try {
@@ -76,65 +123,25 @@ export default function SentenceConstructionQuiz({ onProgressChange, levelId }: 
           return;
         }
 
-        let snapshot;
-        if (db.collection) {
-          try {
-            snapshot = await db
-              .collection("quizzes")
-              .where("userId", "==", user.uid)
-              .where("level", "==", firestoreLevel)
-              .where("gameMode", "==", "Sentence Construction")
-              .orderBy("createdAt", "desc")
-              .limit(1)
-              .get();
-          } catch (err: any) {
-            if (String(err.message).includes("failed-precondition")) {
-              snapshot = await db
-                .collection("quizzes")
-                .where("userId", "==", user.uid)
-                .where("level", "==", firestoreLevel)
-                .where("gameMode", "==", "Sentence Construction")
-                .limit(1)
-                .get();
-            } else throw err;
-          }
-        } else {
-          const { collection, query, where, orderBy, limit, getDocs } =
-            await import("firebase/firestore");
-          let q;
-          try {
-            q = query(
-              collection(db, "quizzes"),
-              where("userId", "==", user.uid),
-              where("level", "==", firestoreLevel),
-              where("gameMode", "==", "Sentence Construction"),
-              orderBy("createdAt", "desc"),
-              limit(1)
-            );
-          } catch (err: any) {
-            if (String(err.message).includes("failed-precondition")) {
-              q = query(
-                collection(db, "quizzes"),
-                where("userId", "==", user.uid),
-                where("level", "==", firestoreLevel),
-                where("gameMode", "==", "Sentence Construction"),
-                limit(1)
-              );
-            } else throw err;
-          }
-          snapshot = await getDocs(q);
-        }
+        const snapshot = await db
+          .collection("quizzes")
+          .where("userId", "==", user.uid)
+          .where("level", "==", firestoreLevel)
+          .where("gameMode", "==", "Sentence Construction")
+          .limit(1)
+          .get();
 
         if (!snapshot.empty) {
           const data = snapshot.docs[0].data();
           if (data.questions) {
-            const mapped: Item[] = data.questions.map((q: any, i: number) => ({
-              id: `${i}`,
-              answer: q.options[q.correctIndex],
-              points: 12,
-              alsoAccept: [],
-            }));
-            setItems(mapped);
+            setItems(
+              data.questions.map((q: any, i: number) => ({
+                id: `${i}`,
+                answer: q.options[q.correctIndex],
+                points: 12,
+                alsoAccept: [],
+              }))
+            );
           }
         }
       } catch (err) {
@@ -147,21 +154,7 @@ export default function SentenceConstructionQuiz({ onProgressChange, levelId }: 
     loadQuiz();
   }, [levelId]);
 
-  // ---- QUIZ STATE ----
-  const total = items.length;
-  const [index, setIndex] = useState(0);
-  const current = items[index];
-
-  const [pool, setPool] = useState<string[]>([]);
-  const [selected, setSelected] = useState<string[]>([]);
-  const [locked, setLocked] = useState(false);
-  const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
-  const [score, setScore] = useState(0);
-
-  const [showModal, setShowModal] = useState(false);
-  const [review, setReview] = useState<ReviewItem[]>([]);
-  const [correctCount, setCorrectCount] = useState(0);
-
+  // 🔹 Reset when question changes
   useEffect(() => {
     if (!current) return;
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
@@ -170,22 +163,18 @@ export default function SentenceConstructionQuiz({ onProgressChange, levelId }: 
     setLocked(false);
     setIsCorrect(null);
     onProgressChange?.({ current: index, total });
-  }, [index, total, current?.answer, onProgressChange]);
+  }, [index, total, current?.answer]);
 
-  // ---- SAVE PROGRESS ----
+  // 🔹 Save Results
   const saveResults = async () => {
     try {
-      const { auth, db } = await initFirebase();
+      const { auth } = await initFirebase();
       const user = auth.currentUser;
       if (!user || !levelId) return;
 
-      const subLevel = levelId.replace("trans-", "");
-      const firestoreLevel = LEVEL_MAP[subLevel] ?? "Unknown";
+      const percentage = Math.round((correctCount / total) * 100);
 
-      const correctAnswers = correctCount;
-      const percentage = Math.round((correctAnswers / total) * 100);
-
-      // Save locally
+      // Local save
       const storageKey = `SentenceConstructionProgress_${user.uid}`;
       const stored = await AsyncStorage.getItem(storageKey);
       let progress = stored ? JSON.parse(stored) : {};
@@ -194,99 +183,38 @@ export default function SentenceConstructionQuiz({ onProgressChange, levelId }: 
         attempted: true,
       };
       await AsyncStorage.setItem(storageKey, JSON.stringify(progress));
-      console.log("✅ Local progress saved:", progress);
 
-      // Get username
-      let userName = "Anonymous";
-      if (db.collection) {
-        const docSnap = await db.collection("users").doc(user.uid).get();
-        if (docSnap.exists) {
-          userName = docSnap.data().name || "Anonymous";
-        }
-      } else {
-        const { doc, getDoc } = await import("firebase/firestore");
-        const userDoc = await getDoc(doc(db, "users", user.uid));
-        if (userDoc.exists()) {
-          userName = (userDoc.data() as any).name || "Anonymous";
-        }
+      // Firestore save delegated to parent
+      onFinish?.(percentage);
+
+      // Badge unlock
+      if (percentage >= 70 && /-2$/.test(levelId)) {
+        const unlocked = await unlockBadge("trans", levelId, progress);
+        if (unlocked.length > 0) setNewBadges(unlocked);
       }
 
-      // Save to Firestore scores collection
-      if (db.collection) {
-        const firestore = (await import("@react-native-firebase/firestore")).default;
-        await db.collection("scores").add({
-          userId: user.uid,
-          userName,
-          quizType: "Sentence Construction",
-          difficulty: firestoreLevel,
-          userscore: percentage,
-          totalscore: 100,
-          createdAt: firestore.FieldValue.serverTimestamp(),
-        });
-      } else {
-        const { collection, addDoc, serverTimestamp } = await import("firebase/firestore");
-        await addDoc(collection(db, "scores"), {
-          userId: user.uid,
-          userName,
-          quizType: "Sentence Construction",
-          difficulty: firestoreLevel,
-          userscore: percentage,
-          totalscore: 100,
-          createdAt: serverTimestamp(),
-        });
-      }
-
-      console.log(`✅ Score uploaded: ${percentage}% (${correctAnswers}/${total})`);
+      console.log(`✅ Score saved: ${percentage}%`);
     } catch (err) {
       console.error("❌ Error saving results:", err);
     }
   };
 
-  // ---- HANDLERS ----
-  const onPick = (tok: string, i: number) => {
-    if (locked) return;
-    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-    const next = [...pool];
-    next.splice(i, 1);
-    setPool(next);
-    setSelected((s) => [...s, tok]);
-  };
-
-  const onUnpick = (i: number) => {
-    if (locked) return;
-    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-    const nextSel = [...selected];
-    const [tok] = nextSel.splice(i, 1);
-    setSelected(nextSel);
-    setPool((p) => [...p, tok]);
-  };
-
-  const onReset = () => {
-    if (locked) return;
-    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-    setSelected([]);
-    setPool(shuffle(toTokens(current.answer)));
-  };
-
+  // 🔹 Handlers
   const check = () => {
     if (locked || selected.length === 0) return;
-
     const guessRaw = selected.join(" ");
     const guess = normalize(guessRaw);
     const correct = normalize(current.answer);
-    const alts = (current.alsoAccept ?? []).map(normalize);
-    const ok = guess === correct || alts.includes(guess);
+    const ok = guess === correct;
 
-    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setIsCorrect(ok);
     setLocked(true);
     if (ok) setScore((s) => s + (current.points ?? 12));
-
     setCorrectCount((c) => (ok ? c + 1 : c));
     setReview((r) => [
       ...r,
       {
-        question: "Arrange the words to form a sentence",
+        question: "Arrange the words",
         yourAnswer: guessRaw,
         isCorrect: ok,
         correctAnswer: ok ? undefined : current.answer,
@@ -296,20 +224,37 @@ export default function SentenceConstructionQuiz({ onProgressChange, levelId }: 
 
   const next = async () => {
     if (!locked) return;
-    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-    if (index < total - 1) {
+    if (!last) {
       setIndex((i) => i + 1);
     } else {
-      await saveResults(); // 🔹 Save when quiz finishes
-      setShowModal(true);
+      await saveResults();
+      setShowResult(true);
     }
   };
 
-  const actionLabel = locked ? (index < total - 1 ? "Next Question" : "Finish") : "Check";
-  const actionHandler = locked ? next : check;
-  const actionDisabled = !locked && selected.length === 0;
+  // 🔹 Badge modal flow
+  useEffect(() => {
+    setBadgeModal(newBadges.length > 0 ? newBadges[0] : null);
+  }, [newBadges]);
 
-  // ---- RENDER ----
+  const handleBadgeContinue = () => {
+    if (newBadges.length > 1) {
+      setNewBadges(newBadges.slice(1));
+    } else {
+      setNewBadges([]);
+      setBadgeModal(null);
+      navigation.reset({
+        index: 0,
+        routes: [{ name: "Home" as keyof RootStackParamList }],
+      });
+    }
+  };
+
+  const badgeData = badgeModal
+    ? BADGES.find((b: { id: string }) => b.id === badgeModal)
+    : null;
+
+  // 🔹 Render
   if (loading) {
     return (
       <View style={styles.center}>
@@ -317,7 +262,6 @@ export default function SentenceConstructionQuiz({ onProgressChange, levelId }: 
       </View>
     );
   }
-
   if (!items.length) {
     return (
       <View style={styles.center}>
@@ -328,13 +272,13 @@ export default function SentenceConstructionQuiz({ onProgressChange, levelId }: 
 
   return (
     <View style={styles.screen}>
-      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+      <ScrollView contentContainerStyle={styles.content}>
         {/* Instructions */}
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Arrange the words</Text>
           <Text style={styles.cardBody}>
-            Arrange the words below to form a correct sentence. Tap words to add them to your
-            sentence.
+            Arrange the words below to form a correct sentence. Tap words to
+            build your sentence.
           </Text>
         </View>
 
@@ -343,13 +287,22 @@ export default function SentenceConstructionQuiz({ onProgressChange, levelId }: 
           <Text style={styles.sectionTitle}>Your Sentence</Text>
           <View style={styles.dashedBox}>
             {selected.length === 0 ? (
-              <Text style={styles.placeholder}>Tap words below to build your sentence</Text>
+              <Text style={styles.placeholder}>
+                Tap words below to build your sentence
+              </Text>
             ) : (
               <View style={styles.rowWrap}>
                 {selected.map((tok, i) => (
                   <TouchableOpacity
                     key={`${tok}-${i}`}
-                    onPress={() => onUnpick(i)}
+                    onPress={() => {
+                      if (!locked) {
+                        const nextSel = [...selected];
+                        const [word] = nextSel.splice(i, 1);
+                        setSelected(nextSel);
+                        setPool((p) => [...p, word]);
+                      }
+                    }}
                     style={styles.selChip}
                   >
                     <Text style={styles.selChipText}>{tok}</Text>
@@ -368,7 +321,14 @@ export default function SentenceConstructionQuiz({ onProgressChange, levelId }: 
               {pool.map((tok, i) => (
                 <TouchableOpacity
                   key={`${tok}-${i}`}
-                  onPress={() => onPick(tok, i)}
+                  onPress={() => {
+                    if (!locked) {
+                      const next = [...pool];
+                      next.splice(i, 1);
+                      setPool(next);
+                      setSelected((s) => [...s, tok]);
+                    }
+                  }}
                   style={styles.poolChip}
                 >
                   <Text style={styles.poolChipText}>{tok}</Text>
@@ -376,7 +336,11 @@ export default function SentenceConstructionQuiz({ onProgressChange, levelId }: 
               ))}
             </View>
             <TouchableOpacity
-              onPress={onReset}
+              onPress={() => {
+                if (!locked)
+                  setSelected([]),
+                    setPool(shuffle(toTokens(current.answer)));
+              }}
               disabled={locked}
               style={[styles.resetBtn, locked && { opacity: 0.5 }]}
             >
@@ -388,14 +352,22 @@ export default function SentenceConstructionQuiz({ onProgressChange, levelId }: 
         {/* Feedback */}
         <View style={{ minHeight: 84 }}>
           {isCorrect !== null && (
-            <View style={[styles.feedback, isCorrect ? styles.okBox : styles.badBox]}>
-              <Text style={[styles.feedbackTitle, isCorrect ? styles.okText : styles.badText]}>
-                {isCorrect ? `✅ Correct: +${current.points ?? 12} points` : "❌ Incorrect"}
+            <View
+              style={[styles.feedback, isCorrect ? styles.okBox : styles.badBox]}
+            >
+              <Text
+                style={[
+                  styles.feedbackTitle,
+                  isCorrect ? styles.okText : styles.badText,
+                ]}
+              >
+                {isCorrect
+                  ? `✅ Correct: +${current.points ?? 12} points`
+                  : "❌ Incorrect"}
               </Text>
               {!isCorrect && (
                 <Text style={styles.feedbackText}>
-                  Correct order:{" "}
-                  <Text style={{ fontWeight: "700" }}>{normalize(current.answer)}</Text>
+                  Correct order: {current.answer}
                 </Text>
               )}
             </View>
@@ -406,79 +378,119 @@ export default function SentenceConstructionQuiz({ onProgressChange, levelId }: 
       </ScrollView>
 
       <View style={[styles.bottomBar, { paddingBottom: insets.bottom + 120 }]}>
-        <PrimaryButton label={actionLabel} onPress={actionHandler} disabled={actionDisabled} />
+        <PrimaryButton
+          label={locked ? (last ? "Finish" : "Next Question") : "Check"}
+          onPress={locked ? next : check}
+          disabled={!locked && selected.length === 0}
+        />
       </View>
 
+      {/* Result Modal */}
       <ResultModal
-        visible={showModal}
+        visible={showResult}
         score={correctCount}
         total={total}
         review={review}
-        onRequestClose={() => setShowModal(false)}
+        onRequestClose={() => setShowResult(false)}
         title="🎉 Great job!"
+        onContinue={() => {
+          setShowResult(false);
+          if (newBadges.length === 0) {
+            navigation.reset({
+              index: 0,
+              routes: [{ name: "Home" as keyof RootStackParamList }],
+            });
+          }
+        }}
       />
+
+      {/* Badge Modal */}
+      <Modal
+        visible={!!badgeData}
+        transparent
+        animationType="fade"
+        onRequestClose={handleBadgeContinue}
+      >
+        <Pressable style={styles.overlay} onPress={handleBadgeContinue}>
+          <View style={styles.modalCard}>
+            {badgeData && (
+              <>
+                <Image source={badgeData.image} style={styles.modalImg} />
+                <Text style={styles.modalTitle}>{badgeData.title}</Text>
+                {badgeData.subtitle && (
+                  <Text style={styles.modalSub}>{badgeData.subtitle}</Text>
+                )}
+                <Text style={styles.modalHint}>Unlocked! 🎉</Text>
+                <PrimaryButton
+                  label="Continue"
+                  onPress={handleBadgeContinue}
+                />
+              </>
+            )}
+          </View>
+        </Pressable>
+      </Modal>
     </View>
   );
 }
 
-
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: '#fff' },
+  screen: { flex: 1, backgroundColor: "#fff" },
   content: { padding: 16 },
-  center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  center: { flex: 1, justifyContent: "center", alignItems: "center" },
 
   card: {
     borderWidth: 1,
-    borderColor: '#E4E6EE',
+    borderColor: "#E4E6EE",
     borderRadius: 12,
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     padding: 14,
     marginBottom: 12,
     minHeight: 135,
-    justifyContent: 'center',
+    justifyContent: "center",
   },
-  cardTitle: { fontSize: 16, fontWeight: '800', marginBottom: 6, color: '#0F1728' },
-  cardBody: { color: '#6B7280', fontSize: 13, lineHeight: 18 },
-  sectionTitle: { fontWeight: '800', marginBottom: 8, color: '#0F1728', fontSize: 15 },
+  cardTitle: { fontSize: 16, fontWeight: "800", marginBottom: 6, color: "#0F1728" },
+  cardBody: { color: "#6B7280", fontSize: 13, lineHeight: 18 },
+  sectionTitle: { fontWeight: "800", marginBottom: 8, color: "#0F1728", fontSize: 15 },
 
   dashedBox: {
     minHeight: 56,
     borderWidth: 1,
-    borderStyle: 'dashed',
-    borderColor: '#D4D7E2',
+    borderStyle: "dashed",
+    borderColor: "#D4D7E2",
     borderRadius: 12,
-    backgroundColor: '#FCFCFE',
+    backgroundColor: "#FCFCFE",
     padding: 12,
-    justifyContent: 'center',
+    justifyContent: "center",
   },
-  placeholder: { color: '#A0A4AE' },
-  rowWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  placeholder: { color: "#A0A4AE" },
+  rowWrap: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
 
   selChip: {
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#B9C2FF',
-    backgroundColor: '#EEF0FF',
+    borderColor: "#B9C2FF",
+    backgroundColor: "#EEF0FF",
     paddingVertical: 8,
     paddingHorizontal: 12,
   },
-  selChipText: { fontWeight: '700', color: '#4E56C9' },
+  selChipText: { fontWeight: "700", color: "#4E56C9" },
 
   poolChip: {
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#D9D9D9',
-    backgroundColor: '#FAFAFA',
+    borderColor: "#D9D9D9",
+    backgroundColor: "#FAFAFA",
     paddingVertical: 10,
     paddingHorizontal: 12,
   },
-  poolChipText: { fontWeight: '600', color: '#222' },
+  poolChipText: { fontWeight: "600", color: "#222" },
 
   outerPoolBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     borderWidth: 1,
-    borderColor: '#D9D9D9',
+    borderColor: "#D9D9D9",
     borderRadius: 12,
     padding: 8,
     marginTop: 6,
@@ -490,31 +502,54 @@ const styles = StyleSheet.create({
     marginLeft: 8,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#D9D9D9',
-    alignItems: 'center',
-    justifyContent: 'center',
+    borderColor: "#D9D9D9",
+    alignItems: "center",
+    justifyContent: "center",
   },
-  resetText: { fontSize: 16, fontWeight: '700', color: '#444' },
+  resetText: { fontSize: 16, fontWeight: "700", color: "#444" },
 
   feedback: { marginTop: 10, borderRadius: 12, padding: 14, borderWidth: 1 },
-  okBox: { backgroundColor: '#E9F8EE', borderColor: '#2EB872' },
-  badBox: { backgroundColor: '#FDECEC', borderColor: '#F26D6D' },
-  feedbackTitle: { fontWeight: '800', marginBottom: 6 },
-  okText: { color: '#1F8F5F' },
-  badText: { color: '#C43D3D' },
-  feedbackText: { color: '#0F1728' },
+  okBox: { backgroundColor: "#E9F8EE", borderColor: "#2EB872" },
+  badBox: { backgroundColor: "#FDECEC", borderColor: "#F26D6D" },
+  feedbackTitle: { fontWeight: "800", marginBottom: 6 },
+  okText: { color: "#1F8F5F" },
+  badText: { color: "#C43D3D" },
+  feedbackText: { color: "#0F1728" },
 
   bottomBar: {
-    position: 'absolute',
+    position: "absolute",
     left: 16,
     right: 16,
     bottom: 0,
     paddingTop: 10,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOpacity: 0.08,
     shadowRadius: 8,
     shadowOffset: { width: 0, height: -2 },
     elevation: 6,
-    backgroundColor: 'transparent',
+    backgroundColor: "transparent",
   },
+
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0,0,0,0.45)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  modalCard: {
+    backgroundColor: "#fff",
+    borderRadius: 16,
+    padding: 20,
+    alignItems: "center",
+    width: "80%",
+  },
+  modalImg: { width: 96, height: 96, marginBottom: 12, resizeMode: "contain" },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    textAlign: "center",
+    marginBottom: 6,
+  },
+  modalSub: { fontSize: 14, textAlign: "center", marginBottom: 8, color: "#555" },
+  modalHint: { fontSize: 14, color: "#111", marginBottom: 12 },
 });
