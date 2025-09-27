@@ -354,7 +354,7 @@ async function generateVocabularyQuiz(
     difficulty: string       
 ): Promise<Question[]> {
     const prompt = vocabularyPrompt(level, interests, gameMode, difficulty);
-    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash-lite" });
 
     try {
         const result = await model.generateContent(prompt);
@@ -373,7 +373,7 @@ async function generateGrammarQuiz(
     difficulty: string
 ): Promise<Question[]> {
     const prompt = grammarPrompt(level, interests, gameMode, difficulty);
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
     try {
         const result = await model.generateContent(prompt);
@@ -637,7 +637,7 @@ export async function fetchWordOfTheDayFromGemini(userId: string): Promise<WordD
   const seed = `${userId}_${today}`;
   const prompt = wordOfTheDayPrompt(seed); 
   
-  const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+  const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash-lite" });
   
   try {
     const result = await model.generateContent(prompt);
