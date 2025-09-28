@@ -180,7 +180,7 @@ export default function LoginScreen() {
             />
           </View>
 
-          {/* Google login */}
+          {/*
           <TouchableOpacity
             style={styles.googleButton}
             disabled={isExpoGo ? !request : false}
@@ -191,12 +191,12 @@ export default function LoginScreen() {
               style={styles.googleIcon}
             />
             <Text style={styles.googleButtonText}>Continue with Google</Text>
-          </TouchableOpacity>
+          </TouchableOpacity> 
 
           {/* Email login */}
           <TouchableOpacity style={styles.button} onPress={handleLogin}>
             <Text style={styles.buttonText}>Login</Text>
-          </TouchableOpacity>
+          </TouchableOpacity>  
 
           <View style={styles.footerContainer}>
             <Text style={styles.footerText}>Don't have an account? </Text>

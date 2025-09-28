@@ -301,7 +301,7 @@ export default function InterestSelectionScreen() {
         </View>
       </View>
 
-      <LoadingModal visible={loading} message={loadingMessage} progress={progress} />
+      <LoadingModal visible={loading} message={loadingMessage} />
     </>
   );
 }

@@ -4,7 +4,7 @@
     "slug": "my-expo-app",
     "version": "1.1.0",
     "orientation": "portrait",
-    "icon": "./assets/EngliquestLogo.png",
+    "icon": "./assets/EngliQuestLogo.png",
     "userInterfaceStyle": "light",
     "splash": {
       "image": "./assets/splash.png",
@@ -28,9 +28,9 @@
     "android": {
       "package": "com.Engliquest.myexpoapp",
       "googleServicesFile": "./google-services.json",
-      "icon": "./assets/EngliquestLogo.png", 
+      "icon": "./assets/EngliQuestLogo.png",
       "adaptiveIcon": {
-        "foregroundImage": "./assets/EngliquestLogo.png",
+        "foregroundImage": "./assets/EngliQuestLogo.png",
         "backgroundColor": "#ffffff"
       }
     },
