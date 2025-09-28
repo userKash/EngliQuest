@@ -183,9 +183,11 @@ export default function FilipinoToEnglishGameScreen() {
         gestureEnabled: false,
         headerTitle: () => (
           <View style={{ alignItems: "center" }}>
-            <Text style={{ fontSize: 18, fontWeight: "bold" }}>Filipino → English</Text>
+            <Text style={{ fontSize: 18, fontWeight: "bold" }}>
+              Vocabulary Practice
+            </Text>
             <Text style={{ fontSize: 12, color: "#555" }}>
-              {String(levelId).toUpperCase()} – Question {progress.current + 1} of {progress.total}
+              {levelId.toUpperCase()} – Question {progress.current + 1} of {progress.total}
             </Text>
           </View>
         ),
@@ -201,7 +203,16 @@ export default function FilipinoToEnglishGameScreen() {
     } else {
       navigation.setOptions({
         gestureEnabled: true,
-        headerTitle: "Filipino to English",
+        headerTitle: () => (
+          <View style={{ alignItems: "flex-start" }}>
+            <Text style={{ fontSize: 18, fontWeight: "bold" }}>
+              Filipino to English
+            </Text>
+            <Text style={{ fontSize: 12, color: "#555" }}>
+              Read the instructions carefully
+            </Text>
+          </View>
+        ),
         headerLeft: undefined,
       });
     }

@@ -76,19 +76,81 @@ export default function App() {
         options={{ headerShown: false }}
       />
       <Stack.Screen name="InterestSelection" component={InterestSelectionScreen} />
-      <Stack.Screen name="VocabularyBuilder" component={VocabularyBuilderScreen} />
-      <Stack.Screen name="VocabularyGame" component={VocabularyGameScreen} />
-      <Stack.Screen name="GrammarPractice" component={GrammarPracticeScreen} />
-      <Stack.Screen name="GrammarGame" component={GrammarGameScreen} />
-      <Stack.Screen name="ReadingComprehension" component={ReadingComprehensionScreen} />
-      <Stack.Screen name="ReadingGame" component={ReadingGameScreen} />
-      <Stack.Screen name="FilipinoToEnglish" component={FilipinoToEnglishScreen} />
-      <Stack.Screen name="FilipinoToEnglishGame" component={FilipinoToEnglishGameScreen} />
-      <Stack.Screen name="SentenceConstruction" component={SentenceConstructionScreen} />
       <Stack.Screen
-        name="SentenceConstructionGame"
-        component={SentenceConstructionGameScreen}
+        name="VocabularyBuilder"
+        component={VocabularyBuilderScreen}
+        options={{
+          headerTitle: () => (
+            <View>
+              <Text style={{ fontSize: 16, fontWeight: "bold" }}>Vocabulary Builder</Text>
+              <Text style={{ fontSize: 14, color: "#555" }}>Choose your difficulty level</Text>
+            </View>
+          ),
+          headerTitleAlign: "left", 
+        }}
       />
+      <Stack.Screen name="VocabularyGame" component={VocabularyGameScreen} />
+
+      <Stack.Screen 
+        name="GrammarPractice" 
+        component={GrammarPracticeScreen}
+        options={{
+          headerTitle: () => (
+            <View>
+              <Text style={{ fontSize: 16, fontWeight: "bold" }}>Grammar Practice</Text>
+              <Text style={{ fontSize: 14, color: "#555" }}>Choose your difficulty level</Text>
+            </View>
+          ),
+          headerTitleAlign: "left", 
+        }} />
+      <Stack.Screen name="GrammarGame" component={GrammarGameScreen} />
+
+
+      <Stack.Screen 
+        name="ReadingComprehension" 
+        component={ReadingComprehensionScreen}
+        options={{
+          headerTitle: () => (
+            <View>
+              <Text style={{ fontSize: 16, fontWeight: "bold" }}>Reading Comprehension</Text>
+              <Text style={{ fontSize: 14, color: "#555" }}>Choose your difficulty level</Text>
+            </View>
+          ),
+          headerTitleAlign: "left", 
+        }}
+       />
+      <Stack.Screen name="ReadingGame" component={ReadingGameScreen} />
+
+
+      <Stack.Screen 
+      name="FilipinoToEnglish" 
+      component={FilipinoToEnglishScreen} 
+      options={{
+          headerTitle: () => (
+            <View>
+              <Text style={{ fontSize: 16, fontWeight: "bold" }}>Filipino to English</Text>
+              <Text style={{ fontSize: 14, color: "#555" }}>Choose your difficulty level</Text>
+            </View>
+          ),
+          headerTitleAlign: "left", 
+        }}
+      />
+      <Stack.Screen name="FilipinoToEnglishGame" component={FilipinoToEnglishGameScreen} />
+
+      <Stack.Screen 
+        name="SentenceConstruction" 
+        component={SentenceConstructionScreen} 
+        options={{
+          headerTitle: () => (
+            <View>
+              <Text style={{ fontSize: 16, fontWeight: "bold" }}>Filipino to English</Text>
+              <Text style={{ fontSize: 14, color: "#555" }}>Choose your difficulty level</Text>
+            </View>
+          ),
+          headerTitleAlign: "left", 
+        }}
+      />
+      <Stack.Screen name="SentenceConstructionGame" component={SentenceConstructionGameScreen}/>
 
       <Stack.Group screenOptions={{ animation: "fade_from_bottom", headerShown: false }}>
         <Stack.Screen name="Home" component={HomeScreen} />

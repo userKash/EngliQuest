@@ -175,9 +175,11 @@ export default function ReadingGameScreen() {
         gestureEnabled: false,
         headerTitle: () => (
           <View style={{ alignItems: "center" }}>
-            <Text style={{ fontSize: 18, fontWeight: "bold" }}>Reading Comprehension</Text>
+            <Text style={{ fontSize: 18, fontWeight: "bold" }}>
+              Vocabulary Practice
+            </Text>
             <Text style={{ fontSize: 12, color: "#555" }}>
-              {String(levelId).toUpperCase()} – Question {progress.current + 1} of {progress.total}
+              {levelId.toUpperCase()} – Question {progress.current + 1} of {progress.total}
             </Text>
           </View>
         ),
@@ -193,7 +195,16 @@ export default function ReadingGameScreen() {
     } else {
       navigation.setOptions({
         gestureEnabled: true,
-        headerTitle: "Reading Comprehension",
+        headerTitle: () => (
+          <View style={{ alignItems: "flex-start" }}>
+            <Text style={{ fontSize: 18, fontWeight: "bold" }}>
+              Reading Comprehension
+            </Text>
+            <Text style={{ fontSize: 12, color: "#555" }}>
+              Read the instructions carefully
+            </Text>
+          </View>
+        ),
         headerLeft: undefined,
       });
     }

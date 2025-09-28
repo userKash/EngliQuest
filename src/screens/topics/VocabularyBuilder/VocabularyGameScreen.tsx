@@ -92,38 +92,47 @@ export default function VocabularyGameScreen() {
   }, [step]);
 
   // ✅ Handle navigation header
-  useLayoutEffect(() => {
-    if (step === "quiz") {
-      navigation.setOptions({
-        gestureEnabled: false,
-        headerTitle: () => (
-          <View style={{ alignItems: "center" }}>
-            <Text style={{ fontSize: 18, fontWeight: "bold" }}>
-              Vocabulary Practice
-            </Text>
-            <Text style={{ fontSize: 12, color: "#555" }}>
-              {levelId.toUpperCase()} – Question {progress.current + 1} of{" "}
-              {progress.total}
-            </Text>
-          </View>
-        ),
-        headerLeft: () => (
-          <TouchableOpacity
-            onPress={() => setShowExitModal(true)}
-            style={{ marginLeft: 12, flexDirection: "row", alignItems: "center" }}
-          >
-            <Ionicons name="arrow-back" size={24} />
-          </TouchableOpacity>
-        ),
-      });
-    } else {
-      navigation.setOptions({
-        gestureEnabled: true,
-        headerTitle: "Vocabulary Practice",
-        headerLeft: undefined,
-      });
-    }
-  }, [step, progress, levelId]);
+useLayoutEffect(() => {
+  if (step === "quiz") {
+    navigation.setOptions({
+      gestureEnabled: false,
+      headerTitle: () => (
+        <View style={{ alignItems: "center" }}>
+          <Text style={{ fontSize: 18, fontWeight: "bold" }}>
+            Vocabulary Practice
+          </Text>
+          <Text style={{ fontSize: 12, color: "#555" }}>
+            {levelId.toUpperCase()} – Question {progress.current + 1} of {progress.total}
+          </Text>
+        </View>
+      ),
+      headerLeft: () => (
+        <TouchableOpacity
+          onPress={() => setShowExitModal(true)}
+          style={{ marginLeft: 12, flexDirection: "row", alignItems: "center" }}
+        >
+          <Ionicons name="arrow-back" size={24} />
+        </TouchableOpacity>
+      ),
+    });
+  } else {
+    navigation.setOptions({
+      gestureEnabled: true,
+      headerTitle: () => (
+        <View style={{ alignItems: "flex-start" }}>
+          <Text style={{ fontSize: 18, fontWeight: "bold" }}>
+            Vocabulary Builder
+          </Text>
+          <Text style={{ fontSize: 14, color: "#555" }}>
+            Read the instructions carefully
+          </Text>
+        </View>
+      ),
+      headerLeft: undefined,
+    });
+  }
+}, [step, progress, levelId]);
+
 
   // ✅ Load quiz
   useEffect(() => {
@@ -215,7 +224,7 @@ export default function VocabularyGameScreen() {
   }, [levelId]);
 
   const instructions = {
-    title: "Vocabulary Practice",
+    title: "Vocabulary Builder",
     body:
       "Instruction:\n\n" +
       "Read each question carefully and select the correct meaning or usage of the given word.\n\n" +
@@ -291,6 +300,7 @@ export default function VocabularyGameScreen() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
+    backgroundColor: "#FFFFFF",
   },
   center: {
     flex: 1,
