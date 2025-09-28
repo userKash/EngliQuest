@@ -1,9 +1,9 @@
-//badge function natin cuh
+// badges_utility/badgesutil.ts
 import { initFirebase } from "firebaseConfig";
 
 export async function unlockBadge(
   category: "vocab" | "grammar" | "reading" | "sentence" | "trans",
-  level: string, 
+  level: string,
   progress: Record<string, any>
 ): Promise<string[]> {
   const unlocked: string[] = [];
@@ -21,7 +21,7 @@ export async function unlockBadge(
     const uid = user.uid;
 
     // --- Normalize level ---
-    let raw = String(level || "").toLowerCase(); 
+    let raw = String(level || "").toLowerCase(); // e.g. "easy-2"
     if (category === "trans") {
       raw = raw.replace(/^trans-/, "");
     }
@@ -31,38 +31,11 @@ export async function unlockBadge(
 
     console.log("📚 Normalized values:", { raw, base, normalizedLevel });
 
-    const progressKey = raw; 
-    const score = progress[progressKey]?.score ?? 0;
+    const score = progress[raw]?.score ?? 0;
+    console.log("🎯 Progress lookup:", { raw, score });
 
-    console.log("🎯 Progress lookup:", { progressKey, score });
-
-    const badgeId = `${category}_${normalizedLevel}`; 
-
-    // --- Normal badge (only unlocked at -2 and score >= 70) ---
-    if (/-2$/.test(raw) && score >= 70) {
-      console.log(`✅ Unlocking badge ${badgeId} (score=${score})`);
-      if (db.collection) {
-        await db.collection("userbadges").doc(uid).set({ [badgeId]: true }, { merge: true });
-      } else {
-        const { doc, setDoc } = await import("firebase/firestore");
-        await setDoc(doc(db, "userbadges", uid), { [badgeId]: true }, { merge: true });
-      }
-      unlocked.push(badgeId);
-    } else {
-      console.log(`⏭ Skipped badge ${badgeId} (raw=${raw}, score=${score})`);
-    }
-
-    // --- Champion Badge (all sublevels 100%) ---
-    const requiredSublevels = [
-      "easy-1",
-      "easy-2",
-      "med-1",
-      "med-2",
-      "hard-1",
-      "hard-2",
-    ];
-    console.log("🏆 Checking champion badge, required:", requiredSublevels);
-
+    // ---------------- Champion Badge (highest priority) ----------------
+    const requiredSublevels = ["easy-1","easy-2","med-1","med-2","hard-1","hard-2"];
     const allPerfect = requiredSublevels.every((sub) => progress[sub]?.score === 100);
     console.log("🏆 Champion check:", { allPerfect });
 
@@ -76,14 +49,14 @@ export async function unlockBadge(
         await setDoc(doc(db, "userbadges", uid), { [champId]: true }, { merge: true });
       }
       unlocked.push(champId);
+
+      // Champion overrides normal/hard → skip lower badges
+      console.log("⏭ Skipping lower badges since Champion unlocked");
+      return unlocked;
     }
 
-    // --- Hard Badge (≥70% on hard-2) ---
-    const hard2Key = "hard-2";
-    const hardScore = progress[hard2Key]?.score ?? 0;
-    console.log("💪 Checking Hard badge:", { hard2Key, hardScore });
-
-    if (hardScore >= 70) {
+    // ---------------- Hard Badge ----------------
+    if (raw === "hard-2" && score >= 70) {
       const hardId = `${category}_hard`;
       console.log(`✅ Unlocking Hard badge: ${hardId}`);
       if (db.collection) {
@@ -93,14 +66,28 @@ export async function unlockBadge(
         await setDoc(doc(db, "userbadges", uid), { [hardId]: true }, { merge: true });
       }
       unlocked.push(hardId);
+
+      // Hard overrides normal badge
+      console.log("⏭ Skipping normal badge since Hard unlocked");
+      return unlocked;
     }
 
-    // --- Ultimate Word Warrior (all categories passed hard-2 with ≥70%) ---
-    const categories = ["vocab", "grammar", "reading", "sentence", "trans"];
-    console.log("🔥 Checking Ultimate Word Warrior across categories:", categories);
+    // ---------------- Normal Badge ----------------
+    if (/-2$/.test(raw) && score >= 70) {
+      const badgeId = `${category}_${normalizedLevel}`;
+      console.log(`✅ Unlocking normal badge: ${badgeId}`);
+      if (db.collection) {
+        await db.collection("userbadges").doc(uid).set({ [badgeId]: true }, { merge: true });
+      } else {
+        const { doc, setDoc } = await import("firebase/firestore");
+        await setDoc(doc(db, "userbadges", uid), { [badgeId]: true }, { merge: true });
+      }
+      unlocked.push(badgeId);
+    }
 
-    // Here we check per-category hard-2
-    const allHard2Passed = categories.every((cat) => progress["hard-2"]?.score >= 70);
+    // ---------------- Ultimate Badge ----------------
+    const categories = ["vocab", "grammar", "reading", "sentence", "trans"];
+    const allHard2Passed = categories.every(() => progress["hard-2"]?.score >= 70);
     console.log("🔥 Ultimate check:", { allHard2Passed });
 
     if (allHard2Passed) {
