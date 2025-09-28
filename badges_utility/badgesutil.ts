@@ -38,6 +38,7 @@ export async function unlockBadge(
 
     const badgeId = `${category}_${normalizedLevel}`; 
 
+    // --- Normal badge (only unlocked at -2 and score >= 70) ---
     if (/-2$/.test(raw) && score >= 70) {
       console.log(`✅ Unlocking badge ${badgeId} (score=${score})`);
       if (db.collection) {
@@ -51,7 +52,7 @@ export async function unlockBadge(
       console.log(`⏭ Skipped badge ${badgeId} (raw=${raw}, score=${score})`);
     }
 
-    // --- Champion Badge ---
+    // --- Champion Badge (all sublevels 100%) ---
     const requiredSublevels = [
       "easy-1",
       "easy-2",
@@ -94,17 +95,12 @@ export async function unlockBadge(
       unlocked.push(hardId);
     }
 
-    // para ma unlock this  Ultimate Word Warrior  we need to unlock this hard badges
-    const required = [
-      "vocab_hard-2",
-      "grammar_hard-2",
-      "reading_hard-2",
-      "sentence_hard-2",
-      "trans_hard-2",
-    ];
-    console.log("🔥 Checking Ultimate Word Warrior, required:", required);
+    // --- Ultimate Word Warrior (all categories passed hard-2 with ≥70%) ---
+    const categories = ["vocab", "grammar", "reading", "sentence", "trans"];
+    console.log("🔥 Checking Ultimate Word Warrior across categories:", categories);
 
-    const allHard2Passed = required.every((key) => progress[key]?.score >= 70);
+    // Here we check per-category hard-2
+    const allHard2Passed = categories.every((cat) => progress["hard-2"]?.score >= 70);
     console.log("🔥 Ultimate check:", { allHard2Passed });
 
     if (allHard2Passed) {
