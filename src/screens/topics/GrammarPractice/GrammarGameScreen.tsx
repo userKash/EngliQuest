@@ -146,38 +146,46 @@ export default function GrammarGameScreen() {
   }, [step]);
 
   // ✅ Handle navigation header
-  useLayoutEffect(() => {
-    if (step === "quiz") {
-      navigation.setOptions({
-        gestureEnabled: false,
-        headerTitle: () => (
-          <View style={{ alignItems: "center" }}>
-            <Text style={{ fontSize: 18, fontWeight: "bold" }}>
-              Grammar Practice
-            </Text>
-            <Text style={{ fontSize: 12, color: "#555" }}>
-              {levelId.toUpperCase()} – Question {progress.current + 1} of{" "}
-              {progress.total}
-            </Text>
-          </View>
-        ),
-        headerLeft: () => (
-          <TouchableOpacity
-            onPress={() => setShowExitModal(true)}
-            style={{ marginLeft: 12, flexDirection: "row", alignItems: "center" }}
-          >
-            <Ionicons name="arrow-back" size={24} />
-          </TouchableOpacity>
-        ),
-      });
-    } else {
-      navigation.setOptions({
-        gestureEnabled: true,
-        headerTitle: "Grammar Practice",
-        headerLeft: undefined,
-      });
-    }
-  }, [step, progress, levelId]);
+useLayoutEffect(() => {
+  if (step === "quiz") {
+    navigation.setOptions({
+      gestureEnabled: false,
+      headerTitle: () => (
+        <View style={{ alignItems: "center" }}>
+          <Text style={{ fontSize: 18, fontWeight: "bold" }}>
+            Vocabulary Practice
+          </Text>
+          <Text style={{ fontSize: 12, color: "#555" }}>
+            {levelId.toUpperCase()} – Question {progress.current + 1} of {progress.total}
+          </Text>
+        </View>
+      ),
+      headerLeft: () => (
+        <TouchableOpacity
+          onPress={() => setShowExitModal(true)}
+          style={{ marginLeft: 12, flexDirection: "row", alignItems: "center" }}
+        >
+          <Ionicons name="arrow-back" size={24} />
+        </TouchableOpacity>
+      ),
+    });
+  } else {
+    navigation.setOptions({
+      gestureEnabled: true,
+      headerTitle: () => (
+        <View style={{ alignItems: "flex-start" }}>
+          <Text style={{ fontSize: 18, fontWeight: "bold" }}>
+            Grammar Practice
+          </Text>
+          <Text style={{ fontSize: 14, color: "#555" }}>
+            Read the instructions carefully
+          </Text>
+        </View>
+      ),
+      headerLeft: undefined,
+    });
+  }
+}, [step, progress, levelId]);
 
   const instructions = {
     title: "Grammar Practice",
