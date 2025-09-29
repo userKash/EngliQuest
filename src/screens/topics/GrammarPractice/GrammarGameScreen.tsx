@@ -175,7 +175,7 @@ useLayoutEffect(() => {
       headerTitle: () => (
         <View style={{ alignItems: "flex-start" }}>
           <Text style={{ fontSize: 18, fontWeight: "bold" }}>
-            Grammar Practice
+            Grammar Practice 
           </Text>
           <Text style={{ fontSize: 14, color: "#555" }}>
             Read the instructions carefully
