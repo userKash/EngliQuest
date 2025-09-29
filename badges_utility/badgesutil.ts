@@ -21,22 +21,40 @@ export async function unlockBadge(
     const uid = user.uid;
 
     // --- Normalize level ---
-    let raw = String(level || "").toLowerCase(); // e.g. "easy-2"
-    if (category === "trans") {
-      raw = raw.replace(/^trans-/, "");
-    }
+    let raw = String(level || "").toLowerCase(); // e.g. "easy-2" | "trans-easy-2"
 
-    const base = raw.replace(/-\d+$/, "");
-    const normalizedLevel = base === "medium" ? "med" : base;
+    // progress keys are stored as:
+    // - grammar/reading: "easy-1", "medium-2", "hard-2"
+    // - trans/sentence: "trans-easy-1", "trans-hard-2", etc.
+    // → so DO NOT strip "trans-" or "sentence-"
+    const base = raw.replace(/-\d+$/, ""); // e.g. "trans-easy"
+    let normalizedLevel = base.replace(/^(trans-|sentence-)/, ""); // remove prefix for badge naming
+    if (normalizedLevel === "medium") normalizedLevel = "med";
 
     console.log("📚 Normalized values:", { raw, base, normalizedLevel });
 
     const score = progress[raw]?.score ?? 0;
     console.log("🎯 Progress lookup:", { raw, score });
 
-    // ---------------- Champion Badge (highest priority) ----------------
-    const requiredSublevels = ["easy-1","easy-2","med-1","med-2","hard-1","hard-2"];
-    const allPerfect = requiredSublevels.every((sub) => progress[sub]?.score === 100);
+    // ---------------- Champion Badge ----------------
+    const requiredSublevels = [
+      "easy-1",
+      "easy-2",
+      "med-1",
+      "med-2",
+      "hard-1",
+      "hard-2",
+    ];
+
+    const allPerfect = requiredSublevels.every((sub) => {
+      // Check with prefix if category uses it
+      const key =
+        category === "trans" || category === "sentence"
+          ? `${category}-${sub}`
+          : sub;
+      return progress[key]?.score === 100;
+    });
+
     console.log("🏆 Champion check:", { allPerfect });
 
     if (allPerfect) {
@@ -50,26 +68,23 @@ export async function unlockBadge(
       }
       unlocked.push(champId);
 
-      // Champion overrides normal/hard → skip lower badges
-      console.log("⏭ Skipping lower badges since Champion unlocked");
-      return unlocked;
+      return unlocked; // Champion overrides
     }
 
     // ---------------- Hard Badge ----------------
-    if (raw === "hard-2" && score >= 70) {
-      const hardId = `${category}_hard`;
-      console.log(`✅ Unlocking Hard badge: ${hardId}`);
-      if (db.collection) {
-        await db.collection("userbadges").doc(uid).set({ [hardId]: true }, { merge: true });
-      } else {
-        const { doc, setDoc } = await import("firebase/firestore");
-        await setDoc(doc(db, "userbadges", uid), { [hardId]: true }, { merge: true });
+    if (/-hard-2$/.test(raw) || raw === "hard-2") {
+      if (score >= 70) {
+        const hardId = `${category}_hard`;
+        console.log(`✅ Unlocking Hard badge: ${hardId}`);
+        if (db.collection) {
+          await db.collection("userbadges").doc(uid).set({ [hardId]: true }, { merge: true });
+        } else {
+          const { doc, setDoc } = await import("firebase/firestore");
+          await setDoc(doc(db, "userbadges", uid), { [hardId]: true }, { merge: true });
+        }
+        unlocked.push(hardId);
+        return unlocked; // skip normal if hard unlocked
       }
-      unlocked.push(hardId);
-
-      // Hard overrides normal badge
-      console.log("⏭ Skipping normal badge since Hard unlocked");
-      return unlocked;
     }
 
     // ---------------- Normal Badge ----------------
@@ -87,7 +102,11 @@ export async function unlockBadge(
 
     // ---------------- Ultimate Badge ----------------
     const categories = ["vocab", "grammar", "reading", "sentence", "trans"];
-    const allHard2Passed = categories.every(() => progress["hard-2"]?.score >= 70);
+    const allHard2Passed = categories.every((cat) => {
+      const key = cat === "trans" || cat === "sentence" ? `${cat}-hard-2` : "hard-2";
+      return progress[key]?.score >= 70;
+    });
+
     console.log("🔥 Ultimate check:", { allHard2Passed });
 
     if (allHard2Passed) {

@@ -18,6 +18,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 import PrimaryButton from "./PrimaryButton";
 import ResultModal from "./ResultModal";
@@ -41,30 +42,38 @@ type ReviewItem = {
 type Props = {
   questions: QA[];
   onProgressChange?: (p: { current: number; total: number }) => void;
-  onFinish?: (percentage: number) => void; 
+  onFinish?: (percentage: number) => void;
 };
 
+const STORAGE_KEY = "TranslationProgress";
 
-if (Platform.OS === "android" && UIManager.setLayoutAnimationEnabledExperimental) {
+if (
+  Platform.OS === "android" &&
+  UIManager.setLayoutAnimationEnabledExperimental
+) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
 
-export default function FilipinoToEnglishQuiz({ questions, onProgressChange, onFinish }: Props) {
+export default function FilipinoToEnglishQuiz({
+  questions,
+  onProgressChange,
+  onFinish,
+}: Props) {
   const insets = useSafeAreaInsets();
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const route = useRoute<any>();
-  const { levelId, progress } = route.params || {};
+  const { levelId } = route.params || {};
 
   const [index, setIndex] = useState(0);
   const [value, setValue] = useState("");
   const [locked, setLocked] = useState(false);
   const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
-  const [score, setScore] = useState(0); // ✅ +10 per correct
+  const [score, setScore] = useState(0);
   const [showResult, setShowResult] = useState(false);
   const [review, setReview] = useState<ReviewItem[]>([]);
 
-  // ✅ Badge state
+  // Badge state
   const [newBadges, setNewBadges] = useState<string[]>([]);
   const [badgeModal, setBadgeModal] = useState<string | null>(null);
 
@@ -76,11 +85,19 @@ export default function FilipinoToEnglishQuiz({ questions, onProgressChange, onF
     onProgressChange?.({ current: index, total });
   }, [index, total]);
 
+  // sync badge modal with unlocked badges
   useEffect(() => {
-    setBadgeModal(newBadges.length > 0 ? newBadges[0] : null);
+    if (newBadges.length > 0) {
+      const normalized = newBadges[0].replace(/-\d+$/, "");
+      console.log("🎯 Opening badge modal for:", normalized);
+      setBadgeModal(normalized);
+    } else {
+      setBadgeModal(null);
+    }
   }, [newBadges]);
 
-  const normalize = (s: string) => s.toLowerCase().trim().replace(/\s+/g, " ");
+  const normalize = (s: string) =>
+    s.toLowerCase().trim().replace(/\s+/g, " ");
 
   const check = () => {
     if (!value.trim() || locked) return;
@@ -103,28 +120,19 @@ export default function FilipinoToEnglishQuiz({ questions, onProgressChange, onF
     ]);
   };
 
-const next = async () => {
-  if (!locked) return;
-  LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+  const next = () => {
+    if (!locked) return;
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
 
-  if (!last) {
-    setIndex((i) => i + 1);
-    setValue("");
-    setLocked(false);
-    setIsCorrect(null);
-  } else {
-    setShowResult(true);
-    const correctAnswers = score / 10;
-    const percentage = Math.round((correctAnswers / total) * 100);
-    if (/-2$/.test(levelId)) {
-      const unlocked = await unlockBadge("trans", levelId, progress || {});
-      if (unlocked.length > 0) setNewBadges(unlocked);
+    if (!last) {
+      setIndex((i) => i + 1);
+      setValue("");
+      setLocked(false);
+      setIsCorrect(null);
+    } else {
+      setShowResult(true);
     }
-
-    onFinish?.(percentage); 
-  }
-};
-
+  };
 
   const reviewData = useMemo(() => review, [review]);
 
@@ -132,9 +140,11 @@ const next = async () => {
   const actionHandler = locked ? next : check;
   const actionDisabled = locked ? false : value.trim().length === 0;
 
+  // badge continue flow
   const handleBadgeContinue = () => {
     if (newBadges.length > 1) {
-      setNewBadges(newBadges.slice(1));
+      const [, ...rest] = newBadges;
+      setNewBadges(rest);
     } else {
       setNewBadges([]);
       navigation.reset({
@@ -150,8 +160,14 @@ const next = async () => {
 
   return (
     <View style={styles.screen}>
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
-        <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+      >
+        <ScrollView
+          contentContainerStyle={styles.content}
+          keyboardShouldPersistTaps="handled"
+        >
           <View style={styles.card}>
             <Text style={styles.cardTitle}>Translate to English</Text>
             <Text style={styles.word}>{current.filipino}</Text>
@@ -187,13 +203,26 @@ const next = async () => {
 
           <View style={{ minHeight: 84 }}>
             {isCorrect !== null && (
-              <View style={[styles.feedbackBox, isCorrect ? styles.correctBox : styles.wrongBox]}>
-                <Text style={[styles.feedbackTitle, isCorrect ? styles.correctText : styles.wrongText]}>
+              <View
+                style={[
+                  styles.feedbackBox,
+                  isCorrect ? styles.correctBox : styles.wrongBox,
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.feedbackTitle,
+                    isCorrect ? styles.correctText : styles.wrongText,
+                  ]}
+                >
                   {isCorrect ? `✅ Correct: +10 points` : "❌ Incorrect"}
                 </Text>
                 {!isCorrect && (
                   <Text style={styles.feedbackDetail}>
-                    Correct answer: <Text style={{ fontWeight: "700" }}>{current.accepts[0]}</Text>
+                    Correct answer:{" "}
+                    <Text style={{ fontWeight: "700" }}>
+                      {current.accepts[0]}
+                    </Text>
                   </Text>
                 )}
               </View>
@@ -203,8 +232,14 @@ const next = async () => {
           <View style={{ height: 120 }} />
         </ScrollView>
 
-        <View style={[styles.bottomBar, { paddingBottom: insets.bottom + 100 }]}>
-          <PrimaryButton label={actionLabel} onPress={actionHandler} disabled={actionDisabled} />
+        <View
+          style={[styles.bottomBar, { paddingBottom: insets.bottom + 100 }]}
+        >
+          <PrimaryButton
+            label={actionLabel}
+            onPress={actionHandler}
+            disabled={actionDisabled}
+          />
         </View>
       </KeyboardAvoidingView>
 
@@ -215,25 +250,64 @@ const next = async () => {
         review={reviewData}
         onRequestClose={() => setShowResult(false)}
         title="🎉 Great job!"
-        onContinue={() => {
+        onContinue={async () => {
           setShowResult(false);
-          if (newBadges.length === 0) {
-            navigation.reset({
-              index: 0,
-              routes: [{ name: "Home" as keyof RootStackParamList }],
-            });
+
+          const finalScore = score;
+          const correctAnswers = finalScore / 10;
+          const percentage = Math.round((correctAnswers / total) * 100);
+
+          try {
+            // 1. Save to AsyncStorage
+            const stored = await AsyncStorage.getItem(STORAGE_KEY);
+            let localProgress = stored ? JSON.parse(stored) : {};
+            localProgress[levelId] = {
+              score: Math.max(localProgress[levelId]?.score ?? 0, percentage),
+              attempted: true,
+            };
+            await AsyncStorage.setItem(
+              STORAGE_KEY,
+              JSON.stringify(localProgress)
+            );
+            console.log("✅ Saved Translation progress:", localProgress);
+
+            // 2. Unlock badges if passed
+            if (percentage >= 70) {
+              console.log("✅ Passed translation quiz, unlocking badges...");
+              const unlocked = await unlockBadge("trans", levelId, localProgress);
+              if (unlocked.length > 0) {
+                setNewBadges(unlocked);
+                return; // show badge modal
+              }
+            } else {
+              console.log("❌ Translation quiz failed — no badges unlocked");
+            }
+          } catch (err) {
+            console.error("❌ Error saving progress/unlocking badge:", err);
           }
+
+          navigation.reset({
+            index: 0,
+            routes: [{ name: "Home" as keyof RootStackParamList }],
+          });
         }}
       />
 
-      <Modal visible={!!badgeData} transparent animationType="fade" onRequestClose={handleBadgeContinue}>
+      <Modal
+        visible={!!badgeData}
+        transparent
+        animationType="fade"
+        onRequestClose={handleBadgeContinue}
+      >
         <Pressable style={styles.overlay} onPress={handleBadgeContinue}>
           <View style={styles.modalCard}>
             {badgeData && (
               <>
                 <Image source={badgeData.image} style={styles.modalImg} />
                 <Text style={styles.modalTitle}>{badgeData.title}</Text>
-                {badgeData.subtitle && <Text style={styles.modalSub}>{badgeData.subtitle}</Text>}
+                {badgeData.subtitle && (
+                  <Text style={styles.modalSub}>{badgeData.subtitle}</Text>
+                )}
                 <Text style={styles.modalHint}>Unlocked! 🎉</Text>
                 <PrimaryButton label="Continue" onPress={handleBadgeContinue} />
               </>
@@ -266,7 +340,12 @@ const styles = StyleSheet.create({
     color: "#5E67CC",
     marginVertical: 30,
   },
-  note: { textAlign: "center", color: "#666", marginBottom: 8, marginVertical: 30 },
+  note: {
+    textAlign: "center",
+    color: "#666",
+    marginBottom: 8,
+    marginVertical: 30,
+  },
   outerInputBox: {
     flexDirection: "row",
     alignItems: "center",
@@ -336,6 +415,11 @@ const styles = StyleSheet.create({
     textAlign: "center",
     marginBottom: 6,
   },
-  modalSub: { fontSize: 14, textAlign: "center", marginBottom: 8, color: "#555" },
+  modalSub: {
+    fontSize: 14,
+    textAlign: "center",
+    marginBottom: 8,
+    color: "#555",
+  },
   modalHint: { fontSize: 14, color: "#111", marginBottom: 12 },
 });
