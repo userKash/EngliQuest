@@ -243,55 +243,53 @@ export default function FilipinoToEnglishQuiz({
         </View>
       </KeyboardAvoidingView>
 
-      <ResultModal
-        visible={showResult}
-        score={score / 10}
-        total={total}
-        review={reviewData}
-        onRequestClose={() => setShowResult(false)}
-        title="🎉 Great job!"
-        onContinue={async () => {
-          setShowResult(false);
+<ResultModal
+  visible={showResult}
+  score={score / 10}
+  total={total}
+  review={reviewData}
+  onRequestClose={() => setShowResult(false)}
+  title="🎉 Great job!"
+  onContinue={async () => {
+    setShowResult(false);
 
-          const finalScore = score;
-          const correctAnswers = finalScore / 10;
-          const percentage = Math.round((correctAnswers / total) * 100);
+    const finalScore = score;
+    const correctAnswers = finalScore / 10;
+    const percentage = Math.round((correctAnswers / total) * 100);
 
-          try {
-            // 1. Save to AsyncStorage
-            const stored = await AsyncStorage.getItem(STORAGE_KEY);
-            let localProgress = stored ? JSON.parse(stored) : {};
-            localProgress[levelId] = {
-              score: Math.max(localProgress[levelId]?.score ?? 0, percentage),
-              attempted: true,
-            };
-            await AsyncStorage.setItem(
-              STORAGE_KEY,
-              JSON.stringify(localProgress)
-            );
-            console.log("✅ Saved Translation progress:", localProgress);
+    try {
+      // 1. Save to AsyncStorage
+      const stored = await AsyncStorage.getItem(STORAGE_KEY);
+      let localProgress = stored ? JSON.parse(stored) : {};
+      localProgress[levelId] = {
+        score: Math.max(localProgress[levelId]?.score ?? 0, percentage),
+        attempted: true,
+      };
+      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(localProgress));
+      console.log("✅ Saved Translation progress:", localProgress);
 
-            // 2. Unlock badges if passed
-            if (percentage >= 70) {
-              console.log("✅ Passed translation quiz, unlocking badges...");
-              const unlocked = await unlockBadge("trans", levelId, localProgress);
-              if (unlocked.length > 0) {
-                setNewBadges(unlocked);
-                return; // show badge modal
-              }
-            } else {
-              console.log("❌ Translation quiz failed — no badges unlocked");
-            }
-          } catch (err) {
-            console.error("❌ Error saving progress/unlocking badge:", err);
-          }
+      // 2. Unlock badges if passed
+      if (percentage >= 70) {
+        console.log("✅ Passed translation quiz, unlocking badges...");
+        const unlocked = await unlockBadge("trans", levelId, localProgress);
+        if (unlocked.length > 0) {
+          setNewBadges(unlocked);
+          return; // ⬅️ stop here, wait for badge modal
+        }
+      } else {
+        console.log("❌ Translation quiz failed — no badges unlocked");
+      }
+    } catch (err) {
+      console.error("❌ Error saving progress/unlocking badge:", err);
+    }
 
-          navigation.reset({
-            index: 0,
-            routes: [{ name: "Home" as keyof RootStackParamList }],
-          });
-        }}
-      />
+    // ⬇️ only runs if no badge unlocked
+    navigation.reset({
+      index: 0,
+      routes: [{ name: "Home" as keyof RootStackParamList }],
+    });
+  }}
+/>
 
       <Modal
         visible={!!badgeData}
