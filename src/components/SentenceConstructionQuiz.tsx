@@ -114,7 +114,7 @@ export default function SentenceConstructionQuiz({
         const user = auth.currentUser;
         if (!user) return;
 
-        const subLevel = levelId?.replace("trans-", "");
+        const subLevel = levelId?.replace("sc-", "");
         const firestoreLevel = LEVEL_MAP[subLevel ?? ""];
 
         if (!firestoreLevel) {

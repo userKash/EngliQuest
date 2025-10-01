@@ -16,8 +16,8 @@ const LEVELS: LevelDef[] = [
     title: "Easy",
     description: "Basic sentence construction",
     sublevels: [
-      { id: "trans-easy-1", title: "Level 1" },
-      { id: "trans-easy-2", title: "Level 2" },
+      { id: "sc-easy-1", title: "Level 1" },
+      { id: "sc-easy-2", title: "Level 2" },
     ],
   },
   {
@@ -26,8 +26,8 @@ const LEVELS: LevelDef[] = [
     title: "Medium",
     description: "Intermediate sentence construction",
     sublevels: [
-      { id: "trans-medium-1", title: "Level 1" },
-      { id: "trans-medium-2", title: "Level 2" },
+      { id: "sc-medium-1", title: "Level 1" },
+      { id: "sc-medium-2", title: "Level 2" },
     ],
   },
   {
@@ -36,19 +36,19 @@ const LEVELS: LevelDef[] = [
     title: "Hard",
     description: "Advanced sentence construction",
     sublevels: [
-      { id: "trans-hard-1", title: "Level 1" },
-      { id: "trans-hard-2", title: "Level 2" },
+      { id: "sc-hard-1", title: "Level 1" },
+      { id: "sc-hard-2", title: "Level 2" },
     ],
   },
 ];
 
 const SUBLEVELS = [
-  "trans-easy-1",
-  "trans-easy-2",
-  "trans-medium-1",
-  "trans-medium-2",
-  "trans-hard-1",
-  "trans-hard-2",
+  "sc-easy-1",
+  "sc-easy-2",
+  "sc-medium-1",
+  "sc-medium-2",
+  "sc-hard-1",
+  "sc-hard-2",
 ];
 
 // Start fresh
@@ -56,25 +56,40 @@ function makeInitialProgress(): ProgressState {
   return {};
 }
 
-// (optional) migration helper if you had old keys
+// Migration helper (keep old progress from trans-* or sentence-*)
 function migrateKeys(oldProgress: ProgressState): ProgressState {
   const map: Record<string, string> = {
-    "sentence-easy-1": "trans-easy-1",
-    "sentence-easy-2": "trans-easy-2",
-    "sentence-medium-1": "trans-medium-1",
-    "sentence-medium-2": "trans-medium-2",
-    "sentence-hard-1": "trans-hard-1",
-    "sentence-hard-2": "trans-hard-2",
+    // old FilipinoToEnglish "trans-" -> Sentence Construction "sc-"
+    "trans-easy-1": "sc-easy-1",
+    "trans-easy-2": "sc-easy-2",
+    "trans-medium-1": "sc-medium-1",
+    "trans-medium-2": "sc-medium-2",
+    "trans-hard-1": "sc-hard-1",
+    "trans-hard-2": "sc-hard-2",
+
+    // even older "sentence-" naming
+    "sentence-easy-1": "sc-easy-1",
+    "sentence-easy-2": "sc-easy-2",
+    "sentence-medium-1": "sc-medium-1",
+    "sentence-medium-2": "sc-medium-2",
+    "sentence-hard-1": "sc-hard-1",
+    "sentence-hard-2": "sc-hard-2",
   };
+
   const migrated: ProgressState = {};
   for (const [k, v] of Object.entries(oldProgress)) {
     const newKey = map[k] || k;
     migrated[newKey] = v;
   }
+
+  if (Object.keys(migrated).length > 0) {
+    console.log("✅ Migrated progress keys:", migrated);
+  }
+
   return migrated;
 }
 
-export default function FilipinoToEnglishScreen() {
+export default function SentenceConstructionScreen() {
   const navigation = useNavigation<any>();
   const [progress, setProgress] = useState<ProgressState>({});
   const [storageKey, setStorageKey] = useState<string | null>(null);
@@ -112,7 +127,7 @@ export default function FilipinoToEnglishScreen() {
 
             snap.forEach((doc) => {
               const data = doc.data();
-              const subId = data.difficulty; // e.g. "trans-easy-1"
+              const subId = data.difficulty; // e.g. "sc-easy-1"
               const score = data.userscore ?? 0;
 
               if (!migrated[subId] || score > (migrated[subId].score ?? 0)) {
@@ -125,7 +140,8 @@ export default function FilipinoToEnglishScreen() {
             setProgress(migrated);
             await AsyncStorage.setItem(storageKey, JSON.stringify(migrated));
           }
-        } catch {
+        } catch (err) {
+          console.error("❌ Error loading Sentence Construction progress:", err);
           if (isActive) setProgress(makeInitialProgress());
         } finally {
           if (isActive) setLoading(false);

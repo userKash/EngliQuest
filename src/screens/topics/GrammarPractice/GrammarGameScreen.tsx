@@ -153,7 +153,7 @@ useLayoutEffect(() => {
       headerTitle: () => (
         <View style={{ alignItems: "center" }}>
           <Text style={{ fontSize: 18, fontWeight: "bold" }}>
-            Vocabulary Practice
+              Grammar Practice
           </Text>
           <Text style={{ fontSize: 12, color: "#555" }}>
             {levelId.toUpperCase()} – Question {progress.current + 1} of {progress.total}

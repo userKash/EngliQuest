@@ -230,61 +230,64 @@ async function saveProgress(finalScore: number, totalQuestions: number) {
         contentContainerStyle={styles.scrollContainer}
         keyboardShouldPersistTaps="handled"
       >
-        <View style={styles.card}>
-          {question.sentence ? (
-            <Text style={styles.sentence}>{question.sentence}</Text>
-          ) : null}
-          <Text style={styles.prompt}>{question.prompt}</Text>
+<View style={styles.card}>
+  <Text style={styles.prompt}>{question.prompt}</Text>
 
-          {question.choices.map((choice, i) => {
-            const correct = question.correctIndex === i;
-            const isSelected = selected === i;
+  {question.choices.map((choice, i) => {
+    const correct = question.correctIndex === i;
+    const isSelected = selected === i;
 
-            let choiceStyle = styles.choice;
-            if (selected !== null) {
-              if (correct)
-                choiceStyle = { ...choiceStyle, ...styles.correctChoice };
-              else if (isSelected)
-                choiceStyle = { ...choiceStyle, ...styles.wrongChoice };
-            }
+    let choiceStyle = styles.choice;
+    if (selected !== null) {
+      if (correct)
+        choiceStyle = { ...choiceStyle, ...styles.correctChoice };
+      else if (isSelected)
+        choiceStyle = { ...choiceStyle, ...styles.wrongChoice };
+    }
 
-            return (
-              <TouchableOpacity
-                key={i}
-                style={choiceStyle}
-                onPress={() => handleSelect(i)}
-                disabled={selected !== null}
-              >
-                <Text style={styles.choiceLabel}>{choiceLabels[i]}</Text>
-                <Text style={styles.choiceText}>{choice}</Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
+    return (
+      <TouchableOpacity
+        key={i}
+        style={choiceStyle}
+        onPress={() => handleSelect(i)}
+        disabled={selected !== null}
+      >
+        <Text style={styles.choiceLabel}>{choiceLabels[i]}</Text>
+        <Text style={styles.choiceText}>{choice}</Text>
+      </TouchableOpacity>
+    );
+  })}
+</View>
+{selected !== null && (
+  <View style={{ minHeight: 120 }}>
+    <View
+      style={[
+        styles.feedback,
+        selected === question.correctIndex ? styles.okBox : styles.badBox,
+      ]}
+    >
+      <Text
+        style={[
+          styles.feedbackTitle,
+          selected === question.correctIndex ? styles.okText : styles.badText,
+        ]}
+      >
+        {selected === question.correctIndex
+          ? "✅ Correct! +10 points"
+          : "❌ Incorrect"}
+      </Text>
+      {selected !== question.correctIndex && (
+        <Text style={styles.feedbackText}>
+          Correct answer: {question.choices[question.correctIndex]}
+        </Text>
+      )}
+      {question.sentence && (
+        <Text style={styles.feedbackText}>{question.sentence}</Text>
+      )}
+    </View>
+  </View>
+)}
 
-        {selected !== null && (
-          <View
-            style={[
-              styles.feedbackContainer,
-              selected === question.correctIndex
-                ? styles.feedbackCorrect
-                : styles.feedbackWrong,
-            ]}
-          >
-            <Text
-              style={[
-                styles.feedbackText,
-                selected === question.correctIndex
-                  ? styles.feedbackTextCorrect
-                  : styles.feedbackTextWrong,
-              ]}
-            >
-              {selected === question.correctIndex
-                ? "✅ Correct! +10 points"
-                : "❌ Incorrect"}
-            </Text>
-          </View>
-        )}
 
         <View style={{ height: 120 }} />
       </ScrollView>
@@ -413,11 +416,30 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     marginTop: 12,
   },
-  feedbackCorrect: { backgroundColor: "#E9F8EE", borderColor: "#2EB872" },
-  feedbackWrong: { backgroundColor: "#FDECEC", borderColor: "#F26D6D" },
-  feedbackText: { textAlign: "center", fontWeight: "bold" },
-  feedbackTextCorrect: { color: "#1F8F5F" },
-  feedbackTextWrong: { color: "#C43D3D" },
+feedback: { marginTop: 10, borderRadius: 12, padding: 14, borderWidth: 1 },
+okBox: { backgroundColor: "#E9F8EE", borderColor: "#2EB872" },
+badBox: { backgroundColor: "#FDECEC", borderColor: "#F26D6D" },
+feedbackTitle: { fontWeight: "800", marginBottom: 6, textAlign: "center" },
+okText: { color: "#1F8F5F" },
+badText: { color: "#C43D3D" },
+feedbackText: { color: "#0F1728", textAlign: "center" },
+
+explanationBox: {
+  marginTop: 12,
+  backgroundColor: "#F9F9FB",
+  borderRadius: 10,
+  padding: 12,
+  borderWidth: 1,
+  borderColor: "#E0E0E0",
+},
+explanationTitle: {
+  fontWeight: "700",
+  marginBottom: 6,
+  fontSize: 14,
+  color: "#222",
+},
+explanationText: { fontSize: 13, color: "#444", lineHeight: 18 },
+
   bottomBar: {
     position: "absolute",
     left: 16,

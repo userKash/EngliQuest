@@ -168,21 +168,39 @@ useEffect(() => {
             </TouchableOpacity>
           ))}
         </View>
+{showAnswer && (
+  <View style={{ minHeight: 120 }}>
+    <View
+      style={[
+        styles.feedback,
+        selected === current.correctIndex ? styles.okBox : styles.badBox,
+      ]}
+    >
+      <Text
+        style={[
+          styles.feedbackTitle,
+          selected === current.correctIndex ? styles.okText : styles.badText,
+        ]}
+      >
+        {selected === current.correctIndex
+          ? "✅ Correct! +10 points"
+          : "❌ Incorrect"}
+      </Text>
 
-        {/* Explanation */}
-        {showAnswer && (
-          <View style={styles.explanationBox}>
-            <Text style={styles.explanationTitle}>
-              {selected === current.correctIndex ? "✅ Correct" : "❌ Incorrect"}
-            </Text>
-            <Text style={styles.explanationText}>
-              {current.explanation ??
-                `Correct answer: ${current.choices[current.correctIndex]}`}
-            </Text>
-          </View>
-        )}
+      {/* Correct answer if wrong */}
+      {selected !== current.correctIndex && (
+        <Text style={styles.feedbackText}>
+          Correct answer: {current.choices[current.correctIndex]}
+        </Text>
+      )}
 
-        {/* ✅ Button is scrollable (not cut) */}
+      {/* Explanation if provided */}
+      {current.explanation && (
+        <Text style={styles.feedbackText}>{current.explanation}</Text>
+      )}
+    </View>
+  </View>
+)}
         {showAnswer && (
           <View style={{ marginTop: 20 }}>
             <PrimaryButton
@@ -192,8 +210,6 @@ useEffect(() => {
           </View>
         )}
       </ScrollView>
-
-      {/* ✅ Result Modal */}
       <ResultModal
         visible={showResult}
         score={score / 10}
@@ -298,4 +314,17 @@ const styles = StyleSheet.create({
   },
   modalSub: { fontSize: 14, textAlign: "center", marginBottom: 8, color: "#555" },
   modalHint: { fontSize: 14, color: "#111", marginBottom: 12 },
+  feedback: { marginTop: 10, borderRadius: 12, padding: 14, borderWidth: 1 },
+okBox: { backgroundColor: "#E9F8EE", borderColor: "#2EB872" },
+badBox: { backgroundColor: "#FDECEC", borderColor: "#F26D6D" },
+feedbackTitle: { fontWeight: "800", marginBottom: 6, textAlign: "center" },
+okText: { color: "#1F8F5F" },
+badText: { color: "#C43D3D" },
+feedbackText: {
+  color: "#0F1728",
+  textAlign: "center",
+  marginTop: 4,
+  fontSize: 14,
+},
+
 });

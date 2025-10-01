@@ -143,7 +143,7 @@ export default function App() {
         options={{
           headerTitle: () => (
             <View>
-              <Text style={{ fontSize: 16, fontWeight: "bold" }}>Filipino to English</Text>
+              <Text style={{ fontSize: 16, fontWeight: "bold" }}>Sentence Construction</Text>
               <Text style={{ fontSize: 14, color: "#555" }}>Choose your difficulty level</Text>
             </View>
           ),
