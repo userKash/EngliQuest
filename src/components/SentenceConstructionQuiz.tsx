@@ -188,10 +188,10 @@ export default function SentenceConstructionQuiz({
       onFinish?.(percentage);
 
       // Badge unlock
-      if (percentage >= 70 && /-2$/.test(levelId)) {
-        const unlocked = await unlockBadge("trans", levelId, progress);
-        if (unlocked.length > 0) setNewBadges(unlocked);
-      }
+    if (percentage >= 70 && /-2$/.test(levelId)) {
+      const unlocked = await unlockBadge("trans", levelId, progress);
+      if (unlocked.length > 0) setNewBadges(unlocked);
+    }
 
       console.log(`✅ Score saved: ${percentage}%`);
     } catch (err) {
@@ -233,22 +233,20 @@ export default function SentenceConstructionQuiz({
   };
 
   // 🔹 Badge modal flow
-  useEffect(() => {
-    setBadgeModal(newBadges.length > 0 ? newBadges[0] : null);
-  }, [newBadges]);
+useEffect(() => {
+  if (newBadges.length > 0) {
+    const badgeId = newBadges[0]; // e.g. "trans_sc-easy"
+    let normalized = badgeId
+      .replace(/_sc-/, "_")   // 🔹 "trans_sc-easy" → "trans_easy"
+      .replace(/-\d+$/, "");  // 🔹 optional safety for suffixes like "-2"
 
-  const handleBadgeContinue = () => {
-    if (newBadges.length > 1) {
-      setNewBadges(newBadges.slice(1));
-    } else {
-      setNewBadges([]);
-      setBadgeModal(null);
-      navigation.reset({
-        index: 0,
-        routes: [{ name: "Home" as keyof RootStackParamList }],
-      });
-    }
-  };
+    console.log("🎯 Opening badge modal for:", normalized);
+    setBadgeModal(normalized);
+  } else {
+    setBadgeModal(null);
+  }
+}, [newBadges]);
+
 
   const badgeData = badgeModal
     ? BADGES.find((b: { id: string }) => b.id === badgeModal)
@@ -269,6 +267,19 @@ export default function SentenceConstructionQuiz({
       </View>
     );
   }
+
+  const handleBadgeContinue = () => {
+  if (newBadges.length > 1) {
+    const [, ...rest] = newBadges;
+    setNewBadges(rest);
+  } else {
+    setNewBadges([]);
+    navigation.reset({
+      index: 0,
+      routes: [{ name: "Home" as keyof RootStackParamList }],
+    });
+  }
+};
 
   return (
     <View style={styles.screen}>
@@ -385,51 +396,84 @@ export default function SentenceConstructionQuiz({
         />
       </View>
 
-      {/* Result Modal */}
-      <ResultModal
-        visible={showResult}
-        score={correctCount}
-        total={total}
-        review={review}
-        onRequestClose={() => setShowResult(false)}
-        title="🎉 Great job!"
-        onContinue={() => {
-          setShowResult(false);
-          if (newBadges.length === 0) {
-            navigation.reset({
-              index: 0,
-              routes: [{ name: "Home" as keyof RootStackParamList }],
-            });
-          }
-        }}
-      />
+{/* Result Modal */}
+<ResultModal
+  visible={showResult}
+  score={correctCount}
+  total={total}
+  review={review}
+  onRequestClose={() => setShowResult(false)}
+  title="🎉 Congratulations!"
+  onContinue={async () => {
+    setShowResult(false);
 
-      {/* Badge Modal */}
-      <Modal
-        visible={!!badgeData}
-        transparent
-        animationType="fade"
-        onRequestClose={handleBadgeContinue}
-      >
-        <Pressable style={styles.overlay} onPress={handleBadgeContinue}>
-          <View style={styles.modalCard}>
-            {badgeData && (
-              <>
-                <Image source={badgeData.image} style={styles.modalImg} />
-                <Text style={styles.modalTitle}>{badgeData.title}</Text>
-                {badgeData.subtitle && (
-                  <Text style={styles.modalSub}>{badgeData.subtitle}</Text>
-                )}
-                <Text style={styles.modalHint}>Unlocked! 🎉</Text>
-                <PrimaryButton
-                  label="Continue"
-                  onPress={handleBadgeContinue}
-                />
-              </>
-            )}
-          </View>
-        </Pressable>
-      </Modal>
+    const finalScore = correctCount * 10; // match grammar/vocab scoring style
+    const percentage = Math.round((correctCount / total) * 100);
+
+    if (percentage >= 70) {
+      console.log("✅ Passed sentence construction quiz, unlocking badges...");
+      try {
+        const { auth } = await initFirebase();
+        const user = auth.currentUser;
+        if (!user) return;
+
+        const storageKey = `SentenceConstructionProgress_${user.uid}`;
+        const stored = await AsyncStorage.getItem(storageKey);
+        const progress = stored ? JSON.parse(stored) : {};
+
+        const unlocked = await unlockBadge("trans", levelId ?? "", progress);
+        if (unlocked.length > 0) {
+          setNewBadges(unlocked); // triggers badge modal
+          return; // 🚫 stop here — badge modal will handle navigation
+        }
+      } catch (err) {
+        console.error("❌ Error unlocking badge after result:", err);
+      }
+    } else {
+      console.log("❌ Sentence Construction quiz failed — no badges unlocked");
+    }
+
+    // ✅ if no badges unlocked, go home
+    navigation.reset({
+      index: 0,
+      routes: [{ name: "Home" as keyof RootStackParamList }],
+    });
+  }}
+/>
+
+{/* Badge Modal */}
+<Modal
+  visible={!!badgeData}
+  transparent
+  animationType="fade"
+  onRequestClose={handleBadgeContinue}
+>
+  <Pressable style={styles.overlay} onPress={handleBadgeContinue}>
+    <View style={styles.modalCard}>
+      {badgeData && (
+        <>
+          <Image
+            source={badgeData.image}
+            style={styles.modalImg}
+            resizeMode="contain"
+          />
+          <Text style={styles.modalTitle}>{badgeData.title}</Text>
+          {badgeData.subtitle && (
+            <Text style={styles.modalSub}>{badgeData.subtitle}</Text>
+          )}
+          <Text style={styles.modalHint}>Unlocked! 🎉</Text>
+          <TouchableOpacity
+            onPress={handleBadgeContinue}
+            style={styles.modalBtn}
+          >
+            <Text style={styles.modalBtnText}>Continue</Text>
+          </TouchableOpacity>
+        </>
+      )}
+    </View>
+  </Pressable>
+</Modal>
+
     </View>
   );
 }
@@ -550,6 +594,14 @@ const styles = StyleSheet.create({
     textAlign: "center",
     marginBottom: 6,
   },
+
+    modalBtn: {
+    backgroundColor: "#6B6EF9",
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 10,
+  },
+  modalBtnText: { color: "#fff", fontWeight: "700" },
   modalSub: { fontSize: 14, textAlign: "center", marginBottom: 8, color: "#555" },
   modalHint: { fontSize: 14, color: "#111", marginBottom: 12 },
 });

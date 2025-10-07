@@ -168,11 +168,10 @@ export default function FilipinoToEnglishQuiz({
           contentContainerStyle={styles.content}
           keyboardShouldPersistTaps="handled"
         >
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Translate to English</Text>
-          <Text style={styles.word}>{current.filipino}</Text>
-        </View>
-
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>Translate to English</Text>
+            <Text style={styles.word}>{current.filipino}</Text>
+          </View>
 
           <View style={styles.outerInputBox}>
             <TextInput
@@ -200,33 +199,35 @@ export default function FilipinoToEnglishQuiz({
               <Text style={styles.resetText}>↻</Text>
             </TouchableOpacity>
           </View>
-          <View style={{ minHeight: 120 }}>
+
+          <View style={{ minHeight: 84 }}>
             {isCorrect !== null && (
               <View
                 style={[
-                  styles.feedback,
-                  isCorrect ? styles.okBox : styles.badBox,
+                  styles.feedbackBox,
+                  isCorrect ? styles.correctBox : styles.wrongBox,
                 ]}
               >
                 <Text
                   style={[
                     styles.feedbackTitle,
-                    isCorrect ? styles.okText : styles.badText,
+                    isCorrect ? styles.correctText : styles.wrongText,
                   ]}
                 >
-                  {isCorrect ? "✅ Correct! +10 points" : "❌ Incorrect"}
+                  {isCorrect ? `✅ Correct: +10 points` : "❌ Incorrect"}
                 </Text>
                 {!isCorrect && (
-                  <Text style={styles.feedbackText}>
-                    Correct answer: {current.accepts[0]}
+                  <Text style={styles.feedbackDetail}>
+                    Correct answer:{" "}
+                    <Text style={{ fontWeight: "700" }}>
+                      {current.accepts[0]}
+                    </Text>
                   </Text>
-                )}
-                {current.note && (
-                  <Text style={styles.feedbackText}>{current.note}</Text>
                 )}
               </View>
             )}
           </View>
+
           <View style={{ height: 120 }} />
         </ScrollView>
 
@@ -371,22 +372,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  feedback: { marginTop: 10, borderRadius: 12, padding: 14, borderWidth: 1 },
-  okBox: { backgroundColor: "#E9F8EE", borderColor: "#2EB872" },
-  badBox: { backgroundColor: "#FDECEC", borderColor: "#F26D6D" },
-  feedbackTitle: { fontWeight: "800", marginBottom: 6, textAlign: "center" },
-  okText: { color: "#1F8F5F" },
-  badText: { color: "#C43D3D" },
-  feedbackText: {
-    color: "#0F1728",
-    textAlign: "center",
-    marginTop: 4,
-    fontSize: 14,
-  },
   resetText: { fontSize: 16, fontWeight: "700", color: "#444" },
   feedbackBox: { borderRadius: 12, padding: 14, borderWidth: 1 },
   correctBox: { backgroundColor: "#E9F8EE", borderColor: "#2EB872" },
   wrongBox: { backgroundColor: "#FDECEC", borderColor: "#F26D6D" },
+  feedbackTitle: { fontWeight: "700", marginBottom: 6, textAlign: "left" },
   correctText: { color: "#1F8F5F" },
   wrongText: { color: "#C43D3D" },
   feedbackDetail: { color: "#333" },
@@ -428,14 +418,5 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     color: "#555",
   },
-    explanationBox: {
-    padding: 12,
-    borderRadius: 8,
-    backgroundColor: "#F3F4F6",
-    marginTop: 10,
-  },
-  explanationTitle: { fontWeight: "700", marginBottom: 4 },
-  explanationText: { color: "#374151", fontSize: 14 },
-
   modalHint: { fontSize: 14, color: "#111", marginBottom: 12 },
 });

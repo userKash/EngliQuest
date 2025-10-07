@@ -124,12 +124,13 @@ export default function HomeScreen() {
         // Sublevel arrays must match those used in each builder screen
         const baseSublevels = ['easy-1', 'easy-2', 'medium-1', 'medium-2', 'hard-1', 'hard-2'];
         const transSublevels = ['trans-easy-1','trans-easy-2','trans-medium-1','trans-medium-2','trans-hard-1','trans-hard-2'];
+        const scSublevels = ['sc-easy-1', 'sc-easy-2', 'sc-medium-1', 'sc-medium-2', 'sc-hard-1', 'sc-hard-2'];
 
         const vocab = computeOverallProgress(vocabProgress, baseSublevels);
         const grammar = computeOverallProgress(grammarProgress, baseSublevels);
         const reading = computeOverallProgress(readingProgress, baseSublevels);
         const translation = computeOverallProgress(translationProgress, transSublevels);
-        const sentence = computeOverallProgress(sentenceProgress, transSublevels);
+        const sentence = computeOverallProgress(sentenceProgress, scSublevels);
 
         // overall = average of the five game modes (keep one decimal)
         const overall = Math.round(((vocab + grammar + reading + translation + sentence) / 5) * 10) / 10;

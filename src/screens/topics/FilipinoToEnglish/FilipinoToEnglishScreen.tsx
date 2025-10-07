@@ -4,8 +4,6 @@ import { View, Text, ActivityIndicator } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import auth from "@react-native-firebase/auth";
-import firestore from "@react-native-firebase/firestore";
-
 import LevelList, { LevelDef, ProgressState } from "../../../components/LevelList";
 
 const PASSING = 70;
@@ -52,7 +50,6 @@ const SUBLEVELS = [
   "trans-hard-2",
 ];
 
-// Start fresh
 function makeInitialProgress(): ProgressState {
   return {};
 }
@@ -63,71 +60,44 @@ export default function FilipinoToEnglishScreen() {
   const [storageKey, setStorageKey] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // 🔹 Generate user-specific storage key
+  // 🔹 Create per-user storage key
   useEffect(() => {
     const user = auth().currentUser;
-    if (!user) return;
-    setStorageKey(`TranslationProgress_${user.uid}`);
+    if (user) setStorageKey(`TranslationProgress_${user.uid}`);
   }, []);
 
-  // 🔹 Reload progress on screen focus
+  // 🔹 Load progress on focus
   useFocusEffect(
     useCallback(() => {
       if (!storageKey) return;
-      let isActive = true;
+      let active = true;
 
       const loadProgress = async () => {
         setLoading(true);
         try {
-          // 1. Load local storage
           const stored = await AsyncStorage.getItem(storageKey);
           const parsed = stored ? JSON.parse(stored) : makeInitialProgress();
-
-          // 2. Fetch Firestore best scores
-          const user = auth().currentUser;
-          if (user) {
-            const snap = await firestore()
-              .collection("scores")
-              .where("userId", "==", user.uid)
-              .where("quizType", "==", "Translation")
-              .get();
-
-            snap.forEach((doc) => {
-              const data = doc.data();
-              const subId = data.difficulty; // e.g. "trans-easy-1"
-              const score = data.userscore ?? 0;
-
-              if (!parsed[subId] || score > (parsed[subId].score ?? 0)) {
-                parsed[subId] = { score };
-              }
-            });
-          }
-
-          if (isActive) {
-            setProgress(parsed);
-            await AsyncStorage.setItem(storageKey, JSON.stringify(parsed));
-          }
-        } catch (e) {
-          if (isActive) setProgress(makeInitialProgress());
+          if (active) setProgress(parsed);
+        } catch {
+          if (active) setProgress(makeInitialProgress());
         } finally {
-          if (isActive) setLoading(false);
+          if (active) setLoading(false);
         }
       };
 
       loadProgress();
       return () => {
-        isActive = false;
+        active = false;
       };
     }, [storageKey])
   );
 
-  // 🔹 Save whenever progress changes
+  // 🔹 Auto-save progress
   useEffect(() => {
-    if (!storageKey) return;
-    AsyncStorage.setItem(storageKey, JSON.stringify(progress));
+    if (storageKey) AsyncStorage.setItem(storageKey, JSON.stringify(progress));
   }, [progress, storageKey]);
 
-  // 🔹 Best score updater
+  // 🔹 Update best score after quiz
   const updateBestScore = (subId: string, newScore: number) => {
     setProgress((prev) => {
       const prevScore = prev[subId]?.score ?? 0;
@@ -138,7 +108,7 @@ export default function FilipinoToEnglishScreen() {
     });
   };
 
-  // 🔹 Unlock rules
+  //  Unlock next level if previous one passed
   const isUnlocked = (subId: string): boolean => {
     const idx = SUBLEVELS.indexOf(subId);
     if (idx === -1) return false;
@@ -149,20 +119,34 @@ export default function FilipinoToEnglishScreen() {
     return prevScore >= PASSING;
   };
 
-  // 🔹 Overall progress calculation
+  // Compute overall progress
   const contribution = 100 / SUBLEVELS.length;
   const overallProgress = SUBLEVELS.reduce((sum, id) => {
     const score = progress[id]?.score ?? 0;
     return sum + (score / 100) * contribution;
   }, 0);
 
-  // 🔹 Start Translation quiz
+  //  Launch a quiz sublevel
   const onStartSubLevel = (subId: string) => {
     if (!isUnlocked(subId)) return;
     navigation.navigate("FilipinoToEnglishGame", {
       levelId: subId,
       gameMode: "Translation",
-      onFinish: (score: number) => updateBestScore(subId, score),
+      onFinish: (score: number) => {
+        updateBestScore(subId, score);
+
+        //  Auto-unlock next level if passed
+        if (score >= PASSING) {
+          const nextIdx = SUBLEVELS.indexOf(subId) + 1;
+          if (nextIdx < SUBLEVELS.length) {
+            const nextId = SUBLEVELS[nextIdx];
+            setProgress((prev) => ({
+              ...prev,
+              [nextId]: prev[nextId] ?? { score: 0 },
+            }));
+          }
+        }
+      },
     });
   };
 
@@ -181,7 +165,7 @@ export default function FilipinoToEnglishScreen() {
         levels={LEVELS}
         progress={progress}
         passing={PASSING}
-        overallProgress={overallProgress} // ✅ now showing progress %
+        overallProgress={overallProgress}
         onStartSubLevel={onStartSubLevel}
         isUnlocked={isUnlocked}
         Footer={
