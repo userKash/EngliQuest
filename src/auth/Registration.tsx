@@ -43,7 +43,7 @@ export default function RegistrationForm() {
       const { auth } = await initFirebase();
 
       if (isExpoGo) {
-        // ✅ Web/Expo Go flow
+        // Web/Expo Go flow
         const { createUserWithEmailAndPassword } = await import("firebase/auth");
         const userCredential = await createUserWithEmailAndPassword(
           auth,
