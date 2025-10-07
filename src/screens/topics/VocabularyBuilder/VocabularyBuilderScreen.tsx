@@ -159,7 +159,7 @@ export default function VocabularyBuilderScreen() {
         levels={LEVELS}
         progress={progress}
         passing={PASSING}
-        overallProgress={overallProgress} // ✅ progress bar fixed
+        overallProgress={overallProgress} 
         onStartSubLevel={onStartSubLevel}
         isUnlocked={isUnlocked}
         Footer={

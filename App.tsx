@@ -60,7 +60,7 @@ export default function App() {
   onStateChange={() => setCurrentRoute(navRef.getCurrentRoute()?.name)}
 >
   <View style={{ flex: 1 }}>
-    {/* ✅ Navigator should only have Screen/Group inside */}
+    {/*  Navigator should only have Screen/Group inside */}
     <Stack.Navigator
       screenOptions={{
         headerBackTitle: '',
