@@ -166,38 +166,34 @@ export default function SentenceConstructionQuiz({
   }, [index, total, current?.answer]);
 
   // 🔹 Save Results
-  const saveResults = async () => {
-    try {
-      const { auth } = await initFirebase();
-      const user = auth.currentUser;
-      if (!user || !levelId) return;
+const saveResults = async () => {
+  try {
+    const { auth } = await initFirebase();
+    const user = auth.currentUser;
+    if (!user || !levelId) return;
 
-      const percentage = Math.round((correctCount / total) * 100);
+    const percentage = Math.round((correctCount / total) * 100);
 
-      // Local save
-      const storageKey = `SentenceConstructionProgress_${user.uid}`;
-      const stored = await AsyncStorage.getItem(storageKey);
-      let progress = stored ? JSON.parse(stored) : {};
-      progress[levelId] = {
-        score: Math.max(progress[levelId]?.score ?? 0, percentage),
-        attempted: true,
-      };
-      await AsyncStorage.setItem(storageKey, JSON.stringify(progress));
+    // consistent storage key for all users (no uid suffix needed)
+    const STORAGE_KEY = "SentenceProgress";
+    const stored = await AsyncStorage.getItem(STORAGE_KEY);
+    let progress = stored ? JSON.parse(stored) : {};
 
-      // Firestore save delegated to parent
-      onFinish?.(percentage);
+    // save local score
+    progress[levelId] = {
+      score: Math.max(progress[levelId]?.score ?? 0, percentage),
+      attempted: true,
+    };
+    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(progress));
+    console.log("✅ Sentence progress saved locally:", progress);
 
-      // Badge unlock
-    if (percentage >= 70 && /-2$/.test(levelId)) {
-      const unlocked = await unlockBadge("trans", levelId, progress);
-      if (unlocked.length > 0) setNewBadges(unlocked);
-    }
+    // pass to parent handler if any
+    onFinish?.(percentage);
+  } catch (err) {
+    console.error("❌ Error saving results:", err);
+  }
+};
 
-      console.log(`✅ Score saved: ${percentage}%`);
-    } catch (err) {
-      console.error("❌ Error saving results:", err);
-    }
-  };
 
   // 🔹 Handlers
   const check = () => {
@@ -222,24 +218,19 @@ export default function SentenceConstructionQuiz({
     ]);
   };
 
-  const next = async () => {
-    if (!locked) return;
-    if (!last) {
-      setIndex((i) => i + 1);
-    } else {
-      await saveResults();
-      setShowResult(true);
-    }
-  };
+const next = async () => {
+  if (!locked) return;
+  if (!last) {
+    setIndex((i) => i + 1);
+  } else {
+    await saveResults();
+    setShowResult(true);
+  }
+};
 
-  // 🔹 Badge modal flow
 useEffect(() => {
   if (newBadges.length > 0) {
-    const badgeId = newBadges[0]; // e.g. "trans_sc-easy"
-    let normalized = badgeId
-      .replace(/_sc-/, "_")   // 🔹 "trans_sc-easy" → "trans_easy"
-      .replace(/-\d+$/, "");  // 🔹 optional safety for suffixes like "-2"
-
+    const normalized = newBadges[0].replace(/-\d+$/, "");
     console.log("🎯 Opening badge modal for:", normalized);
     setBadgeModal(normalized);
   } else {
@@ -247,10 +238,6 @@ useEffect(() => {
   }
 }, [newBadges]);
 
-
-  const badgeData = badgeModal
-    ? BADGES.find((b: { id: string }) => b.id === badgeModal)
-    : null;
 
   // 🔹 Render
   if (loading) {
@@ -268,7 +255,7 @@ useEffect(() => {
     );
   }
 
-  const handleBadgeContinue = () => {
+const handleBadgeContinue = () => {
   if (newBadges.length > 1) {
     const [, ...rest] = newBadges;
     setNewBadges(rest);
@@ -280,6 +267,10 @@ useEffect(() => {
     });
   }
 };
+
+const badgeData = badgeModal
+  ? BADGES.find((b: { id: string }) => b.id === badgeModal)
+  : null;
 
   return (
     <View style={styles.screen}>
@@ -395,53 +386,42 @@ useEffect(() => {
           disabled={!locked && selected.length === 0}
         />
       </View>
+    <ResultModal
+      visible={showResult}
+      score={correctCount}
+      total={total}
+      review={review}
+      onRequestClose={() => setShowResult(false)}
+      title="🎉 Congratulations!"
+      onContinue={async () => {
+        setShowResult(false);
 
-{/* Result Modal */}
-<ResultModal
-  visible={showResult}
-  score={correctCount}
-  total={total}
-  review={review}
-  onRequestClose={() => setShowResult(false)}
-  title="🎉 Congratulations!"
-  onContinue={async () => {
-    setShowResult(false);
+        const finalPercentage = Math.round((correctCount / total) * 100);
+        const STORAGE_KEY = "SentenceProgress";
 
-    const finalScore = correctCount * 10; // match grammar/vocab scoring style
-    const percentage = Math.round((correctCount / total) * 100);
-
-    if (percentage >= 70) {
-      console.log("✅ Passed sentence construction quiz, unlocking badges...");
-      try {
-        const { auth } = await initFirebase();
-        const user = auth.currentUser;
-        if (!user) return;
-
-        const storageKey = `SentenceConstructionProgress_${user.uid}`;
-        const stored = await AsyncStorage.getItem(storageKey);
-        const progress = stored ? JSON.parse(stored) : {};
-
-        const unlocked = await unlockBadge("trans", levelId ?? "", progress);
-        if (unlocked.length > 0) {
-          setNewBadges(unlocked); // triggers badge modal
-          return; // 🚫 stop here — badge modal will handle navigation
+        if (finalPercentage >= 70) {
+          try {
+            const stored = await AsyncStorage.getItem(STORAGE_KEY);
+            const progress = stored ? JSON.parse(stored) : {};
+            const unlocked = await unlockBadge("sentence", levelId ?? "", progress);
+            if (unlocked.length > 0) {
+              setNewBadges(unlocked);
+              return; 
+            }
+          } catch (err) {
+            console.error("❌ Error unlocking sentence badge:", err);
+          }
+        } else {
+          console.log("❌ Sentence Construction quiz failed — no badges unlocked");
         }
-      } catch (err) {
-        console.error("❌ Error unlocking badge after result:", err);
-      }
-    } else {
-      console.log("❌ Sentence Construction quiz failed — no badges unlocked");
-    }
+        navigation.reset({
+          index: 0,
+          routes: [{ name: "Home" as keyof RootStackParamList }],
+        });
+      }}
+    />
 
-    // ✅ if no badges unlocked, go home
-    navigation.reset({
-      index: 0,
-      routes: [{ name: "Home" as keyof RootStackParamList }],
-    });
-  }}
-/>
 
-{/* Badge Modal */}
 <Modal
   visible={!!badgeData}
   transparent

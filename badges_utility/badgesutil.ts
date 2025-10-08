@@ -21,17 +21,22 @@ export async function unlockBadge(
     const uid = user.uid;
 
     // --- Normalize level ---
-    let raw = String(level || "").toLowerCase(); // e.g. "easy-2" | "trans-easy-2"
+    let raw = String(level || "").toLowerCase()
+    const base = raw.replace(/-\d+$/, "");
 
-    // progress keys are stored as:
-    // - grammar/reading: "easy-1", "medium-2", "hard-2"
-    // - trans/sentence: "trans-easy-1", "trans-hard-2", etc.
-    // → so DO NOT strip "trans-" or "sentence-"
-    const base = raw.replace(/-\d+$/, ""); // e.g. "trans-easy"
-    let normalizedLevel = base.replace(/^(trans-|sentence-)/, ""); // remove prefix for badge naming
-    if (normalizedLevel === "medium") normalizedLevel = "med";
+    let normalizedLevel: string;
+    if (category === "sentence") {
+      normalizedLevel = base
+        .replace(/^(sentence-|sc-)/, "")
+        .replace(/^medium/, "med"); 
+    } else {
+      normalizedLevel = base
+        .replace(/^(trans-|sentence-)/, "")
+        .replace(/^medium/, "med");
+    }
 
-    console.log("📚 Normalized values:", { raw, base, normalizedLevel });
+
+    console.log("Normalized values:", { raw, base, normalizedLevel });
 
     const score = progress[raw]?.score ?? 0;
     console.log("🎯 Progress lookup:", { raw, score });
