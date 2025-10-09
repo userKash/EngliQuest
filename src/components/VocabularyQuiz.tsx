@@ -110,7 +110,7 @@ async function saveProgress(finalScore: number, totalQuestions: number) {
     await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(progress));
     console.log("✅ Progress saved locally:", progress);
 
-    // 🚫 badges removed from here
+    //  badges removed from here
   } catch (err) {
     console.error("❌ Error saving progress:", err);
   }
@@ -323,8 +323,8 @@ async function saveProgress(finalScore: number, totalQuestions: number) {
             const progress = stored ? JSON.parse(stored) : {};
             const unlocked = await unlockBadge("vocab", levelId, progress);
             if (unlocked.length > 0) {
-              setNewBadges(unlocked); // triggers badge modal(s)
-              return; // 🚫 stop here, let badge modal handle navigation
+              setNewBadges(unlocked); 
+              return; 
             }
           } catch (err) {
             console.error("❌ Error unlocking badge after result:", err);
@@ -332,8 +332,6 @@ async function saveProgress(finalScore: number, totalQuestions: number) {
         } else {
           console.log("❌ Quiz failed — no badges unlocked");
         }
-
-        // ✅ if no badges, go home right away
         navigation.reset({
           index: 0,
           routes: [{ name: "Home" as keyof RootStackParamList }],

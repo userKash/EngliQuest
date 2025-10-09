@@ -9,7 +9,7 @@ export async function unlockBadge(
   const unlocked: string[] = [];
 
   try {
-    console.log("🔑 unlockBadge called with:", { category, level, progress });
+    console.log("unlockBadge called with:", { category, level, progress });
 
     const { auth, db } = await initFirebase();
     const user = auth.currentUser;

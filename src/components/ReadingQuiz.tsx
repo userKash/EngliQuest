@@ -90,27 +90,29 @@ useEffect(() => {
     ]);
   };
 
-  const handleNext = async () => {
-    if (!last) {
-      setIndex((i) => i + 1);
-      setSelected(null);
-      setShowAnswer(false);
-    } else {
-      setShowResult(true);
-      const correctAnswers = score / 10;
-      const percentage = Math.round((correctAnswers / questions.length) * 100);
+const handleNext = async () => {
+  if (!last) {
+    setIndex((i) => i + 1);
+    setSelected(null);
+    setShowAnswer(false);
+  } else {
+    setShowResult(true);
 
-      // ✅ Badge unlocking logic untouched
-      if (/-2$/.test(levelId)) {
-        const unlocked = await unlockBadge("reading", levelId, progress || {});
-        if (unlocked.length > 0) setNewBadges(unlocked);
-      }
+    const correctAnswers = score / 10;
+    const percentage = Math.round((correctAnswers / questions.length) * 100);
 
-      onFinish?.(percentage);
-    }
-  };
+    const AsyncStorage = (await import("@react-native-async-storage/async-storage")).default;
+    const STORAGE_KEY = "ReadingProgress";
+    const stored = await AsyncStorage.getItem(STORAGE_KEY);
+    let progress = stored ? JSON.parse(stored) : {};
+    progress[levelId] = { score: percentage, attempted: true };
+    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(progress));
+    console.log("✅ Saved Reading", percentage, "% locally for", levelId);
+    onFinish?.(percentage);
+  }
+};
 
-  // ✅ Badge modal flow unchanged
+
   const handleBadgeContinue = () => {
     if (newBadges.length > 1) {
       setNewBadges(newBadges.slice(1));
@@ -217,18 +219,37 @@ useEffect(() => {
         review={review}
         onRequestClose={() => setShowResult(false)}
         title="🎉 Well done!"
-        onContinue={() => {
+        onContinue={async () => {
           setShowResult(false);
-          if (newBadges.length === 0) {
-            navigation.reset({
-              index: 0,
-              routes: [{ name: "Home" as keyof RootStackParamList }],
-            });
+
+          const correctAnswers = score / 10;
+          const percentage = Math.round((correctAnswers / questions.length) * 100);
+
+          if (percentage >= 70) {
+            console.log("✅ Passed Reading quiz, unlocking badges...");
+            try {
+              const AsyncStorage = (await import("@react-native-async-storage/async-storage")).default;
+              const STORAGE_KEY = "ReadingProgress";
+              const stored = await AsyncStorage.getItem(STORAGE_KEY);
+              const progress = stored ? JSON.parse(stored) : {};
+
+              const unlocked = await unlockBadge("reading", levelId, progress);
+              if (unlocked.length > 0) {
+                setNewBadges(unlocked);
+                return; // ⏹ Stop here — badge modal will appear next
+              }
+            } catch (err) {
+              console.error("❌ Error unlocking badge after Reading result:", err);
+            }
+          } else {
+            console.log("❌ Reading quiz failed — no badges unlocked");
           }
+          navigation.reset({
+            index: 0,
+            routes: [{ name: "Home" as keyof RootStackParamList }],
+          });
         }}
       />
-
-      {/* ✅ Badge Modal restored */}
       <Modal
         visible={!!badgeData}
         transparent
@@ -245,7 +266,12 @@ useEffect(() => {
                   <Text style={styles.modalSub}>{badgeData.subtitle}</Text>
                 )}
                 <Text style={styles.modalHint}>Unlocked! 🎉</Text>
-                <PrimaryButton label="Continue" onPress={handleBadgeContinue} />
+                <TouchableOpacity
+                  onPress={handleBadgeContinue}
+                  style={styles.modalBtn}
+                >
+                  <Text style={styles.modalBtnText}>Continue</Text>
+                </TouchableOpacity>
               </>
             )}
           </View>
@@ -326,5 +352,19 @@ feedbackText: {
   marginTop: 4,
   fontSize: 14,
 },
+modalBtn: {
+  backgroundColor: "#6B6EF9",
+  paddingHorizontal: 20,
+  paddingVertical: 10,
+  borderRadius: 10,
+  marginTop: 10,
+},
+modalBtnText: {
+  color: "#fff",
+  fontWeight: "700",
+  fontSize: 16,
+  textAlign: "center",
+},
+
 
 });

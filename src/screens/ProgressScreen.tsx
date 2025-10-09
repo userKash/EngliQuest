@@ -188,7 +188,7 @@ useEffect(() => {
         badgeDoc = snap.exists() ? snap.data() : {};
       }
 
-      // 🔑 Normalize keys so "reading_read-easy" → "reading_easy"
+      // Normalize keys so "reading_read-easy" → "reading_easy"
       const normalize = (key: string) =>
         key
           .replace("read-easy", "easy")

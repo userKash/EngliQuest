@@ -142,7 +142,7 @@ export default function FilipinoToEnglishQuiz({ questions, onFinish, onProgressC
     }
   }
 
-  // 🧩 save score to Firestore
+  // save score to Firestore
   async function saveScoreToFirestore(finalScore: number, total: number) {
     try {
       const { auth, db } = await initFirebase();
@@ -168,7 +168,7 @@ export default function FilipinoToEnglishQuiz({ questions, onFinish, onProgressC
     }
   }
 
-  // 🧩 handle badge continue (like Vocabulary)
+  // handle badge continue (like Vocabulary)
   const handleBadgeContinue = () => {
     if (newBadges.length > 1) {
       const [, ...rest] = newBadges;
@@ -236,8 +236,7 @@ export default function FilipinoToEnglishQuiz({ questions, onFinish, onProgressC
           <PrimaryButton label={actionLabel} onPress={actionHandler} disabled={actionDisabled} />
         </View>
       </KeyboardAvoidingView>
-
-      {/* ✅ Result Modal */}
+      
       <ResultModal
         visible={showResult}
         score={score / 10}
@@ -276,7 +275,6 @@ export default function FilipinoToEnglishQuiz({ questions, onFinish, onProgressC
         }}
       />
 
-      {/* ✅ Badge Modal */}
       <Modal visible={!!badgeData} transparent animationType="fade" onRequestClose={handleBadgeContinue}>
         <Pressable style={styles.overlay} onPress={handleBadgeContinue}>
           <View style={styles.modalCard}>
