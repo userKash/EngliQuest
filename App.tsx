@@ -75,7 +75,14 @@ export default function App() {
         component={WordOfTheDayScreen}
         options={{ headerShown: false }}
       />
-      <Stack.Screen name="InterestSelection" component={InterestSelectionScreen} />
+      <Stack.Screen
+      name="InterestSelection"
+      component={InterestSelectionScreen}
+      options={{
+        headerTitle: "Interest Selection",
+        headerTitleAlign: "left",
+      }}
+    />
       <Stack.Screen
         name="VocabularyBuilder"
         component={VocabularyBuilderScreen}
