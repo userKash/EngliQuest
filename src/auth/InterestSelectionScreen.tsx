@@ -32,9 +32,20 @@ export default function InterestSelectionScreen() {
   >([]);
 
   const toggleInterest = (title: string) => {
-    setSelected((prev) =>
-      prev.includes(title) ? prev.filter((i) => i !== title) : [...prev, title]
-    );
+    setSelected((prev) => {
+      if (prev.includes(title)) {
+        // Allow deselection
+        return prev.filter((i) => i !== title);
+      } else {
+        // Only allow selection if less than 3 are selected
+        if (prev.length < 3) {
+          return [...prev, title];
+        } else {
+          Alert.alert("Limit Reached", "You can only select 3 interests.");
+          return prev;
+        }
+      }
+    });
   };
 
   // Helper function to format quiz labels
@@ -58,8 +69,8 @@ export default function InterestSelectionScreen() {
   };
 
   const handleCreateAccount = async () => {
-    if (selected.length < 3) {
-      Alert.alert("Selection Required", "Please select at least 3 interests.");
+    if (selected.length !== 3) {
+      Alert.alert("Selection Required", "Please select exactly 3 interests.");
       return;
     }
 
@@ -213,8 +224,11 @@ export default function InterestSelectionScreen() {
         <ScrollView contentContainerStyle={styles.container}>
           <Text style={styles.header}>What interests you?</Text>
           <Text style={styles.subtext}>
-            Select at least 3 topics you enjoy. We'll create personalized stories
+            Select exactly 3 topics you enjoy. We'll create personalized stories
             and lessons just for you!
+          </Text>
+          <Text style={styles.counter}>
+            {selected.length}/3 selected
           </Text>
 
           <View style={styles.row}>
@@ -346,8 +360,15 @@ const styles = StyleSheet.create({
   subtext: {
     fontSize: 14,
     textAlign: "center",
-    marginBottom: 20,
+    marginBottom: 8,
     color: "#555",
+  },
+  counter: {
+    fontSize: 14,
+    fontWeight: "600",
+    textAlign: "center",
+    marginBottom: 20,
+    color: "#5E67CC",
   },
   row: {
     flexDirection: "row",
