@@ -39,6 +39,27 @@ export default function RegistrationForm() {
       return;
     }
 
+  const nameParts = fullName.trim().split(/\s+/);
+
+  // Check if full name has at least first and last name
+  if (nameParts.length < 2) {
+    Alert.alert(
+      "Invalid Name",
+      "Please enter your full name (first and last name)."
+    );
+    return;
+  }
+
+  // Check if name only contains letters (and spaces)
+  const nameRegex = /^[A-Za-z\s]+$/;
+  if (!nameRegex.test(fullName)) {
+    Alert.alert(
+      "Invalid Name",
+      "Name should contain letters only (no numbers or special characters)."
+    );
+    return;
+  }
+
     try {
       const { auth } = await initFirebase();
 
