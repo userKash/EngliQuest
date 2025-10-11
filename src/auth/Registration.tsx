@@ -6,14 +6,13 @@ import {
   TouchableOpacity,
   StyleSheet,
   ScrollView,
-  Alert,
+  Modal,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import type { RootStackParamList } from "../navigation/type";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
-
-import { initFirebase } from "../../firebaseConfig"; 
+import { initFirebase } from "../../firebaseConfig";
 import Constants from "expo-constants";
 
 export default function RegistrationForm() {
@@ -29,42 +28,45 @@ export default function RegistrationForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
 
+  const [modalVisible, setModalVisible] = useState(false);
+  const [modalTitle, setModalTitle] = useState("");
+  const [modalMessage, setModalMessage] = useState("");
+
+  const showModal = (title: string, message: string) => {
+    setModalTitle(title);
+    setModalMessage(message);
+    setModalVisible(true);
+  };
+
   const handleNext = async () => {
     if (!fullName || !email || !password || !confirmPassword) {
-      Alert.alert("Missing Fields", "Please fill in all fields.");
+      showModal("Missing Fields", "Please fill in all fields.");
       return;
     }
     if (password !== confirmPassword) {
-      Alert.alert("Password Mismatch", "Passwords do not match.");
+      showModal("Password Mismatch", "Passwords do not match.");
       return;
     }
 
-  const nameParts = fullName.trim().split(/\s+/);
+    const nameParts = fullName.trim().split(/\s+/);
+    if (nameParts.length < 2) {
+      showModal("Invalid Name", "Please enter your full name \n (first and last name).");
+      return;
+    }
 
-  // Check if full name has at least first and last name
-  if (nameParts.length < 2) {
-    Alert.alert(
-      "Invalid Name",
-      "Please enter your full name (first and last name)."
-    );
-    return;
-  }
-
-  // Check if name only contains letters (and spaces)
-  const nameRegex = /^[A-Za-z\s]+$/;
-  if (!nameRegex.test(fullName)) {
-    Alert.alert(
-      "Invalid Name",
-      "Name should contain letters only (no numbers or special characters)."
-    );
-    return;
-  }
+    const nameRegex = /^[A-Za-z\s]+$/;
+    if (!nameRegex.test(fullName)) {
+      showModal(
+        "Invalid Name",
+        "Name should contain letters only (no numbers or special characters)."
+      );
+      return;
+    }
 
     try {
       const { auth } = await initFirebase();
 
       if (isExpoGo) {
-        // Web/Expo Go flow
         const { createUserWithEmailAndPassword } = await import("firebase/auth");
         const userCredential = await createUserWithEmailAndPassword(
           auth,
@@ -73,7 +75,6 @@ export default function RegistrationForm() {
         );
         console.log("✅ User created (Web):", userCredential.user);
       } else {
-        // ✅ Native flow
         const userCredential = await auth.createUserWithEmailAndPassword(
           email,
           password
@@ -81,11 +82,14 @@ export default function RegistrationForm() {
         console.log("✅ User created (Native):", userCredential.user);
       }
 
-      Alert.alert("Success", "Registration successful!");
-      navigation.navigate("InterestSelection", { fullName, email, password });
+      showModal("Success", "Registration successful!");
+      setTimeout(() => {
+        setModalVisible(false);
+        navigation.navigate("InterestSelection", { fullName, email, password });
+      }, 1500);
     } catch (error: any) {
       console.error("❌ Registration error:", error);
-      Alert.alert("Registration Failed", error.message || "Something went wrong.");
+      showModal("Registration Failed", error.message || "Something went wrong.");
     }
   };
 
@@ -181,6 +185,28 @@ export default function RegistrationForm() {
           <Text style={styles.createText}>Next</Text>
         </TouchableOpacity>
       </View>
+
+      {/* 🔹 Modal Component */}
+      <Modal
+        transparent
+        animationType="fade"
+        visible={modalVisible}
+        onRequestClose={() => setModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalBox}>
+            <Text style={styles.modalTitle}>{modalTitle}</Text>
+            <Text style={styles.modalMessage}>{modalMessage}</Text>
+
+            <TouchableOpacity
+              style={styles.modalButton}
+              onPress={() => setModalVisible(false)}
+            >
+              <Text style={styles.modalButtonText}>OK</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -241,4 +267,43 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   createText: { color: "#fff", fontSize: 16, fontWeight: "bold" },
+
+  // 🔹 Modal Styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  modalBox: {
+    backgroundColor: "#fff",
+    width: "80%",
+    borderRadius: 10,
+    padding: 24,
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 6,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#111827",
+    marginBottom: 8,
+    textAlign: "center",
+  },
+  modalMessage: {
+    fontSize: 15,
+    color: "#374151",
+    textAlign: "center",
+    marginBottom: 20,
+  },
+  modalButton: {
+    backgroundColor: "#5E67CC",
+    borderRadius: 8,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+  },
+  modalButtonText: { color: "#fff", fontWeight: "bold" },
 });

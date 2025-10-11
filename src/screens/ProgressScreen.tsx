@@ -248,7 +248,7 @@ useEffect(() => {
     grammar: "#45C56B",
     sentence: "#D99A4A",
     trans: "#E06464",
-    reading: "#6BA7D6",
+    reading: "#DF91EF",
     ultimate: "#9B59B6",
   };
 

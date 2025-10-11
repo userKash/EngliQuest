@@ -5,7 +5,7 @@ import {
   TouchableOpacity,
   StyleSheet,
   ScrollView,
-  Alert,
+  Modal,
 } from "react-native";
 import { useRoute, useNavigation } from "@react-navigation/native";
 import { Feather } from "@expo/vector-icons";
@@ -13,7 +13,6 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../navigation/type";
 import type { RouteProp } from "@react-navigation/native";
 import { initFirebase } from "../../firebaseConfig";
-import { createPersonalizedQuizClient } from "../../gemini.client";
 import LoadingModal from "../components/LoadingModal";
 
 export default function InterestSelectionScreen() {
@@ -31,46 +30,52 @@ export default function InterestSelectionScreen() {
     { id: string; label: string; status: "pending" | "in-progress" | "success" | "failed" }[]
   >([]);
 
+  // 🔹 Modal state
+  const [modalVisible, setModalVisible] = useState(false);
+  const [modalTitle, setModalTitle] = useState("");
+  const [modalMessage, setModalMessage] = useState("");
+
+  const showModal = (title: string, message: string) => {
+    setModalTitle(title);
+    setModalMessage(message);
+    setModalVisible(true);
+  };
+
   const toggleInterest = (title: string) => {
     setSelected((prev) => {
       if (prev.includes(title)) {
-        // Allow deselection
         return prev.filter((i) => i !== title);
       } else {
-        // Only allow selection if less than 3 are selected
         if (prev.length < 3) {
           return [...prev, title];
         } else {
-          Alert.alert("Limit Reached", "You can only select 3 interests.");
+          showModal("Limit Reached", "You can only select 3 interests.");
           return prev;
         }
       }
     });
   };
 
-  // Helper function to format quiz labels
   const formatQuizLabel = (gameMode: string, level: string, difficulty: string) => {
     const levelNames: Record<string, string> = {
-      "A1": "Level 1",
-      "A2": "Level 2", 
-      "B1": "Level 1",
-      "B2": "Level 2",
-      "C1": "Level 1",
-      "C2": "Level 2"
+      A1: "Level 1",
+      A2: "Level 2",
+      B1: "Level 1",
+      B2: "Level 2",
+      C1: "Level 1",
+      C2: "Level 2",
     };
-
     const difficultyNames: Record<string, string> = {
-      "easy": "Easy",
-      "medium": "Medium", 
-      "hard": "Hard"
+      easy: "Easy",
+      medium: "Medium",
+      hard: "Hard",
     };
-
     return `${gameMode} - ${difficultyNames[difficulty]} - ${levelNames[level]}`;
   };
 
   const handleCreateAccount = async () => {
     if (selected.length !== 3) {
-      Alert.alert("Selection Required", "Please select exactly 3 interests.");
+      showModal("Selection Required", "Please select exactly 3 interests.");
       return;
     }
 
@@ -81,7 +86,7 @@ export default function InterestSelectionScreen() {
       const { auth, db } = await initFirebase();
       const user = auth.currentUser;
       if (!user) {
-        Alert.alert("Error", "No authenticated user found.");
+        showModal("Error", "No authenticated user found.");
         setLoading(false);
         return;
       }
@@ -114,68 +119,28 @@ export default function InterestSelectionScreen() {
         );
       }
 
-      // Define the quiz plan to match the order in gemini.client
-      const quizPlan = [
-        { level: "A1", difficulty: "easy", gameMode: "Vocabulary" },
-        { level: "A2", difficulty: "easy", gameMode: "Vocabulary" },
-        { level: "B1", difficulty: "medium", gameMode: "Vocabulary" },
-        { level: "B2", difficulty: "medium", gameMode: "Vocabulary" },
-        { level: "C1", difficulty: "hard", gameMode: "Vocabulary" },
-        { level: "C2", difficulty: "hard", gameMode: "Vocabulary" },
-        { level: "A1", difficulty: "easy", gameMode: "Grammar" },
-        { level: "A2", difficulty: "easy", gameMode: "Grammar" },
-        { level: "B1", difficulty: "medium", gameMode: "Grammar" },
-        { level: "B2", difficulty: "medium", gameMode: "Grammar" },
-        { level: "C1", difficulty: "hard", gameMode: "Grammar" },
-        { level: "C2", difficulty: "hard", gameMode: "Grammar" },
-        { level: "A1", difficulty: "easy", gameMode: "Translation" },
-        { level: "A2", difficulty: "easy", gameMode: "Translation" },
-        { level: "B1", difficulty: "medium", gameMode: "Translation" },
-        { level: "B2", difficulty: "medium", gameMode: "Translation" },
-        { level: "C1", difficulty: "hard", gameMode: "Translation" },
-        { level: "C2", difficulty: "hard", gameMode: "Translation" },
-        { level: "A1", difficulty: "easy", gameMode: "Sentence Construction" },
-        { level: "A2", difficulty: "easy", gameMode: "Sentence Construction" },
-        { level: "B1", difficulty: "medium", gameMode: "Sentence Construction" },
-        { level: "B2", difficulty: "medium", gameMode: "Sentence Construction" },
-        { level: "C1", difficulty: "hard", gameMode: "Sentence Construction" },
-        { level: "C2", difficulty: "hard", gameMode: "Sentence Construction" },
-        { level: "A1", difficulty: "easy", gameMode: "Reading Comprehension" },
-        { level: "A2", difficulty: "easy", gameMode: "Reading Comprehension" },
-        { level: "B1", difficulty: "medium", gameMode: "Reading Comprehension" },
-        { level: "B2", difficulty: "medium", gameMode: "Reading Comprehension" },
-        { level: "C1", difficulty: "hard", gameMode: "Reading Comprehension" },
-        { level: "C2", difficulty: "hard", gameMode: "Reading Comprehension" },
-      ];
-
-      // Initialize progress with detailed labels
-      setProgress(
-        quizPlan.map((quiz, idx) => ({
-          id: `${quiz.gameMode}-${quiz.level}`,
-          label: formatQuizLabel(quiz.gameMode, quiz.level, quiz.difficulty),
-          status: "pending" as const,
-        }))
-      );
-
       const { generateAllQuizzes } = await import("../../gemini.client");
-      
+
       const allQuizzes = await generateAllQuizzes(
         uid,
         selected,
         (completed, total) => {
-          setLoadingMessage(`We're crafting your personalized learning journey. Generated ${completed}/${total} quizzes...`);
-          
-          setProgress(prev => 
+          setLoadingMessage(
+            `We're crafting your personalized learning journey. Generated ${completed}/${total} quizzes...`
+          );
+
+          setProgress((prev) =>
             prev.map((p, idx) => ({
               ...p,
-              status: idx < completed ? "success" : idx === completed ? "in-progress" : "pending"
+              status:
+                idx < completed ? "success" : idx === completed ? "in-progress" : "pending",
             }))
           );
         }
       );
 
       setLoadingMessage("Saving quizzes to database...");
-      
+
       const savePromises = allQuizzes.map(async ({ quizId, questions, metadata }) => {
         if (db.collection) {
           const firestore = db;
@@ -206,15 +171,22 @@ export default function InterestSelectionScreen() {
       await Promise.all(savePromises);
 
       setLoading(false);
-      Alert.alert("Welcome!", "Your account and all 30 quizzes have been created successfully.");
-      navigation.reset({
-        index: 0,
-        routes: [{ name: "WordOfTheDay" }],
-      });
+      showModal(
+        "Welcome!",
+        "Your account and all 30 quizzes have been created successfully."
+      );
+
+      setTimeout(() => {
+        setModalVisible(false);
+        navigation.reset({
+          index: 0,
+          routes: [{ name: "WordOfTheDay" }],
+        });
+      }, 1500);
     } catch (err: any) {
       console.error("Quiz generation error:", err);
       setLoading(false);
-      Alert.alert("Error", err.message || "Something went wrong creating your quizzes.");
+      showModal("Error", err.message || "Something went wrong creating your quizzes.");
     }
   };
 
@@ -227,9 +199,7 @@ export default function InterestSelectionScreen() {
             Select exactly 3 topics you enjoy. We'll create personalized stories
             and lessons just for you!
           </Text>
-          <Text style={styles.counter}>
-            {selected.length}/3 selected
-          </Text>
+          <Text style={styles.counter}>{selected.length}/3 selected</Text>
 
           <View style={styles.row}>
             <InterestCard
@@ -315,26 +285,29 @@ export default function InterestSelectionScreen() {
         </View>
       </View>
 
+      {/* Loading Modal */}
       <LoadingModal visible={loading} message={loadingMessage} />
+
+      {/* 🔹 Reusable Message Modal */}
+      <Modal transparent animationType="fade" visible={modalVisible}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalBox}>
+            <Text style={styles.modalTitle}>{modalTitle}</Text>
+            <Text style={styles.modalMessage}>{modalMessage}</Text>
+            <TouchableOpacity
+              style={styles.modalButton}
+              onPress={() => setModalVisible(false)}
+            >
+              <Text style={styles.modalButtonText}>OK</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </>
   );
 }
 
-function InterestCard({
-  title,
-  description,
-  icon,
-  color,
-  selected,
-  toggle,
-}: {
-  title: string;
-  description: string;
-  icon: any;
-  color: string;
-  selected: string[];
-  toggle: (title: string) => void;
-}) {
+function InterestCard({ title, description, icon, color, selected, toggle }: any) {
   const isSelected = selected.includes(title);
   return (
     <TouchableOpacity
@@ -395,4 +368,43 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   createText: { color: "#fff", fontSize: 16, fontWeight: "bold" },
+
+  // 🔹 Modal Styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  modalBox: {
+    backgroundColor: "#fff",
+    width: "80%",
+    borderRadius: 10,
+    padding: 24,
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 6,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#111827",
+    marginBottom: 8,
+    textAlign: "center",
+  },
+  modalMessage: {
+    fontSize: 15,
+    color: "#374151",
+    textAlign: "center",
+    marginBottom: 20,
+  },
+  modalButton: {
+    backgroundColor: "#5E67CC",
+    borderRadius: 8,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+  },
+  modalButtonText: { color: "#fff", fontWeight: "bold" },
 });
