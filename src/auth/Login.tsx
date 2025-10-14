@@ -47,75 +47,75 @@ export default function LoginScreen() {
   const [errorMessage, setErrorMessage] = useState("");
 
 
-  const [request, response, promptAsync] =
-    GoogleAuthSession.useIdTokenAuthRequest({
-      webClientId:
-        "1072058760841-l2dfoc318glg28rlrubevsl0447alikd.apps.googleusercontent.com",
-      androidClientId:
-        "1072058760841-m1etg934ctag3g9b3b5616tvadmbbp5t.apps.googleusercontent.com",
-      iosClientId:
-        "1072058760841-npc57ujq8omfm079qiomb2ls0ljmq7rn.apps.googleusercontent.com",
-    });
+  // const [request, response, promptAsync] =
+  //   GoogleAuthSession.useIdTokenAuthRequest({
+  //     webClientId:
+  //       "1072058760841-l2dfoc318glg28rlrubevsl0447alikd.apps.googleusercontent.com",
+  //     androidClientId:
+  //       "1072058760841-m1etg934ctag3g9b3b5616tvadmbbp5t.apps.googleusercontent.com",
+  //     iosClientId:
+  //       "1072058760841-npc57ujq8omfm079qiomb2ls0ljmq7rn.apps.googleusercontent.com",
+  //   });
 
-  useEffect(() => {
-    if (isExpoGo && response?.type === "success") {
-      const { id_token } = response.params;
-      if (!id_token) {
-        setErrorMessage("Google Sign-In Failed: No ID token received.");
-        setErrorVisible(true);
-        return;
-      }
+  // useEffect(() => {
+  //   if (isExpoGo && response?.type === "success") {
+  //     const { id_token } = response.params;
+  //     if (!id_token) {
+  //       setErrorMessage("Google Sign-In Failed: No ID token received.");
+  //       setErrorVisible(true);
+  //       return;
+  //     }
 
-      (async () => {
-        const { auth } = await initFirebase();
-        const { GoogleAuthProvider, signInWithCredential } = await import(
-          "firebase/auth"
-        );
+  //     (async () => {
+  //       const { auth } = await initFirebase();
+  //       const { GoogleAuthProvider, signInWithCredential } = await import(
+  //         "firebase/auth"
+  //       );
 
-        const credential = GoogleAuthProvider.credential(id_token);
-        signInWithCredential(auth, credential)
-          .then((userCredential) => {
-            console.log("✅ Google Sign-In (Expo Go):", userCredential.user);
-            navigation.navigate("WordOfTheDay");
-          })
-          .catch((error) => {
-            console.error("❌ Firebase Google Sign-In Error:", error);
-            setErrorMessage(getFirebaseErrorMessage(error));
-            setErrorVisible(true);
-          });
-      })();
-    }
-  }, [response]);
+  //       const credential = GoogleAuthProvider.credential(id_token);
+  //       signInWithCredential(auth, credential)
+  //         .then((userCredential) => {
+  //           console.log("Google Sign-In (Expo Go):", userCredential.user);
+  //           navigation.navigate("WordOfTheDay");
+  //         })
+  //         .catch((error) => {
+  //           console.error("Firebase Google Sign-In Error:", error);
+  //           setErrorMessage(getFirebaseErrorMessage(error));
+  //           setErrorVisible(true);
+  //         });
+  //     })();
+  //   }
+  // }, [response]);
 
-  const handleNativeGoogleLogin = async () => {
-    try {
-      await initFirebase();
-      await configureGoogleSignin();
+  // const handleNativeGoogleLogin = async () => {
+  //   try {
+  //     await initFirebase();
+  //     await configureGoogleSignin();
 
-      await GoogleSignin.hasPlayServices({
-        showPlayServicesUpdateDialog: true,
-      });
-      const { idToken } = await GoogleSignin.signIn();
+  //     await GoogleSignin.hasPlayServices({
+  //       showPlayServicesUpdateDialog: true,
+  //     });
+  //     const { idToken } = await GoogleSignin.signIn();
 
-      if (!idToken)
-        throw new Error(
-          "No ID token returned. Check Firebase SHA-1/256 config."
-        );
+  //     if (!idToken)
+  //       throw new Error(
+  //         "No ID token returned. Check Firebase SHA-1/256 config."
+  //       );
 
-      const { GoogleAuthProvider, signInWithCredential } = await import(
-        "firebase/auth"
-      );
-      const credential = GoogleAuthProvider.credential(idToken);
-      const userCredential = await signInWithCredential(auth, credential);
+  //     const { GoogleAuthProvider, signInWithCredential } = await import(
+  //       "firebase/auth"
+  //     );
+  //     const credential = GoogleAuthProvider.credential(idToken);
+  //     const userCredential = await signInWithCredential(auth, credential);
 
-      console.log("✅ Google Sign-In (Native):", userCredential.user);
-      navigation.navigate("WordOfTheDay");
-    } catch (error: any) {
-      console.error("❌ Native Google Sign-In Error:", error);
-      setErrorMessage(getFirebaseErrorMessage(error));
-      setErrorVisible(true);
-    }
-  };
+  //     console.log("Google Sign-In (Native):", userCredential.user);
+  //     navigation.navigate("WordOfTheDay");
+  //   } catch (error: any) {
+  //     console.error("Native Google Sign-In Error:", error);
+  //     setErrorMessage(getFirebaseErrorMessage(error));
+  //     setErrorVisible(true);
+  //   }
+  // };
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -132,17 +132,17 @@ export default function LoginScreen() {
           email,
           password
         );
-        console.log("✅ Email login (Web):", userCredential.user);
+        console.log("Email login (Web):", userCredential.user);
       } else {
         const userCredential = await auth.signInWithEmailAndPassword(
           email,
           password
         );
-        console.log("✅ Email login (Native):", userCredential.user);
+        console.log("Email login (Native):", userCredential.user);
       }
       navigation.navigate("WordOfTheDay");
     } catch (error: any) {
-      console.error("❌ Email/Password login error:", error);
+      console.error("Email/Password login error:", error);
       setErrorMessage(getFirebaseErrorMessage(error));
       setErrorVisible(true);
     }

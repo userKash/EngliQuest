@@ -1,4 +1,3 @@
-// src/screens/Vocabulary/VocabularyBuilderScreen.tsx
 import React, { useEffect, useState, useCallback } from "react";
 import { View, Text, ActivityIndicator } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";

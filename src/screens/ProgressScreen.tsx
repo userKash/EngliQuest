@@ -1,4 +1,3 @@
-// src/screens/ProgressScreen.tsx
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { initFirebase } from "firebaseConfig";
 import React, { useEffect, useMemo, useState } from "react";
@@ -228,7 +227,7 @@ useEffect(() => {
 
       setUnlocked(unlockedSet);
     } catch (err) {
-      console.error("❌ Failed to load badges:", err);
+      console.error(" Failed to load badges:", err);
     }
   })();
 }, []);

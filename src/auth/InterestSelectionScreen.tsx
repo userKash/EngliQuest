@@ -30,7 +30,6 @@ export default function InterestSelectionScreen() {
     { id: string; label: string; status: "pending" | "in-progress" | "success" | "failed" }[]
   >([]);
 
-  // 🔹 Modal state
   const [modalVisible, setModalVisible] = useState(false);
   const [modalTitle, setModalTitle] = useState("");
   const [modalMessage, setModalMessage] = useState("");
@@ -288,7 +287,7 @@ export default function InterestSelectionScreen() {
       {/* Loading Modal */}
       <LoadingModal visible={loading} message={loadingMessage} />
 
-      {/* 🔹 Reusable Message Modal */}
+      {/* Modal */}
       <Modal transparent animationType="fade" visible={modalVisible}>
         <View style={styles.modalOverlay}>
           <View style={styles.modalBox}>
@@ -369,7 +368,6 @@ const styles = StyleSheet.create({
   },
   createText: { color: "#fff", fontSize: 16, fontWeight: "bold" },
 
-  // 🔹 Modal Styles
   modalOverlay: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.5)",

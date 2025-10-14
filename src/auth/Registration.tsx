@@ -73,13 +73,13 @@ export default function RegistrationForm() {
           email,
           password
         );
-        console.log("✅ User created (Web):", userCredential.user);
+        console.log("User created (Web):", userCredential.user);
       } else {
         const userCredential = await auth.createUserWithEmailAndPassword(
           email,
           password
         );
-        console.log("✅ User created (Native):", userCredential.user);
+        console.log("User created (Native):", userCredential.user);
       }
 
       showModal("Success", "Registration successful!");
@@ -88,7 +88,7 @@ export default function RegistrationForm() {
         navigation.navigate("InterestSelection", { fullName, email, password });
       }, 1500);
     } catch (error: any) {
-      console.error("❌ Registration error:", error);
+      console.error("Registration error:", error);
       showModal("Registration Failed", error.message || "Something went wrong.");
     }
   };
@@ -186,7 +186,7 @@ export default function RegistrationForm() {
         </TouchableOpacity>
       </View>
 
-      {/* 🔹 Modal Component */}
+      {/* Modal */}
       <Modal
         transparent
         animationType="fade"
@@ -268,7 +268,6 @@ const styles = StyleSheet.create({
   },
   createText: { color: "#fff", fontSize: 16, fontWeight: "bold" },
 
-  // 🔹 Modal Styles
   modalOverlay: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.5)",
