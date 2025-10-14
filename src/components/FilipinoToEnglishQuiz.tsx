@@ -74,7 +74,7 @@ export default function FilipinoToEnglishQuiz({ questions, onFinish, onProgressC
   useEffect(() => {
     if (newBadges.length > 0) {
       const normalized = newBadges[0].replace(/-\d+$/, "");
-      console.log("🎯 Opening badge modal for:", normalized);
+      console.log("Opening badge modal for:", normalized);
       setBadgeModal(normalized);
     } else {
       setBadgeModal(null);
@@ -118,7 +118,7 @@ export default function FilipinoToEnglishQuiz({ questions, onFinish, onProgressC
   const actionHandler = locked ? next : check;
   const actionDisabled = locked ? false : value.trim().length === 0;
 
-  // 🧩 save local progress
+  // save local progress
   async function saveProgress(finalScore: number, total: number) {
     try {
       const correctAnswers = finalScore / 10;
@@ -133,11 +133,11 @@ export default function FilipinoToEnglishQuiz({ questions, onFinish, onProgressC
       };
 
       await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(progress));
-      console.log("✅ Translation progress saved locally:", progress);
+      console.log("Translation progress saved locally:", progress);
 
       return percentage;
     } catch (err) {
-      console.error("❌ Error saving translation progress:", err);
+      console.error("Error saving translation progress:", err);
       return 0;
     }
   }
@@ -162,9 +162,9 @@ export default function FilipinoToEnglishQuiz({ questions, onFinish, onProgressC
         createdAt: firestore.FieldValue.serverTimestamp(),
       });
 
-      console.log(`✅ Score saved to Firestore: ${percentage}%`);
+      console.log(`Score saved to Firestore: ${percentage}%`);
     } catch (err) {
-      console.error("❌ Error saving score:", err);
+      console.error("Error saving score:", err);
     }
   }
 
@@ -218,7 +218,7 @@ export default function FilipinoToEnglishQuiz({ questions, onFinish, onProgressC
             {isCorrect !== null && (
               <View style={[styles.feedbackBox, isCorrect ? styles.correctBox : styles.wrongBox]}>
                 <Text style={[styles.feedbackTitle, isCorrect ? styles.correctText : styles.wrongText]}>
-                  {isCorrect ? "✅ Correct: +10 points" : "❌ Incorrect"}
+                  {isCorrect ? "Correct: +10 points" : "Incorrect"}
                 </Text>
                 {!isCorrect && (
                   <Text style={styles.feedbackDetail}>
@@ -242,7 +242,7 @@ export default function FilipinoToEnglishQuiz({ questions, onFinish, onProgressC
         score={score / 10}
         total={total}
         review={reviewData}
-        title="🎉 Great job!"
+        title="Great job!"
         onRequestClose={() => setShowResult(false)}
         onContinue={async () => {
           setShowResult(false);
@@ -252,7 +252,7 @@ export default function FilipinoToEnglishQuiz({ questions, onFinish, onProgressC
           await saveScoreToFirestore(finalScore, total);
 
           if (percentage >= 70) {
-            console.log("✅ Passed translation quiz, unlocking badges...");
+            console.log("Passed translation quiz, unlocking badges...");
             try {
               const stored = await AsyncStorage.getItem(STORAGE_KEY);
               const progress = stored ? JSON.parse(stored) : {};
@@ -262,10 +262,10 @@ export default function FilipinoToEnglishQuiz({ questions, onFinish, onProgressC
                 return;
               }
             } catch (err) {
-              console.error("❌ Error unlocking badge:", err);
+              console.error("Error unlocking badge:", err);
             }
           } else {
-            console.log("❌ Translation quiz failed — no badges unlocked");
+            console.log("Translation quiz failed — no badges unlocked");
           }
 
           navigation.reset({

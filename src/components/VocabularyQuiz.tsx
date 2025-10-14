@@ -86,7 +86,7 @@ export default function VocabularyQuiz({
   useEffect(() => {
     if (newBadges.length > 0) {
       const normalized = newBadges[0].replace(/-\d+$/, "");
-      console.log("🎯 Opening badge modal for:", normalized);
+      console.log("Opening badge modal for:", normalized);
       setBadgeModal(normalized);
     } else {
       setBadgeModal(null);
@@ -108,11 +108,11 @@ async function saveProgress(finalScore: number, totalQuestions: number) {
     };
 
     await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(progress));
-    console.log("✅ Progress saved locally:", progress);
+    console.log("Progress saved locally:", progress);
 
     //  badges removed from here
   } catch (err) {
-    console.error("❌ Error saving progress:", err);
+    console.error("Error saving progress:", err);
   }
 }
 
@@ -172,10 +172,10 @@ async function saveProgress(finalScore: number, totalQuestions: number) {
       }
 
       console.log(
-        `✅ Score saved to Firestore: ${percentage}% for user ${userName}`
+        `Score saved to Firestore: ${percentage}% for user ${userName}`
       );
     } catch (err) {
-      console.error("❌ Error saving score:", err);
+      console.error("Error saving score:", err);
     }
   }
 
@@ -273,8 +273,8 @@ async function saveProgress(finalScore: number, totalQuestions: number) {
         ]}
       >
         {selected === question.correctIndex
-          ? "✅ Correct! +10 points"
-          : "❌ Incorrect"}
+          ? "Correct! +10 points"
+          : "Incorrect"}
       </Text>
       {selected !== question.correctIndex && (
         <Text style={styles.feedbackText}>
@@ -308,7 +308,7 @@ async function saveProgress(finalScore: number, totalQuestions: number) {
       total={questions.length}
       review={review}
       onRequestClose={() => setShowResult(false)}
-      title="🎉 Congratulations!"
+      title="Congratulations!"
       onContinue={async () => {
         setShowResult(false);
 
@@ -317,7 +317,7 @@ async function saveProgress(finalScore: number, totalQuestions: number) {
         const percentage = Math.round((correctAnswers / questions.length) * 100);
 
         if (percentage >= 70) {
-          console.log("✅ Passed quiz, unlocking badges...");
+          console.log("Passed quiz, unlocking badges...");
           try {
             const stored = await AsyncStorage.getItem(STORAGE_KEY);
             const progress = stored ? JSON.parse(stored) : {};
@@ -327,10 +327,10 @@ async function saveProgress(finalScore: number, totalQuestions: number) {
               return; 
             }
           } catch (err) {
-            console.error("❌ Error unlocking badge after result:", err);
+            console.error("Error unlocking badge after result:", err);
           }
         } else {
-          console.log("❌ Quiz failed — no badges unlocked");
+          console.log("Quiz failed — no badges unlocked");
         }
         navigation.reset({
           index: 0,

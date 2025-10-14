@@ -83,7 +83,7 @@ export default function SentenceConstructionQuiz({
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
-  // 🔹 State
+  // State
   const [items, setItems] = useState<Item[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -98,7 +98,7 @@ export default function SentenceConstructionQuiz({
   const [review, setReview] = useState<ReviewItem[]>([]);
   const [showResult, setShowResult] = useState(false);
 
-  // 🔹 Badge
+  // Badge
   const [newBadges, setNewBadges] = useState<string[]>([]);
   const [badgeModal, setBadgeModal] = useState<string | null>(null);
 
@@ -106,7 +106,7 @@ export default function SentenceConstructionQuiz({
   const current = items[index];
   const last = index === total - 1;
 
-  // 🔹 Load Firestore quiz
+  // Load Firestore quiz
   useEffect(() => {
     const loadQuiz = async () => {
       try {
@@ -145,7 +145,7 @@ export default function SentenceConstructionQuiz({
           }
         }
       } catch (err) {
-        console.error("❌ Error fetching Sentence Construction quiz:", err);
+        console.error(" Error fetching Sentence Construction quiz:", err);
       } finally {
         setLoading(false);
       }
@@ -154,7 +154,7 @@ export default function SentenceConstructionQuiz({
     loadQuiz();
   }, [levelId]);
 
-  // 🔹 Reset when question changes
+  // Reset when question changes
   useEffect(() => {
     if (!current) return;
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
@@ -165,7 +165,7 @@ export default function SentenceConstructionQuiz({
     onProgressChange?.({ current: index, total });
   }, [index, total, current?.answer]);
 
-  // 🔹 Save Results
+  // Save Results
 const saveResults = async () => {
   try {
     const { auth } = await initFirebase();
@@ -185,17 +185,17 @@ const saveResults = async () => {
       attempted: true,
     };
     await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(progress));
-    console.log("✅ Sentence progress saved locally:", progress);
+    console.log("Sentence progress saved locally:", progress);
 
     // pass to parent handler if any
     onFinish?.(percentage);
   } catch (err) {
-    console.error("❌ Error saving results:", err);
+    console.error("Error saving results:", err);
   }
 };
 
 
-  // 🔹 Handlers
+  // Handlers
   const check = () => {
     if (locked || selected.length === 0) return;
     const guessRaw = selected.join(" ");
@@ -231,7 +231,7 @@ const next = async () => {
 useEffect(() => {
   if (newBadges.length > 0) {
     const normalized = newBadges[0].replace(/-\d+$/, "");
-    console.log("🎯 Opening badge modal for:", normalized);
+    console.log("Opening badge modal for:", normalized);
     setBadgeModal(normalized);
   } else {
     setBadgeModal(null);
@@ -364,8 +364,8 @@ const badgeData = badgeModal
                 ]}
               >
                 {isCorrect
-                  ? `✅ Correct: +${current.points ?? 12} points`
-                  : "❌ Incorrect"}
+                  ? `Correct: +${current.points ?? 12} points`
+                  : "Incorrect"}
               </Text>
               {!isCorrect && (
                 <Text style={styles.feedbackText}>
@@ -392,7 +392,7 @@ const badgeData = badgeModal
       total={total}
       review={review}
       onRequestClose={() => setShowResult(false)}
-      title="🎉 Congratulations!"
+      title="Congratulations!"
       onContinue={async () => {
         setShowResult(false);
 
@@ -409,10 +409,10 @@ const badgeData = badgeModal
               return; 
             }
           } catch (err) {
-            console.error("❌ Error unlocking sentence badge:", err);
+            console.error("Error unlocking sentence badge:", err);
           }
         } else {
-          console.log("❌ Sentence Construction quiz failed — no badges unlocked");
+          console.log("Sentence Construction quiz failed — no badges unlocked");
         }
         navigation.reset({
           index: 0,

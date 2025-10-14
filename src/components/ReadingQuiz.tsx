@@ -1,4 +1,3 @@
-// src/components/ReadingQuiz.tsx
 import React, { useEffect, useState } from "react";
 import {
   View,
@@ -56,7 +55,7 @@ export default function ReadingQuiz({
   const [showResult, setShowResult] = useState(false);
   const [review, setReview] = useState<any[]>([]);
 
-  // ✅ Badge feature preserved
+  // Badge feature preserved
   const [newBadges, setNewBadges] = useState<string[]>([]);
   const [badgeModal, setBadgeModal] = useState<string | null>(null);
 
@@ -107,7 +106,7 @@ const handleNext = async () => {
     let progress = stored ? JSON.parse(stored) : {};
     progress[levelId] = { score: percentage, attempted: true };
     await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(progress));
-    console.log("✅ Saved Reading", percentage, "% locally for", levelId);
+    console.log("Saved Reading", percentage, "% locally for", levelId);
     onFinish?.(percentage);
   }
 };
@@ -139,7 +138,7 @@ const handleNext = async () => {
         style={{ flex: 1 }}
         contentContainerStyle={[
           styles.container,
-          { paddingBottom: insets.bottom + 140 }, // ✅ enough space for button + tab bar
+          { paddingBottom: insets.bottom + 140 }, // enough space for button + tab bar
         ]}
         showsVerticalScrollIndicator
       >
@@ -185,8 +184,8 @@ const handleNext = async () => {
         ]}
       >
         {selected === current.correctIndex
-          ? "✅ Correct! +10 points"
-          : "❌ Incorrect"}
+          ? "Correct! +10 points"
+          : "Incorrect"}
       </Text>
 
       {/* Correct answer if wrong */}
@@ -218,7 +217,7 @@ const handleNext = async () => {
         total={questions.length}
         review={review}
         onRequestClose={() => setShowResult(false)}
-        title="🎉 Well done!"
+        title="Well done!"
         onContinue={async () => {
           setShowResult(false);
 
@@ -226,7 +225,7 @@ const handleNext = async () => {
           const percentage = Math.round((correctAnswers / questions.length) * 100);
 
           if (percentage >= 70) {
-            console.log("✅ Passed Reading quiz, unlocking badges...");
+            console.log("Passed Reading quiz, unlocking badges...");
             try {
               const AsyncStorage = (await import("@react-native-async-storage/async-storage")).default;
               const STORAGE_KEY = "ReadingProgress";
@@ -239,10 +238,10 @@ const handleNext = async () => {
                 return; // ⏹ Stop here — badge modal will appear next
               }
             } catch (err) {
-              console.error("❌ Error unlocking badge after Reading result:", err);
+              console.error("Error unlocking badge after Reading result:", err);
             }
           } else {
-            console.log("❌ Reading quiz failed — no badges unlocked");
+            console.log("Reading quiz failed — no badges unlocked");
           }
           navigation.reset({
             index: 0,
