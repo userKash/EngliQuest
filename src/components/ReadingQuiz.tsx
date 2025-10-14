@@ -138,7 +138,7 @@ const handleNext = async () => {
         style={{ flex: 1 }}
         contentContainerStyle={[
           styles.container,
-          { paddingBottom: insets.bottom + 140 }, // enough space for button + tab bar
+          { paddingBottom: insets.bottom + 140 }, 
         ]}
         showsVerticalScrollIndicator
       >

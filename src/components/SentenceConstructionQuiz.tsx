@@ -41,7 +41,7 @@ type ReviewItem = {
 
 type Props = {
   onProgressChange?: (p: { current: number; total: number }) => void;
-  onFinish?: (percentage: number) => void; // ✅ just like ReadingQuiz
+  onFinish?: (percentage: number) => void; 
   levelId?: string;
 };
 
@@ -274,7 +274,9 @@ const badgeData = badgeModal
 
   return (
     <View style={styles.screen}>
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView
+        contentContainerStyle={[styles.content, { paddingBottom: 140 }]}
+        showsVerticalScrollIndicator={false}>
         {/* Instructions */}
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Arrange the words</Text>
