@@ -95,7 +95,7 @@ export default function GrammarPracticeScreen() {
     AsyncStorage.setItem(storageKey, JSON.stringify(progress));
   }, [progress, storageKey]);
 
-  // 🔹 Best score updater
+  //  Best score updater
   const updateBestScore = (subId: string, newScore: number) => {
     setProgress((prev) => {
       const prevScore = prev[subId]?.score ?? 0;
@@ -106,7 +106,7 @@ export default function GrammarPracticeScreen() {
     });
   };
 
-  // 🔹 Unlock rules: pass ≥ 70% in the previous sublevel
+  //  Unlock rules: pass ≥ 70% in the previous sublevel
   const isUnlocked = (subId: string): boolean => {
     const idx = SUBLEVELS.indexOf(subId);
     if (idx === -1) return false;
@@ -117,20 +117,20 @@ export default function GrammarPracticeScreen() {
     return prevScore >= PASSING;
   };
 
-  // 🔹 Overall progress bar
+  //  Overall progress bar
   const contribution = 100 / SUBLEVELS.length;
   const overallProgress = SUBLEVELS.reduce((sum, id) => {
     const score = progress[id]?.score ?? 0;
     return sum + (score / 100) * contribution;
   }, 0);
 
-  // 🔹 Start or preview a sublevel
+  //  Start or preview a sublevel
   const onStartSubLevel = (subId: string) => {
     if (!isUnlocked(subId)) return;
     navigation.navigate("GrammarGame", {
       levelId: subId,
       gameMode: "Grammar",
-      onFinish: (score: number) => updateBestScore(subId, score), // ✅ record best score
+      onFinish: (score: number) => updateBestScore(subId, score), //  record best score
     });
   };
 
@@ -149,7 +149,7 @@ export default function GrammarPracticeScreen() {
         levels={LEVELS}
         progress={progress}
         passing={PASSING}
-        overallProgress={overallProgress} // ✅ progress bar fixed
+        overallProgress={overallProgress} //  progress bar fixed
         onStartSubLevel={onStartSubLevel}
         isUnlocked={isUnlocked}
         Footer={

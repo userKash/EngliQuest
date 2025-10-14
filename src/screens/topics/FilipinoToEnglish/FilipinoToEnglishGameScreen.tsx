@@ -1,4 +1,3 @@
-// src/screens/Translation/FilipinoToEnglishGameScreen.tsx
 import React, { useEffect, useLayoutEffect, useState } from "react";
 import {
   View,
@@ -32,7 +31,7 @@ type QA = {
   accepts: string[];
 };
 
-// 🔹 Map Firestore levels
+// Map Firestore levels
 const LEVEL_MAP: Record<string, string> = {
   "easy-1": "A1",
   "easy-2": "A2",
@@ -42,7 +41,7 @@ const LEVEL_MAP: Record<string, string> = {
   "hard-2": "C2",
 };
 
-// ✅ Save quiz result (local + Firestore)
+// Save quiz result (local + Firestore)
 async function saveTranslationResult(subId: string, percentage: number) {
   const user = auth().currentUser;
   if (!user) return;
@@ -60,7 +59,7 @@ async function saveTranslationResult(subId: string, percentage: number) {
   };
 
   await AsyncStorage.setItem(key, JSON.stringify(progress));
-  console.log(`✅ Saved Translation ${finalPct}% locally for ${subId}`);
+  console.log(` Saved Translation ${finalPct}% locally for ${subId}`);
 
   try {
     const { db } = await initFirebase();
@@ -74,9 +73,9 @@ async function saveTranslationResult(subId: string, percentage: number) {
         await import("@react-native-firebase/firestore")
       ).default.FieldValue.serverTimestamp(),
     });
-    console.log("✅ Saved Translation score to Firestore");
+    console.log(" Saved Translation score to Firestore");
   } catch (err) {
-    console.warn("⚠️ Could not save Translation score to Firestore:", err);
+    console.warn(" Could not save Translation score to Firestore:", err);
   }
 }
 
@@ -94,7 +93,7 @@ export default function FilipinoToEnglishGameScreen() {
   const [loading, setLoading] = useState(true);
   const [showExitModal, setShowExitModal] = useState(false);
 
-  // ✅ Load quiz
+  // Load quiz
   useEffect(() => {
     const loadQuiz = async () => {
       setLoading(true);
@@ -154,7 +153,7 @@ export default function FilipinoToEnglishGameScreen() {
           setQuestions([]);
         }
       } catch (err) {
-        console.error("❌ Error fetching translation quiz:", err);
+        console.error("Error fetching translation quiz:", err);
       } finally {
         setLoading(false);
       }
@@ -163,7 +162,7 @@ export default function FilipinoToEnglishGameScreen() {
     loadQuiz();
   }, [levelId]);
 
-  // ✅ Handle Android back button
+  // Handle Android back button
   useEffect(() => {
     const backAction = () => {
       if (step === "quiz") {
@@ -176,7 +175,7 @@ export default function FilipinoToEnglishGameScreen() {
     return () => backHandler.remove();
   }, [step]);
 
-  // ✅ Handle navigation header
+  // Handle navigation header
   useLayoutEffect(() => {
     if (step === "quiz") {
       navigation.setOptions({

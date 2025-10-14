@@ -60,26 +60,26 @@
                 console.log('🔑 Logged-in user UID:', user.uid);
 
                 try {
-                  // ✅ same API as HomeScreen
+                  // same API as HomeScreen
                   const userDoc = await db.collection('users').doc(user.uid).get();
                   if (userDoc.exists) {
                     const data = userDoc.data();
-                    console.log('📂 Firestore user data:', data);
+                    console.log('Firestore user data:', data);
 
                     if (Array.isArray(data?.interests)) {
-                      console.log('✅ Interests found:', data.interests);
+                      console.log(' Interests found:', data.interests);
                       setInterests(data.interests);
                     } else {
-                      console.log('⚠️ No interests field or not an array.');
+                      console.log('No interests field or not an array.');
                     }
                   } else {
-                    console.log('❌ No Firestore doc found for this user UID.');
+                    console.log('No Firestore doc found for this user UID.');
                   }
                 } catch (err) {
-                  console.error('🔥 Error fetching Firestore user doc:', err);
+                  console.error('Error fetching Firestore user doc:', err);
                 }
               } else {
-                console.log('⚠️ No authenticated user found.');
+                console.log('No authenticated user found.');
               }
             });
 
@@ -146,11 +146,10 @@
             </View>
           </View>
 
-          {/* Dynamic Chips */}
           {interests.length > 0 ? (
             <View style={styles.chipsRow}>
               {interests.map((interest, idx) => {
-                console.log('🎨 Rendering chip for:', interest);
+                console.log('Rendering chip for:', interest);
                 return <Chip key={idx} icon={getInterestIcon(interest)} label={interest} />;
               })}
             </View>

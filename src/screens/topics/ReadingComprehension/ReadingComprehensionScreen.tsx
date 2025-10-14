@@ -1,4 +1,3 @@
-// src/screens/Reading/ReadingComprehensionScreen.tsx
 import React, { useEffect, useState, useCallback } from "react";
 import { View, Text, ActivityIndicator } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -80,14 +79,14 @@ export default function ReadingComprehensionScreen() {
   const [storageKey, setStorageKey] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // 🔹 Generate user-specific storage key
+  // Generate user-specific storage key
   useEffect(() => {
     const user = auth().currentUser;
     if (!user) return;
     setStorageKey(`ReadingProgress_${user.uid}`);
   }, []);
 
-  // 🔹 Reload progress on screen focus
+  //  Reload progress on screen focus
   useFocusEffect(
     useCallback(() => {
       if (!storageKey) return;
@@ -141,13 +140,13 @@ export default function ReadingComprehensionScreen() {
     }, [storageKey])
   );
 
-  // 🔹 Save progress automatically
+  //  Save progress automatically
   useEffect(() => {
     if (!storageKey) return;
     AsyncStorage.setItem(storageKey, JSON.stringify(progress));
   }, [progress, storageKey]);
 
-  // 🔹 Best score updater
+  //  Best score updater
   const updateBestScore = (subId: string, newScore: number) => {
     setProgress((prev) => {
       const prevScore = prev[subId]?.score ?? 0;
@@ -158,7 +157,7 @@ export default function ReadingComprehensionScreen() {
     });
   };
 
-  // 🔹 Unlock rules
+  //  Unlock rules
   const isUnlocked = (subId: string): boolean => {
     const idx = SUBLEVELS.indexOf(subId);
     if (idx === -1) return false;
@@ -168,14 +167,14 @@ export default function ReadingComprehensionScreen() {
     return prevScore >= PASSING;
   };
 
-  // 🔹 Overall progress
+  //  Overall progress
   const contribution = 100 / SUBLEVELS.length;
   const overallProgress = SUBLEVELS.reduce((sum, id) => {
     const score = progress[id]?.score ?? 0;
     return sum + (score / 100) * contribution;
   }, 0);
 
-  // 🔹 Start Reading quiz
+  //  Start Reading quiz
   const onStartSubLevel = (subId: string) => {
     if (!isUnlocked(subId)) return;
     navigation.navigate("ReadingGame", {

@@ -83,7 +83,7 @@ function migrateKeys(oldProgress: ProgressState): ProgressState {
   }
 
   if (Object.keys(migrated).length > 0) {
-    console.log("✅ Migrated progress keys:", migrated);
+    console.log(" Migrated progress keys:", migrated);
   }
 
   return migrated;
@@ -95,14 +95,14 @@ export default function SentenceConstructionScreen() {
   const [storageKey, setStorageKey] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // 🔹 Generate user-specific storage key
+  //  Generate user-specific storage key
   useEffect(() => {
     const user = auth().currentUser;
     if (!user) return;
     setStorageKey(`SentenceConstructionProgress_${user.uid}`);
   }, []);
 
-  // 🔹 Reload progress on focus
+  //  Reload progress on focus
   useFocusEffect(
     useCallback(() => {
       if (!storageKey) return;
@@ -155,13 +155,13 @@ export default function SentenceConstructionScreen() {
     }, [storageKey])
   );
 
-  // 🔹 Save progress automatically
+  //  Save progress automatically
   useEffect(() => {
     if (!storageKey) return;
     AsyncStorage.setItem(storageKey, JSON.stringify(progress));
   }, [progress, storageKey]);
 
-  // 🔹 Best score updater
+  //  Best score updater
   const updateBestScore = (subId: string, newScore: number) => {
     setProgress((prev) => {
       const prevScore = prev[subId]?.score ?? 0;
@@ -172,7 +172,7 @@ export default function SentenceConstructionScreen() {
     });
   };
 
-  // 🔹 Unlock rules
+  //  Unlock rules
   const isUnlocked = (subId: string): boolean => {
     const idx = SUBLEVELS.indexOf(subId);
     if (idx === -1) return false;
@@ -183,14 +183,14 @@ export default function SentenceConstructionScreen() {
     return prevScore >= PASSING;
   };
 
-  // 🔹 Overall progress
+  //  Overall progress
   const contribution = 100 / SUBLEVELS.length;
   const overallProgress = SUBLEVELS.reduce((sum, id) => {
     const score = progress[id]?.score ?? 0;
     return sum + (score / 100) * contribution;
   }, 0);
 
-  // 🔹 Start Sentence Construction quiz
+  //  Start Sentence Construction quiz
   const onStartSubLevel = (subId: string) => {
     if (!isUnlocked(subId)) return;
     navigation.navigate("SentenceConstructionGame", {

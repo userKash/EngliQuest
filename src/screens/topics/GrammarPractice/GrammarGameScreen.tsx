@@ -35,7 +35,7 @@ const LEVEL_MAP: Record<string, string> = {
   "hard-2": "C2",
 };
 
-// ✅ Save quiz result
+// Save quiz result
 async function saveQuizResult(
   subId: string,
   rawScore: number,
@@ -57,7 +57,7 @@ async function saveQuizResult(
   };
 
   await AsyncStorage.setItem(key, JSON.stringify(progress));
-  console.log(`✅ Saved ${percentage}% for ${subId}`);
+  console.log(` Saved ${percentage}% for ${subId}`);
 }
 
 export default function GrammarGameScreen() {
@@ -74,7 +74,7 @@ export default function GrammarGameScreen() {
   const [loading, setLoading] = useState(true);
   const [showExitModal, setShowExitModal] = useState(false);
 
-  // ✅ Load grammar quiz from Firestore
+  //  Load grammar quiz from Firestore
   useEffect(() => {
     const loadQuiz = async () => {
       try {
@@ -129,7 +129,7 @@ export default function GrammarGameScreen() {
     loadQuiz();
   }, [levelId]);
 
-  // ✅ Handle Android hardware back
+  //  Handle Android hardware back
   useEffect(() => {
     const backAction = () => {
       if (step === "quiz") {
@@ -145,7 +145,7 @@ export default function GrammarGameScreen() {
     return () => backHandler.remove();
   }, [step]);
 
-  // ✅ Handle navigation header
+  //  Handle navigation header
 useLayoutEffect(() => {
   if (step === "quiz") {
     navigation.setOptions({

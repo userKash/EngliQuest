@@ -1,4 +1,3 @@
-// src/screens/Translation/FilipinoToEnglishScreen.tsx
 import React, { useEffect, useState, useCallback } from "react";
 import { View, Text, ActivityIndicator } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -60,13 +59,13 @@ export default function FilipinoToEnglishScreen() {
   const [storageKey, setStorageKey] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // 🔹 Create per-user storage key
+  // Create per-user storage key
   useEffect(() => {
     const user = auth().currentUser;
     if (user) setStorageKey(`TranslationProgress_${user.uid}`);
   }, []);
 
-  // 🔹 Load progress on focus
+  // Load progress on focus
   useFocusEffect(
     useCallback(() => {
       if (!storageKey) return;
@@ -92,12 +91,12 @@ export default function FilipinoToEnglishScreen() {
     }, [storageKey])
   );
 
-  // 🔹 Auto-save progress
+  // Auto-save progress
   useEffect(() => {
     if (storageKey) AsyncStorage.setItem(storageKey, JSON.stringify(progress));
   }, [progress, storageKey]);
 
-  // 🔹 Update best score after quiz
+  // Update best score after quiz
   const updateBestScore = (subId: string, newScore: number) => {
     setProgress((prev) => {
       const prevScore = prev[subId]?.score ?? 0;

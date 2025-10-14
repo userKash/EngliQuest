@@ -31,7 +31,7 @@ const LEVEL_MAP: Record<string, string> = {
   "hard-2": "C2",
 };
 
-// ✅ Save quiz result locally & Firestore
+// Save quiz result locally & Firestore
 async function saveSentenceResult(subId: string, percentage: number) {
   const user = auth().currentUser;
   if (!user) return;
@@ -50,7 +50,7 @@ async function saveSentenceResult(subId: string, percentage: number) {
   };
 
   await AsyncStorage.setItem(key, JSON.stringify(progress));
-  console.log(`✅ Saved SentenceConstruction ${finalPct}% locally for ${subId}`);
+  console.log(` Saved SentenceConstruction ${finalPct}% locally for ${subId}`);
 
   try {
     const { db } = await initFirebase();
@@ -64,9 +64,9 @@ async function saveSentenceResult(subId: string, percentage: number) {
         await import("@react-native-firebase/firestore")
       ).default.FieldValue.serverTimestamp(),
     });
-    console.log("✅ Saved SentenceConstruction score to Firestore");
+    console.log("Saved SentenceConstruction score to Firestore");
   } catch (err) {
-    console.warn("⚠️ Could not save sentence score to Firestore:", err);
+    console.warn("Could not save sentence score to Firestore:", err);
   }
 }
 
@@ -83,7 +83,7 @@ export default function SentenceConstructionGameScreen() {
 
   const [showExitModal, setShowExitModal] = useState(false);
 
-  // ✅ Android back button
+  //  Android back button
   useEffect(() => {
     const backAction = () => {
       if (step === "quiz") {
@@ -96,7 +96,7 @@ export default function SentenceConstructionGameScreen() {
     return () => backHandler.remove();
   }, [step]);
 
-  // ✅ Navigation header
+  //  Navigation header
   useLayoutEffect(() => {
     if (step === "quiz") {
       navigation.setOptions({

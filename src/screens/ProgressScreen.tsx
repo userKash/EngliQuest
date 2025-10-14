@@ -395,7 +395,7 @@ useEffect(() => {
                 )}
                 <Text style={styles.modalHint}>
                   {unlocked.has(selected.id)
-                    ? "Unlocked! 🎉"
+                    ? "Unlocked!"
                     : "Locked. Finish the required level to unlock."}
                 </Text>
                 <Pressable

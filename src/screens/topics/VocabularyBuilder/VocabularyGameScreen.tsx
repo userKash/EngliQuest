@@ -73,7 +73,7 @@ export default function VocabularyGameScreen() {
 
   const [showExitModal, setShowExitModal] = useState(false);
 
-  // ✅ Handle Android hardware back
+  // Handle Android hardware back
   useEffect(() => {
     const backAction = () => {
       if (step === "quiz") {
@@ -91,7 +91,7 @@ export default function VocabularyGameScreen() {
     return () => backHandler.remove();
   }, [step]);
 
-  // ✅ Handle navigation header
+  // Handle navigation header
 useLayoutEffect(() => {
   if (step === "quiz") {
     navigation.setOptions({
@@ -134,7 +134,7 @@ useLayoutEffect(() => {
 }, [step, progress, levelId]);
 
 
-  // ✅ Load quiz
+  // Load quiz
   useEffect(() => {
     const loadQuiz = async () => {
       try {
