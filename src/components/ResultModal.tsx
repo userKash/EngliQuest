@@ -1,4 +1,3 @@
-// src/components/ResultModal.tsx
 import {
   Modal,
   View,
@@ -21,7 +20,7 @@ type ResultModalProps = {
   total: number;
   review: ReviewItem[];
   onRequestClose?: () => void;
-  onContinue?: () => void; // 🔑 parent decides what happens next
+  onContinue?: () => void; 
   title?: string;
 };
 
@@ -32,7 +31,7 @@ export default function ResultModal({
   review,
   onRequestClose,
   onContinue,
-  title = "🎉 Congratulations!",
+  title = "Congratulations!",
 }: ResultModalProps) {
   const pct = Math.round((score / Math.max(total, 1)) * 100);
 
@@ -80,7 +79,7 @@ export default function ResultModal({
               ))}
             </ScrollView>
 
-            {/* 🔑 Close modal + delegate next step */}
+            {/*  Close modal + delegate next step */}
             <TouchableOpacity
               onPress={() => {
                 if (onRequestClose) onRequestClose(); // hide modal

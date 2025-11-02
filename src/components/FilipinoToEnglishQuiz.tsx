@@ -118,7 +118,7 @@ export default function FilipinoToEnglishQuiz({ questions, onFinish, onProgressC
   const actionHandler = locked ? next : check;
   const actionDisabled = locked ? false : value.trim().length === 0;
 
-  // save local progress
+  //  save local progress
   async function saveProgress(finalScore: number, total: number) {
     try {
       const correctAnswers = finalScore / 10;

@@ -239,7 +239,7 @@ useEffect(() => {
 }, [newBadges]);
 
 
-  // 🔹 Render
+  //  Render
   if (loading) {
     return (
       <View style={styles.center}>

@@ -24,6 +24,7 @@ import type { RootStackParamList } from "../navigation/type";
 
 const STORAGE_KEY = "VocabularyProgress";
 
+
 type VocabQuestion = {
   prompt: string;
   choices: string[];
@@ -231,6 +232,7 @@ async function saveProgress(finalScore: number, totalQuestions: number) {
         keyboardShouldPersistTaps="handled"
       >
 <View style={styles.card}>
+  
   <Text style={styles.prompt}>{question.prompt}</Text>
 
   {question.choices.map((choice, i) => {
