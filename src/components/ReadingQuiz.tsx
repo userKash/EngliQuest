@@ -188,28 +188,28 @@ const handleNext = async () => {
           : "Incorrect"}
       </Text>
 
-      {/* Correct answer if wrong */}
-      {selected !== current.correctIndex && (
-        <Text style={styles.feedbackText}>
-          Correct answer: {current.choices[current.correctIndex]}
-        </Text>
-      )}
+              {/* Correct answer if wrong */}
+              {selected !== current.correctIndex && (
+                <Text style={styles.feedbackText}>
+                  Correct answer: {current.choices[current.correctIndex]}
+                </Text>
+              )}
 
-      {/* Explanation if provided */}
-      {current.explanation && (
-        <Text style={styles.feedbackText}>{current.explanation}</Text>
-      )}
-    </View>
-  </View>
-)}
-        {showAnswer && (
-          <View style={{ marginTop: 20 }}>
-            <PrimaryButton
-              label={last ? "Finish" : "Next"}
-              onPress={handleNext}
-            />
+              {/* Explanation if provided */}
+              {current.explanation && (
+                <Text style={styles.feedbackText}>{current.explanation}</Text>
+              )}
+            </View>
           </View>
         )}
+                {showAnswer && (
+                  <View style={{ marginTop: 20 }}>
+                    <PrimaryButton
+                      label={last ? "Finish" : "Next"}
+                      onPress={handleNext}
+                    />
+                  </View>
+                )}
       </ScrollView>
       <ResultModal
         visible={showResult}

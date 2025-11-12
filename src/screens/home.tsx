@@ -3,6 +3,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../navigation/type';
+import {Feather } from '@expo/vector-icons';
+import SettingsModal from "../components/SettingsModal";
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useEffect, useState } from 'react';
@@ -14,6 +16,9 @@ export default function HomeScreen() {
   const navigation = useNavigation<NavigationProp>();
   const [avatar, setAvatar] = useState<any>(require('../../assets/userProfile.png'));
   const [userName, setUserName] = useState<string>('User');
+  const [modalVisible, setModalVisible] = useState(false);
+  const [bgMusic, setBgMusic] = useState(true);
+  const [soundEffects, setSoundEffects] = useState(true);
 
   // topic progress states (one decimal accuracy)
   const [vocabPct, setVocabPct] = useState<number>(0);
@@ -156,11 +161,27 @@ export default function HomeScreen() {
         {/* Header */}
         <View style={styles.header}>
           <Image source={avatar} style={styles.avatar} />
-          <View>
+          <View style={styles.textContainer}>
             <Text style={styles.greeting}>Hello, {userName}</Text>
             <Text style={styles.subtext}>Let's play, learn, and have fun</Text>
           </View>
+      
+      <TouchableOpacity onPress={() => setModalVisible(true)}>
+        <Feather name="settings" size={22} color="#525252" />
+      </TouchableOpacity>
+
+      <SettingsModal
+        visible={modalVisible}
+        onClose={() => setModalVisible(false)}
+        bgMusic={bgMusic}
+        setBgMusic={setBgMusic}
+        soundEffects={soundEffects}
+        setSoundEffects={setSoundEffects}
+      />
+
+
         </View>
+        
 
         <ScrollView contentContainerStyle={styles.scrollContainer}>
           <Text style={styles.welcome}>Welcome back to</Text>
@@ -274,16 +295,32 @@ function TopicCard({
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#fff' },
   scrollContainer: { padding: 20, paddingBottom: 120 },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    padding: 20,
-    backgroundColor: '#fff',
+header: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    backgroundColor: "#fff",
   },
-  avatar: { width: 48, height: 48, borderRadius: 24 },
-  greeting: { fontSize: 14, color: '#333' },
-  subtext: { fontSize: 12, color: '#888', fontFamily: 'PoppinsRegular' as any },
+  avatar: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    marginRight: 10,
+  },
+  textContainer: {
+    flex: 1,
+  },
+  greeting: {
+    fontSize: 16,
+    fontWeight: "600",
+  },
+  subtext: {
+    color: "#777",
+    fontSize: 13,
+  },
+
   welcome: {
     fontSize: 24,
     color: '#5E67CC',
