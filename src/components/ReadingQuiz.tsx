@@ -46,25 +46,37 @@ export default function ReadingQuiz({
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const route = useRoute<any>();
-  const { levelId, progress } = route.params || {};
+  const { levelId } = route.params || {};
 
-  const [index, setIndex] = useState(0);
+  // Group questions by passage
+  const groups = Object.values(
+    questions.reduce((acc, q) => {
+      const key = q.passage || "Untitled Passage";
+      if (!acc[key]) acc[key] = [];
+      acc[key].push(q);
+      return acc;
+    }, {} as Record<string, InQuestion[]>)
+  );
+
+  const [groupIndex, setGroupIndex] = useState(0);
+  const [phase, setPhase] = useState<"story" | "questions">("story");
+  const [index, setIndex] = useState(0); // current question index inside current group
   const [selected, setSelected] = useState<number | null>(null);
   const [score, setScore] = useState(0);
   const [showAnswer, setShowAnswer] = useState(false);
   const [showResult, setShowResult] = useState(false);
   const [review, setReview] = useState<any[]>([]);
-
-  // Badge feature preserved
   const [newBadges, setNewBadges] = useState<string[]>([]);
   const [badgeModal, setBadgeModal] = useState<string | null>(null);
 
-  const current = questions[index];
-  const last = index === questions.length - 1;
+  const currentGroup = groups[groupIndex];
+  const currentQuestion = currentGroup[index];
+  const lastQuestionInGroup = index === currentGroup.length - 1;
+  const lastGroup = groupIndex === groups.length - 1;
 
-useEffect(() => {
-  onProgressChange?.({ current: index, total: questions.length });
-}, [index, questions.length]);
+  useEffect(() => {
+    onProgressChange?.({ current: groupIndex, total: groups.length });
+  }, [groupIndex, groups.length]);
 
   useEffect(() => {
     setBadgeModal(newBadges.length > 0 ? newBadges[0] : null);
@@ -75,42 +87,57 @@ useEffect(() => {
     setSelected(ci);
     setShowAnswer(true);
 
-    const correct = ci === current.correctIndex;
+    const correct = ci === currentQuestion.correctIndex;
     if (correct) setScore((s) => s + 10);
 
     setReview((prev) => [
       ...prev,
       {
-        question: current.prompt,
-        yourAnswer: current.choices[ci],
+        question: currentQuestion.prompt,
+        yourAnswer: currentQuestion.choices[ci],
         isCorrect: correct,
-        correctAnswer: current.choices[current.correctIndex],
+        correctAnswer: currentQuestion.choices[currentQuestion.correctIndex],
       },
     ]);
   };
 
-const handleNext = async () => {
-  if (!last) {
-    setIndex((i) => i + 1);
-    setSelected(null);
-    setShowAnswer(false);
-  } else {
-    setShowResult(true);
+  const handleNext = async () => {
+    if (phase === "story") {
+      // move from story to questions
+      setPhase("questions");
+      return;
+    }
 
-    const correctAnswers = score / 10;
-    const percentage = Math.round((correctAnswers / questions.length) * 100);
+    if (!lastQuestionInGroup) {
+      // next question
+      setIndex((i) => i + 1);
+      setSelected(null);
+      setShowAnswer(false);
+    } else if (!lastGroup) {
+      // move to next story
+      setGroupIndex((g) => g + 1);
+      setIndex(0);
+      setPhase("story");
+      setSelected(null);
+      setShowAnswer(false);
+    } else {
+      // last story done
+      setShowResult(true);
+      const correctAnswers = score / 10;
+      const percentage = Math.round(
+        (correctAnswers / questions.length) * 100
+      );
 
-    const AsyncStorage = (await import("@react-native-async-storage/async-storage")).default;
-    const STORAGE_KEY = "ReadingProgress";
-    const stored = await AsyncStorage.getItem(STORAGE_KEY);
-    let progress = stored ? JSON.parse(stored) : {};
-    progress[levelId] = { score: percentage, attempted: true };
-    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(progress));
-    console.log("Saved Reading", percentage, "% locally for", levelId);
-    onFinish?.(percentage);
-  }
-};
+      const AsyncStorage = (await import("@react-native-async-storage/async-storage")).default;
+      const STORAGE_KEY = "ReadingProgress";
+      const stored = await AsyncStorage.getItem(STORAGE_KEY);
+      let progress = stored ? JSON.parse(stored) : {};
+      progress[levelId] = { score: percentage, attempted: true };
+      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(progress));
 
+      onFinish?.(percentage);
+    }
+  };
 
   const handleBadgeContinue = () => {
     if (newBadges.length > 1) {
@@ -128,6 +155,38 @@ const handleNext = async () => {
     ? BADGES.find((b: { id: string }) => b.id === badgeModal)
     : null;
 
+  // STORY PHASE
+  if (phase === "story") {
+    return (
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        keyboardVerticalOffset={insets.top + 50}
+      >
+        <ScrollView
+          style={{ flex: 1 }}
+          contentContainerStyle={[
+            styles.container,
+            { paddingBottom: insets.bottom + 140 },
+          ]}
+        >
+          <View style={styles.passageCard}>
+            <Text style={styles.sectionTitle}>Story {groupIndex + 1}</Text>
+            <Text style={styles.passageText}>
+              {currentGroup[0].passage ?? ""}
+            </Text>
+          </View>
+
+          <PrimaryButton
+            label="Next: Questions"
+            onPress={handleNext}
+          />
+        </ScrollView>
+      </KeyboardAvoidingView>
+    );
+  }
+
+  // 🧩 QUESTION PHASE
   return (
     <KeyboardAvoidingView
       style={{ flex: 1 }}
@@ -138,28 +197,22 @@ const handleNext = async () => {
         style={{ flex: 1 }}
         contentContainerStyle={[
           styles.container,
-          { paddingBottom: insets.bottom + 140 }, 
+          { paddingBottom: insets.bottom + 140 },
         ]}
-        showsVerticalScrollIndicator
       >
-        {/* Passage */}
-        <View style={styles.passageCard}>
-          <Text style={styles.sectionTitle}>{passageTitle}</Text>
-          <Text style={styles.passageText}>{current.passage ?? ""}</Text>
-        </View>
-
-        {/* Question */}
         <View style={styles.questionBlock}>
-          <Text style={styles.prompt}>{current.prompt}</Text>
-          {current.choices.map((c, ci) => (
+          <Text style={styles.prompt}>{currentQuestion.prompt}</Text>
+          {currentQuestion.choices.map((c, ci) => (
             <TouchableOpacity
               key={ci}
               style={[
                 styles.choice,
-                showAnswer && ci === current.correctIndex && styles.choiceCorrect,
+                showAnswer &&
+                  ci === currentQuestion.correctIndex &&
+                  styles.choiceCorrect,
                 showAnswer &&
                   selected === ci &&
-                  ci !== current.correctIndex &&
+                  ci !== currentQuestion.correctIndex &&
                   styles.choiceWrong,
               ]}
               onPress={() => handleSelect(ci)}
@@ -169,48 +222,60 @@ const handleNext = async () => {
             </TouchableOpacity>
           ))}
         </View>
-{showAnswer && (
-  <View style={{ minHeight: 120 }}>
-    <View
-      style={[
-        styles.feedback,
-        selected === current.correctIndex ? styles.okBox : styles.badBox,
-      ]}
-    >
-      <Text
-        style={[
-          styles.feedbackTitle,
-          selected === current.correctIndex ? styles.okText : styles.badText,
-        ]}
-      >
-        {selected === current.correctIndex
-          ? "Correct! +10 points"
-          : "Incorrect"}
-      </Text>
 
-              {/* Correct answer if wrong */}
-              {selected !== current.correctIndex && (
+        {showAnswer && (
+          <View style={{ minHeight: 120 }}>
+            <View
+              style={[
+                styles.feedback,
+                selected === currentQuestion.correctIndex
+                  ? styles.okBox
+                  : styles.badBox,
+              ]}
+            >
+              <Text
+                style={[
+                  styles.feedbackTitle,
+                  selected === currentQuestion.correctIndex
+                    ? styles.okText
+                    : styles.badText,
+                ]}
+              >
+                {selected === currentQuestion.correctIndex
+                  ? "Correct! +10 points"
+                  : "Incorrect"}
+              </Text>
+
+              {selected !== currentQuestion.correctIndex && (
                 <Text style={styles.feedbackText}>
-                  Correct answer: {current.choices[current.correctIndex]}
+                  Correct answer:{" "}
+                  {currentQuestion.choices[currentQuestion.correctIndex]}
                 </Text>
               )}
 
-              {/* Explanation if provided */}
-              {current.explanation && (
-                <Text style={styles.feedbackText}>{current.explanation}</Text>
+              {currentQuestion.explanation && (
+                <Text style={styles.feedbackText}>
+                  {currentQuestion.explanation}
+                </Text>
               )}
+            </View>
+
+            <View style={{ marginTop: 20 }}>
+              <PrimaryButton
+                label={
+                  lastQuestionInGroup
+                    ? lastGroup
+                      ? "Finish Quiz"
+                      : "Next Story"
+                    : "Next Question"
+                }
+                onPress={handleNext}
+              />
             </View>
           </View>
         )}
-                {showAnswer && (
-                  <View style={{ marginTop: 20 }}>
-                    <PrimaryButton
-                      label={last ? "Finish" : "Next"}
-                      onPress={handleNext}
-                    />
-                  </View>
-                )}
       </ScrollView>
+
       <ResultModal
         visible={showResult}
         score={score / 10}
@@ -220,12 +285,12 @@ const handleNext = async () => {
         title="Well done!"
         onContinue={async () => {
           setShowResult(false);
-
           const correctAnswers = score / 10;
-          const percentage = Math.round((correctAnswers / questions.length) * 100);
+          const percentage = Math.round(
+            (correctAnswers / questions.length) * 100
+          );
 
           if (percentage >= 70) {
-            console.log("Passed Reading quiz, unlocking badges...");
             try {
               const AsyncStorage = (await import("@react-native-async-storage/async-storage")).default;
               const STORAGE_KEY = "ReadingProgress";
@@ -235,13 +300,11 @@ const handleNext = async () => {
               const unlocked = await unlockBadge("reading", levelId, progress);
               if (unlocked.length > 0) {
                 setNewBadges(unlocked);
-                return; // ⏹ Stop here — badge modal will appear next
+                return;
               }
             } catch (err) {
               console.error("Error unlocking badge after Reading result:", err);
             }
-          } else {
-            console.log("Reading quiz failed — no badges unlocked");
           }
           navigation.reset({
             index: 0,
@@ -249,6 +312,7 @@ const handleNext = async () => {
           });
         }}
       />
+
       <Modal
         visible={!!badgeData}
         transparent
@@ -294,10 +358,15 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     backgroundColor: "#F9FAFB",
   },
-  sectionTitle: { fontWeight: "700", marginBottom: 8, fontSize: 15 },
+  sectionTitle: { fontWeight: "700", marginBottom: 8, fontSize: 17 },
   passageText: { fontSize: 16, lineHeight: 22, color: "#111827" },
   questionBlock: { marginBottom: 16 },
-  prompt: { fontSize: 17, fontWeight: "600", marginBottom: 12, color: "#1F2937" },
+  prompt: {
+    fontSize: 17,
+    fontWeight: "600",
+    marginBottom: 12,
+    color: "#1F2937",
+  },
   choice: {
     borderWidth: 1,
     borderColor: "#D1D5DB",
@@ -309,14 +378,18 @@ const styles = StyleSheet.create({
   choiceText: { fontSize: 15, color: "#111827" },
   choiceCorrect: { backgroundColor: "#DCFCE7", borderColor: "#16A34A" },
   choiceWrong: { backgroundColor: "#FEE2E2", borderColor: "#DC2626" },
-  explanationBox: {
-    padding: 12,
-    borderRadius: 8,
-    backgroundColor: "#F3F4F6",
-    marginTop: 10,
+  feedback: { marginTop: 10, borderRadius: 12, padding: 14, borderWidth: 1 },
+  okBox: { backgroundColor: "#E9F8EE", borderColor: "#2EB872" },
+  badBox: { backgroundColor: "#FDECEC", borderColor: "#F26D6D" },
+  feedbackTitle: { fontWeight: "800", marginBottom: 6, textAlign: "center" },
+  okText: { color: "#1F8F5F" },
+  badText: { color: "#C43D3D" },
+  feedbackText: {
+    color: "#0F1728",
+    textAlign: "center",
+    marginTop: 4,
+    fontSize: 14,
   },
-  explanationTitle: { fontWeight: "700", marginBottom: 4 },
-  explanationText: { color: "#374151", fontSize: 14 },
   overlay: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: "rgba(0,0,0,0.45)",
@@ -339,31 +412,17 @@ const styles = StyleSheet.create({
   },
   modalSub: { fontSize: 14, textAlign: "center", marginBottom: 8, color: "#555" },
   modalHint: { fontSize: 14, color: "#111", marginBottom: 12 },
-  feedback: { marginTop: 10, borderRadius: 12, padding: 14, borderWidth: 1 },
-okBox: { backgroundColor: "#E9F8EE", borderColor: "#2EB872" },
-badBox: { backgroundColor: "#FDECEC", borderColor: "#F26D6D" },
-feedbackTitle: { fontWeight: "800", marginBottom: 6, textAlign: "center" },
-okText: { color: "#1F8F5F" },
-badText: { color: "#C43D3D" },
-feedbackText: {
-  color: "#0F1728",
-  textAlign: "center",
-  marginTop: 4,
-  fontSize: 14,
-},
-modalBtn: {
-  backgroundColor: "#6B6EF9",
-  paddingHorizontal: 20,
-  paddingVertical: 10,
-  borderRadius: 10,
-  marginTop: 10,
-},
-modalBtnText: {
-  color: "#fff",
-  fontWeight: "700",
-  fontSize: 16,
-  textAlign: "center",
-},
-
-
+  modalBtn: {
+    backgroundColor: "#6B6EF9",
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 10,
+    marginTop: 10,
+  },
+  modalBtnText: {
+    color: "#fff",
+    fontWeight: "700",
+    fontSize: 16,
+    textAlign: "center",
+  },
 });

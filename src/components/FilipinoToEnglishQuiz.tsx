@@ -295,8 +295,8 @@ export default function FilipinoToEnglishQuiz({ questions, onFinish, onProgressC
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: "#fff" },
-  content: { padding: 16 },
+  screen: { flex: 1, backgroundColor: "#fff", marginTop: 20 },
+  content: { padding: 16,  },
   card: {
     borderWidth: 1,
     borderColor: "#E0E0E0",

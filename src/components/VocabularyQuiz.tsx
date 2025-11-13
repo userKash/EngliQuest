@@ -226,12 +226,12 @@ async function saveProgress(finalScore: number, totalQuestions: number) {
     : null;
 
   return (
-    <View style={{ flex: 1 }}>
+    <View style={{ flex: 1, marginTop: 20,}}>
       <ScrollView
         contentContainerStyle={styles.scrollContainer}
         keyboardShouldPersistTaps="handled"
       >
-<View style={styles.card}>
+    <View style={styles.card}>
   
   <Text style={styles.prompt}>{question.prompt}</Text>
 
