@@ -10,6 +10,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useEffect, useState } from 'react';
 import { initFirebase } from '../../firebaseConfig';
 
+import { useMusic } from "../context/MusicContext";
+
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
 export default function HomeScreen() {
@@ -17,7 +19,7 @@ export default function HomeScreen() {
   const [avatar, setAvatar] = useState<any>(require('../../assets/userProfile.png'));
   const [userName, setUserName] = useState<string>('User');
   const [modalVisible, setModalVisible] = useState(false);
-  const [bgMusic, setBgMusic] = useState(true);
+  const { bgMusic, setBgMusic } = useMusic();
   const [soundEffects, setSoundEffects] = useState(true);
 
   // topic progress states (one decimal accuracy)
@@ -169,7 +171,6 @@ export default function HomeScreen() {
       <TouchableOpacity onPress={() => setModalVisible(true)}>
         <Feather name="settings" size={22} color="#525252" />
       </TouchableOpacity>
-
       <SettingsModal
         visible={modalVisible}
         onClose={() => setModalVisible(false)}
@@ -178,11 +179,7 @@ export default function HomeScreen() {
         soundEffects={soundEffects}
         setSoundEffects={setSoundEffects}
       />
-
-
         </View>
-        
-
         <ScrollView contentContainerStyle={styles.scrollContainer}>
           <Text style={styles.welcome}>Welcome back to</Text>
           <Text style={styles.brand}>EngliQuest</Text>
