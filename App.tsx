@@ -15,6 +15,8 @@ import ProfileScreen from './src/screens/ProfileScreen';
 import RegistrationForm from './src/auth/Registration';
 import InterestSelectionScreen from './src/auth/InterestSelectionScreen';
 
+import { MusicProvider } from "./src/context/MusicContext";
+
 import VocabularyBuilderScreen from './src/screens/topics/VocabularyBuilder/VocabularyBuilderScreen';
 import VocabularyGameScreen from './src/screens/topics/VocabularyBuilder/VocabularyGameScreen';
 import GrammarPracticeScreen from './src/screens/topics/GrammarPractice/GrammarPracticeScreen';
@@ -54,6 +56,8 @@ export default function App() {
   }
 
   return (
+
+    <MusicProvider>
 <NavigationContainer
   ref={navRef}
   onReady={() => setCurrentRoute(navRef.getCurrentRoute()?.name)}
@@ -97,7 +101,6 @@ export default function App() {
         }}
       />
       <Stack.Screen name="VocabularyGame" component={VocabularyGameScreen} />
-
       <Stack.Screen 
         name="GrammarPractice" 
         component={GrammarPracticeScreen}
@@ -183,6 +186,7 @@ export default function App() {
     )}
   </View>
 </NavigationContainer>
+</MusicProvider>
 
   );
 }
