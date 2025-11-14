@@ -1,4 +1,5 @@
 // firebaseConfig.ts
+
 import Constants from "expo-constants";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
@@ -7,44 +8,35 @@ let db: any = null;
 let app: any = null;
 let googleConfigured = false;
 
-/**
- * Initializes Firebase depending on environment:
- * - Expo Go → Firebase Web SDK
- * - Native build (EAS Dev/Prod) → React Native Firebase
- */
-export async function initFirebase() {
-  // Prevent re-initialization
-  if (auth && db) return { auth, db, app };
+const firebaseEnvConfig = {
+  apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY!,
+  authDomain: process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN!,
+  projectId: process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID!,
+  storageBucket: process.env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET!,
+  messagingSenderId: process.env.EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID!,
+  appId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID!,
+};
 
-  if (Constants.appOwnership === "expo") {
-    // Expo Go → Firebase Web SDK
+export async function initFirebase() {
+  if (auth && db && app) return { auth, db, app };
+
+  const isExpoGo = Constants.appOwnership === "expo";
+
+  if (isExpoGo) {
     console.log("Expo Go detected → using Firebase Web SDK");
 
     const { initializeApp } = await import("firebase/app");
     const { initializeAuth } = await import("firebase/auth");
     const { getFirestore } = await import("firebase/firestore");
-
-    // Fix TypeScript warning for persistence
     const { getReactNativePersistence } = require("firebase/auth") as any;
 
-    const firebaseConfig = {
-      apiKey: "AIzaSyC7AMHG2pEDsqL91NyTWlisA8YEl3SBxCA",
-      authDomain: "engliquest-788b6.firebaseapp.com",
-      projectId: "engliquest-788b6",
-      storageBucket: "engliquest-788b6.appspot.com",
-      messagingSenderId: "1072058760841",
-      appId: "1:1072058760841:web:664d901b651ba67d521058",
-    };
-
-    app = initializeApp(firebaseConfig);
-
+    app = initializeApp(firebaseEnvConfig);
     auth = initializeAuth(app, {
       persistence: getReactNativePersistence(AsyncStorage),
     });
 
     db = getFirestore(app);
   } else {
-    // Native builds → React Native Firebase
     console.log("Native build detected → using React Native Firebase");
 
     const authModule = (await import("@react-native-firebase/auth")).default;
@@ -52,31 +44,23 @@ export async function initFirebase() {
 
     auth = authModule();
     db = firestoreModule();
-    app = "native"; // placeholder
-
-    // ⚡️ Do NOT configure Google here anymore; use configureGoogleSignin() instead
+    app = "native";
   }
 
   return { auth, db, app };
 }
 
-/**
- * Configures Google Sign-In for Native builds.
- * Must be called before calling GoogleSignin.signIn()
- */
 export async function configureGoogleSignin() {
-  if (googleConfigured || Constants.appOwnership === "expo") return;
-
+  const isExpoGo = Constants.appOwnership === "expo";
+  if (googleConfigured || isExpoGo) return;
   const { GoogleSignin } = await import("@react-native-google-signin/google-signin");
 
   GoogleSignin.configure({
-    webClientId: "1072058760841-l2dfoc318glg28rlrubevsl0447alikd.apps.googleusercontent.com",
+    webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID!,
     offlineAccess: true,
     forceCodeForRefreshToken: true,
   });
 
   googleConfigured = true;
 }
-
-// Export accessors
 export { auth, db, app };
