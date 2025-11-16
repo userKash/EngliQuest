@@ -4,22 +4,44 @@
     type MusicContextType = {
     bgMusic: boolean;
     setBgMusic: (v: boolean) => void;
+
+    shouldPlay: boolean;
+    setShouldPlay: (v: boolean) => void;
+
+    stopAllMusic: () => void;
     };
 
     const MusicContext = createContext<MusicContextType | null>(null);
 
     export function MusicProvider({ children }: { children: React.ReactNode }) {
     const [bgMusic, setBgMusic] = useState(true);
+    const [shouldPlay, setShouldPlay] = useState(false);
+
+    // 🔥 Centralized stop function
+    const stopAllMusic = () => {
+        setShouldPlay(false);
+        setBgMusic(false);
+        AudioManager.stopBackgroundMusic();
+    };
+
     useEffect(() => {
-        if (bgMusic) {
+        if (shouldPlay && bgMusic) {
         AudioManager.playBackgroundMusic();
         } else {
         AudioManager.stopBackgroundMusic();
         }
-    }, [bgMusic]);
+    }, [shouldPlay, bgMusic]);
 
     return (
-        <MusicContext.Provider value={{ bgMusic, setBgMusic }}>
+        <MusicContext.Provider
+        value={{
+            bgMusic,
+            setBgMusic,
+            shouldPlay,
+            setShouldPlay,
+            stopAllMusic,
+        }}
+        >
         {children}
         </MusicContext.Provider>
     );
