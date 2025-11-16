@@ -27,6 +27,7 @@ type InQuestion = {
   correctIndex: number;
   explanation?: string;
   passage?: string;
+  clue?: string;
 };
 
 type Props = {
@@ -186,7 +187,6 @@ export default function ReadingQuiz({
     );
   }
 
-  // 🧩 QUESTION PHASE
   return (
     <KeyboardAvoidingView
       style={{ flex: 1 }}
@@ -200,6 +200,12 @@ export default function ReadingQuiz({
           { paddingBottom: insets.bottom + 140 },
         ]}
       >
+      {currentQuestion.clue && (
+        <View style={[styles.feedback, styles.clueBox]}>
+          <Text style={[styles.feedbackTitle, styles.clueTitle]}>💡 Hint</Text>
+          <Text style={styles.clueText}>{currentQuestion.clue}</Text>
+        </View>
+      )}
         <View style={styles.questionBlock}>
           <Text style={styles.prompt}>{currentQuestion.prompt}</Text>
           {currentQuestion.choices.map((c, ci) => (
@@ -425,4 +431,33 @@ const styles = StyleSheet.create({
     fontSize: 16,
     textAlign: "center",
   },
+  clueBox: {
+  backgroundColor: "#F4F6FF",  
+  borderColor: "#5E67CC",     
+  borderWidth: 1,
+  marginBottom: 12,
+  padding: 12,
+  borderRadius: 12,
+  shadowColor: "#000",
+  shadowOffset: { width: 0, height: 4 },
+  shadowOpacity: 0.04,
+  shadowRadius: 6,
+  elevation: 1,
+},
+
+clueTitle: {
+  color: "#5E67CC",         
+  fontSize: 14,
+  fontWeight: "700",
+  marginBottom: 6,
+  textAlign: "left",
+},
+
+clueText: {
+  color: "#0F1728",  
+  fontSize: 14,
+  lineHeight: 20,
+  textAlign: "left",
+},
+
 });

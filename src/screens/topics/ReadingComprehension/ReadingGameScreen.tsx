@@ -24,6 +24,7 @@ type Question = {
   correctIndex: number;
   explanation?: string;
   passage?: string;
+  clue?: string;
 };
 
 const LEVEL_MAP: Record<string, string> = {
@@ -139,6 +140,7 @@ export default function ReadingGameScreen() {
             correctIndex: typeof q.correctIndex === "number" ? q.correctIndex : 0,
             explanation: q.explanation ?? "",
             passage: q.passage ?? "",
+            clue: q.clue ?? "", 
           }));
           setQuestions(normalizedQuestions);
           setProgress({ current: 0, total: normalizedQuestions.length || 1 });
@@ -258,6 +260,7 @@ export default function ReadingGameScreen() {
             correctIndex: q.correctIndex,
             explanation: q.explanation,
             passage: q.passage,
+            clue: q.clue,
           }))}
           passageTitle="Passage"
           onProgressChange={setProgress}
