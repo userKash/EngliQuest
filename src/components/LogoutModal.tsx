@@ -7,6 +7,7 @@ import {
   Image,
   StyleSheet,
 } from "react-native";
+import { useMusic } from "../context/MusicContext";
 
 type Props = {
   visible: boolean;
@@ -15,26 +16,38 @@ type Props = {
 };
 
 export default function LogoutModal({ visible, onCancel, onConfirm }: Props) {
+  const { stopAllMusic } = useMusic();
+
+  const handleConfirm = () => {
+    try {
+      stopAllMusic();
+    } catch (err) {
+      console.error("Error stopping music during logout:", err);
+    }
+
+    try {
+      onConfirm();
+    } catch (err) {
+      console.error("Error in onConfirm handler:", err);
+    }
+  };
+
   return (
     <Modal visible={visible} transparent animationType="fade">
       <View style={styles.overlay}>
         <View style={styles.container}>
           <Image
-            source={require("../../assets/logoutIcon.png")} 
+            source={require("../../assets/logoutIcon.png")}
             style={styles.image}
           />
-
           <Text style={styles.title}>Comeback Soon!</Text>
-          <Text style={styles.subtitle}>
-            Are you sure you want to logout?
-          </Text>
-
+          <Text style={styles.subtitle}>Are you sure you want to logout?</Text>
           <View style={styles.actions}>
             <TouchableOpacity style={styles.cancelBtn} onPress={onCancel}>
               <Text style={styles.cancelText}>Cancel</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.logoutBtn} onPress={onConfirm}>
+            <TouchableOpacity style={styles.logoutBtn} onPress={handleConfirm}>
               <Text style={styles.logoutText}>Logout</Text>
             </TouchableOpacity>
           </View>
