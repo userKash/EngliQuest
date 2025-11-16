@@ -18,7 +18,7 @@ import { initFirebase } from "../../../../firebaseConfig";
 import ExitQuizModal from "../../../components/ExitQuizModal";
 import BottomNav from "../../../components/BottomNav";
 import { Ionicons } from "@expo/vector-icons";
-import { useMusic } from "";
+import { useMusic } from "../../../context/MusicContext";
 
 type Question = {
   question: string;

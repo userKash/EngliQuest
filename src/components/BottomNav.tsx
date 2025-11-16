@@ -8,7 +8,6 @@ type Props = {
   inQuiz?: boolean; 
   onBlockedNav?: () => void; 
 };
-
 export default function BottomNav({
   currentRoute,
   onNavigate,

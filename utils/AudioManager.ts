@@ -2,7 +2,6 @@ import { Audio } from "expo-av";
 import homeMusicFile from "../assets/sounds/bg_music.mp3";
 import quizMusicFile from "../assets/sounds/bg_quiz.mp3";
 
-awdawdawdawdwdwdwdw
 export class AudioManager {
     static homeSound: Audio.Sound | null = null;
     static quizSound: Audio.Sound | null = null;
