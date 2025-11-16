@@ -30,7 +30,7 @@ export default function SettingsModal({
               value={bgMusic}
               onValueChange={setBgMusic}
               trackColor={{ false: "#ccc", true: "#5E67CC" }}
-               thumbColor={bgMusic ? "#5E67CC" : "#5E67CC"}
+              thumbColor={bgMusic ? "#5E67CC" : "#5E67CC"}
             />
           </View>
 
@@ -40,7 +40,7 @@ export default function SettingsModal({
               value={soundEffects}
               onValueChange={setSoundEffects}
               trackColor={{ false: "#ccc", true: "#5E67CC" }}
-               thumbColor={bgMusic ? "#5E67CC" : "#5E67CC"}
+              thumbColor={bgMusic ? "#5E67CC" : "#5E67CC"}
             />
           </View>
 

@@ -20,6 +20,7 @@ import { initFirebase } from "../../firebaseConfig";
 import { unlockBadge } from "../../badges_utility/badgesutil";
 import { BADGES } from "../screens/ProgressScreen";
 import type { RootStackParamList } from "../navigation/type";
+import { AudioManager } from "../../utils/AudioManager"; 
 
 const STORAGE_KEY = "GrammarProgress";
 
@@ -70,18 +71,24 @@ export default function GrammarQuiz({
     onProgressChange?.({ current: qIndex, total: questions.length });
   }, [qIndex]);
 
-  const handleSelect = (i: number) => {
-    if (selected !== null) return;
-    setSelected(i);
+const handleSelect = (i: number) => {
+  if (selected !== null) return;
+  setSelected(i);
 
-    setAnswers((prev) => {
-      const copy = [...prev];
-      copy[qIndex] = i;
-      return copy;
-    });
+  setAnswers((prev) => {
+    const copy = [...prev];
+    copy[qIndex] = i;
+    return copy;
+  });
 
-    if (i === question.correctIndex) setScore((p) => p + 10);
-  };
+  if (i === question.correctIndex) {
+    AudioManager.playCorrectSfx();
+    setScore((p) => p + 10);
+  } else {
+    AudioManager.playWrongSfx();
+  }
+};
+
 
   // --- keep badgeModal in sync with newBadges ---
   useEffect(() => {
