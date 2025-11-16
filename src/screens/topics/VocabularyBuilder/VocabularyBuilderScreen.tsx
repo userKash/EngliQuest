@@ -139,7 +139,7 @@ export default function VocabularyBuilderScreen() {
     navigation.navigate("VocabularyGame", {
       levelId: subId,
       gameMode: "Vocabulary",
-      onFinish: (score: number) => updateBestScore(subId, score), // ✅ record best score
+      onFinish: (score: number) => updateBestScore(subId, score),
     });
   };
 

@@ -24,6 +24,7 @@ type Question = {
   options: string[];
   correctIndex: number;
   explanation: string;
+  clue?: string;
 };
 
 const LEVEL_MAP: Record<string, string> = {
@@ -134,94 +135,107 @@ useLayoutEffect(() => {
 }, [step, progress, levelId]);
 
 
-  // Load quiz
-  useEffect(() => {
-    const loadQuiz = async () => {
-      try {
-        const { auth, db } = await initFirebase();
-        const user = auth.currentUser;
-        if (!user) return;
+ // Load quiz
+useEffect(() => {
+  const loadQuiz = async () => {
+    try {
+      const { auth, db } = await initFirebase();
+      const user = auth.currentUser;
+      if (!user) return;
 
-        const uid = user.uid;
-        const firestoreLevel = LEVEL_MAP[levelId];
+      const uid = user.uid;
+      const firestoreLevel = LEVEL_MAP[levelId];
 
-        if (!firestoreLevel) {
-          console.warn(`No mapping found for sublevel: ${levelId}`);
-          return;
-        }
+      if (!firestoreLevel) {
+        console.warn(`No mapping for level ${levelId}`);
+        return;
+      }
 
-        if (db.collection) {
-          // Firestore v8
-          let snapshot;
-          try {
+      const COLLECTION = "quizzes";
+
+      if (db.collection) {
+        let snapshot;
+
+        try {
+          snapshot = await db
+            .collection(COLLECTION)
+            .where("userId", "==", uid)
+            .where("level", "==", firestoreLevel)
+            .where("gameMode", "==", "Vocabulary")   
+            .where("status", "==", "approved")   
+            .orderBy("createdAt", "desc")
+            .limit(1)
+            .get();
+        } catch (err: any) {
+          if (String(err.message).includes("failed-precondition")) {
             snapshot = await db
-              .collection("quizzes")
+              .collection(COLLECTION)
               .where("userId", "==", uid)
               .where("level", "==", firestoreLevel)
-              .orderBy("createdAt", "desc")
+              .where("gameMode", "==", "Vocabulary")  
+              .where("status", "==", "approved")
               .limit(1)
               .get();
-          } catch (err: any) {
-            if (String(err.message).includes("failed-precondition")) {
-              snapshot = await db
-                .collection("quizzes")
-                .where("userId", "==", uid)
-                .where("level", "==", firestoreLevel)
-                .limit(1)
-                .get();
-            } else throw err;
-          }
+          } else throw err;
+        }
 
-          if (!snapshot.empty) {
-            const data = snapshot.docs[0].data();
-            if (data.questions) {
-              setQuestions(data.questions);
-              setProgress({ current: 0, total: data.questions.length });
-            }
-          }
-        } else {
-          // Firestore v9
-          const { collection, query, where, orderBy, limit, getDocs } =
-            await import("firebase/firestore");
-
-          let q;
-          try {
-            q = query(
-              collection(db, "quizzes"),
-              where("userId", "==", uid),
-              where("level", "==", firestoreLevel),
-              orderBy("createdAt", "desc"),
-              limit(1)
-            );
-          } catch (err: any) {
-            if (String(err.message).includes("failed-precondition")) {
-              q = query(
-                collection(db, "quizzes"),
-                where("userId", "==", uid),
-                where("level", "==", firestoreLevel),
-                limit(1)
-              );
-            } else throw err;
-          }
-
-          const snap = await getDocs(q);
-          if (!snap.empty) {
-            const data = snap.docs[0].data();
-            if (data.questions) {
-              setQuestions(data.questions);
-              setProgress({ current: 0, total: data.questions.length });
-            }
+        if (!snapshot.empty) {
+          const data = snapshot.docs[0].data();
+          if (data.questions) {
+            setQuestions(data.questions);
+            setProgress({ current: 0, total: data.questions.length });
           }
         }
-      } catch (err) {
-        console.error("Error fetching quiz:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
 
-    loadQuiz();
-  }, [levelId]);
+      } else {
+        const { collection, query, where, orderBy, limit, getDocs } =
+          await import("firebase/firestore");
+
+        let q;
+
+        try {
+          q = query(
+            collection(db, COLLECTION),
+            where("userId", "==", uid),
+            where("level", "==", firestoreLevel),
+            where("gameMode", "==", "Vocabulary"),  
+            where("status", "==", "approved"),
+            orderBy("createdAt", "desc"),
+            limit(1)
+          );
+        } catch (err: any) {
+          if (String(err.message).includes("failed-precondition")) {
+            q = query(
+              collection(db, COLLECTION),
+              where("userId", "==", uid),
+              where("level", "==", firestoreLevel),
+              where("gameMode", "==", "Vocabulary"),
+              where("status", "==", "approved"),
+              limit(1)
+            );
+          } else throw err;
+        }
+
+        const snap = await getDocs(q);
+
+        if (!snap.empty) {
+          const data = snap.docs[0].data();
+          if (data.questions) {
+            setQuestions(data.questions);
+            setProgress({ current: 0, total: data.questions.length });
+          }
+        }
+      }
+    } catch (err) {
+      console.error("Error fetching vocabulary quiz:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  loadQuiz();
+}, [levelId]);
+
 
   const instructions = {
     title: "Vocabulary Builder",
@@ -271,6 +285,7 @@ useLayoutEffect(() => {
             choices: q.options,
             correctIndex: q.correctIndex,
             sentence: q.explanation,
+            clue: q.clue ?? "",   
           }))}
           onProgressChange={setProgress}
           onFinish={async (rawScore: number) => {

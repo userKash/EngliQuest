@@ -30,6 +30,7 @@ type VocabQuestion = {
   choices: string[];
   correctIndex: number;
   sentence?: string;
+  clue?: string;
 };
 
 type Props = {
@@ -211,7 +212,7 @@ async function saveProgress(finalScore: number, totalQuestions: number) {
   const handleBadgeContinue = () => {
     if (newBadges.length > 1) {
       const [, ...rest] = newBadges;
-      setNewBadges(rest); // useEffect opens next badge
+      setNewBadges(rest); 
     } else {
       setNewBadges([]);
       navigation.reset({
@@ -231,8 +232,13 @@ async function saveProgress(finalScore: number, totalQuestions: number) {
         contentContainerStyle={styles.scrollContainer}
         keyboardShouldPersistTaps="handled"
       >
-    <View style={styles.card}>
-  
+      {question.clue && (
+        <View style={[styles.feedback, styles.clueBox]}>
+          <Text style={[styles.feedbackTitle, styles.clueTitle]}>💡 Hint</Text>
+          <Text style={styles.clueText}>{question.clue}</Text>
+        </View>
+      )}
+  <View style={styles.card}>
   <Text style={styles.prompt}>{question.prompt}</Text>
 
   {question.choices.map((choice, i) => {
@@ -483,4 +489,32 @@ explanationText: { fontSize: 13, color: "#444", lineHeight: 18 },
     borderRadius: 10,
   },
   modalBtnText: { color: "#fff", fontWeight: "700" },
+    clueBox: {
+  backgroundColor: "#F4F6FF",  
+  borderColor: "#5E67CC",     
+  borderWidth: 1,
+  marginBottom: 12,
+  padding: 12,
+  borderRadius: 12,
+  shadowColor: "#000",
+  shadowOffset: { width: 0, height: 4 },
+  shadowOpacity: 0.04,
+  shadowRadius: 6,
+  elevation: 1,
+},
+
+clueTitle: {
+  color: "#5E67CC",         
+  fontSize: 14,
+  fontWeight: "700",
+  marginBottom: 6,
+  textAlign: "left",
+},
+
+clueText: {
+  color: "#0F1728",  
+  fontSize: 14,
+  lineHeight: 20,
+  textAlign: "left",
+},
 });
