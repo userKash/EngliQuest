@@ -13,6 +13,7 @@ export type RootStackParamList = {
     password: string;
   };
   Home: undefined;
+  CloudLoading: undefined;
   Progress: undefined;
   Profile: undefined;
   WordOfTheDay: undefined;
