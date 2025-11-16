@@ -23,6 +23,7 @@ type FirestoreQuestion = {
   options: string[];
   correctIndex: number;
   explanation?: string;
+  clue?: string;
 };
 
 type QA = {
@@ -144,6 +145,7 @@ export default function FilipinoToEnglishGameScreen() {
           const normalizedQuestions: QA[] = qArr.map((q) => ({
             filipino: q.question,
             note: q.explanation ?? "",
+            clue: q.clue ?? "", 
             accepts: q.options[q.correctIndex] ? [q.options[q.correctIndex]] : [],
           }));
 
