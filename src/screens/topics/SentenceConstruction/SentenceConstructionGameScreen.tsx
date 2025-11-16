@@ -17,6 +17,7 @@ import SentenceConstructionQuiz from "../../../components/SentenceConstructionQu
 import { Ionicons } from "@expo/vector-icons";
 import BottomNav from "../../../components/BottomNav";
 import ExitQuizModal from "../../../components/ExitQuizModal";
+import { useMusic } from "../../../context/MusicContext";
 
 type ParamList = {
   SentenceConstructionGame: { levelId?: string };
@@ -82,6 +83,18 @@ export default function SentenceConstructionGameScreen() {
   });
 
   const [showExitModal, setShowExitModal] = useState(false);
+
+const { setMode, setShouldPlay } = useMusic();
+
+useEffect(() => {
+  setShouldPlay(true);
+  setMode("quiz");  
+
+  return () => {
+    setMode("home"); 
+  };
+}, []);
+
 
   //  Android back button
   useEffect(() => {

@@ -24,6 +24,7 @@ import { initFirebase } from "../../firebaseConfig";
 import { unlockBadge } from "../../badges_utility/badgesutil";
 import { BADGES } from "../screens/ProgressScreen";
 import type { RootStackParamList } from "../navigation/type";
+import { AudioManager } from "../../utils/AudioManager"; 
 
 type Item = {
   id: string;
@@ -198,27 +199,33 @@ const saveResults = async () => {
 
 
   // Handlers
-  const check = () => {
-    if (locked || selected.length === 0) return;
-    const guessRaw = selected.join(" ");
-    const guess = normalize(guessRaw);
-    const correct = normalize(current.answer);
-    const ok = guess === correct;
+const check = () => {
+  if (locked || selected.length === 0) return;
 
-    setIsCorrect(ok);
-    setLocked(true);
-    if (ok) setScore((s) => s + (current.points ?? 12));
-    setCorrectCount((c) => (ok ? c + 1 : c));
-    setReview((r) => [
-      ...r,
-      {
-        question: "Arrange the words",
-        yourAnswer: guessRaw,
-        isCorrect: ok,
-        correctAnswer: ok ? undefined : current.answer,
-      },
-    ]);
-  };
+  const guessRaw = selected.join(" ");
+  const guess = normalize(guessRaw);
+  const correct = normalize(current.answer);
+  const ok = guess === correct;
+
+  // 🔊 Play SFX
+  if (ok) AudioManager.playCorrectSfx();
+  else AudioManager.playWrongSfx();
+
+  setIsCorrect(ok);
+  setLocked(true);
+  if (ok) setScore((s) => s + (current.points ?? 12));
+  setCorrectCount((c) => (ok ? c + 1 : c));
+  setReview((r) => [
+    ...r,
+    {
+      question: "Arrange the words",
+      yourAnswer: guessRaw,
+      isCorrect: ok,
+      correctAnswer: ok ? undefined : current.answer,
+    },
+  ]);
+};
+
 
 const next = async () => {
   if (!locked) return;
