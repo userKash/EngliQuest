@@ -1,53 +1,58 @@
-    import { createContext, useContext, useState, useEffect } from "react";
-    import { AudioManager } from "../../utils/AudioManager";
+import { createContext, useContext, useState, useEffect } from "react";
+import { AudioManager } from "../../utils/AudioManager";
 
-    type MusicContextType = {
-    bgMusic: boolean;
-    setBgMusic: (v: boolean) => void;
+type MusicMode = "home" | "quiz";
 
+type MusicContextType = {
     shouldPlay: boolean;
     setShouldPlay: (v: boolean) => void;
 
+    mode: MusicMode;
+    setMode: (m: MusicMode) => void;
+
     stopAllMusic: () => void;
-    };
+};
 
-    const MusicContext = createContext<MusicContextType | null>(null);
+const MusicContext = createContext<MusicContextType | null>(null);
 
-    export function MusicProvider({ children }: { children: React.ReactNode }) {
-    const [bgMusic, setBgMusic] = useState(true);
+export function MusicProvider({ children }: { children: React.ReactNode }) {
     const [shouldPlay, setShouldPlay] = useState(false);
+    const [mode, setMode] = useState<MusicMode>("home");
 
-    // 🔥 Centralized stop function
     const stopAllMusic = () => {
         setShouldPlay(false);
-        setBgMusic(false);
-        AudioManager.stopBackgroundMusic();
+        AudioManager.stopAll();
     };
 
     useEffect(() => {
-        if (shouldPlay && bgMusic) {
-        AudioManager.playBackgroundMusic();
-        } else {
-        AudioManager.stopBackgroundMusic();
+        if (!shouldPlay) {
+            AudioManager.stopAll();
+            return;
         }
-    }, [shouldPlay, bgMusic]);
+
+        if (mode === "home") {
+            AudioManager.playHomeMusic();
+        } else if (mode === "quiz") {
+            AudioManager.playQuizMusic();
+        }
+    }, [shouldPlay, mode]);
 
     return (
         <MusicContext.Provider
-        value={{
-            bgMusic,
-            setBgMusic,
-            shouldPlay,
-            setShouldPlay,
-            stopAllMusic,
-        }}
+            value={{
+                shouldPlay,
+                setShouldPlay,
+                mode,
+                setMode,
+                stopAllMusic,
+            }}
         >
-        {children}
+            {children}
         </MusicContext.Provider>
     );
-    }
+}
 
-    export function useMusic() {
+export function useMusic() {
     const ctx = useContext(MusicContext);
     if (!ctx) throw new Error("useMusic must be used inside <MusicProvider>");
     return ctx;

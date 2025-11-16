@@ -18,6 +18,7 @@ import { initFirebase } from "../../../../firebaseConfig";
 import ExitQuizModal from "../../../components/ExitQuizModal";
 import BottomNav from "../../../components/BottomNav";
 import { Ionicons } from "@expo/vector-icons";
+import { useMusic } from "";
 
 type Question = {
   question: string;
@@ -73,6 +74,16 @@ export default function VocabularyGameScreen() {
   const [loading, setLoading] = useState(true);
 
   const [showExitModal, setShowExitModal] = useState(false);
+
+  const { setMode } = useMusic();
+    useEffect(() => {
+    setMode("quiz"); 
+
+    return () => {
+      setMode("home"); 
+    };
+  }, []);
+
 
   // Handle Android hardware back
   useEffect(() => {
