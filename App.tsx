@@ -171,12 +171,13 @@ export default function App() {
           </Stack.Navigator>
 
           {/* BOTTOM NAV ALWAYS SAFE */}
-          {![ 
+          {![
             "VocabularyGame",
             "GrammarGame",
             "ReadingGame",
             "FilipinoToEnglishGame",
             "SentenceConstructionGame",
+            "CloudLoading", // ✅ Added here to hide BottomNav during loading
           ].includes(currentRoute ?? "") && (
             <BottomNav
               currentRoute={currentRoute}
