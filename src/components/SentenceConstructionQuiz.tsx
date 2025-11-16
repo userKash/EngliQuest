@@ -30,6 +30,7 @@ type Item = {
   answer: string;
   points?: number;
   alsoAccept?: string[];
+  clue?: string; 
 };
 
 type ReviewItem = {
@@ -140,6 +141,7 @@ export default function SentenceConstructionQuiz({
                 answer: q.options[q.correctIndex],
                 points: 12,
                 alsoAccept: [],
+                clue: q.clue ?? null, 
               }))
             );
           }
@@ -285,6 +287,12 @@ const badgeData = badgeModal
             build your sentence.
           </Text>
         </View>
+        {current.clue && (
+        <View style={[styles.feedback, styles.clueBox]}>
+          <Text style={[styles.feedbackTitle, styles.clueTitle]}>💡 Hint</Text>
+          <Text style={styles.clueText}>{current.clue}</Text>
+        </View>
+      )}
 
         {/* Your Sentence */}
         <View style={styles.card}>
@@ -586,4 +594,32 @@ const styles = StyleSheet.create({
   modalBtnText: { color: "#fff", fontWeight: "700" },
   modalSub: { fontSize: 14, textAlign: "center", marginBottom: 8, color: "#555" },
   modalHint: { fontSize: 14, color: "#111", marginBottom: 12 },
+      clueBox: {
+  backgroundColor: "#F4F6FF",  
+  borderColor: "#5E67CC",     
+  borderWidth: 1,
+  marginBottom: 12,
+  padding: 12,
+  borderRadius: 12,
+  shadowColor: "#000",
+  shadowOffset: { width: 0, height: 4 },
+  shadowOpacity: 0.04,
+  shadowRadius: 6,
+  elevation: 1,
+},
+
+clueTitle: {
+  color: "#5E67CC",         
+  fontSize: 14,
+  fontWeight: "700",
+  marginBottom: 6,
+  textAlign: "left",
+},
+
+clueText: {
+  color: "#0F1728",  
+  fontSize: 14,
+  lineHeight: 20,
+  textAlign: "left",
+},
 });
