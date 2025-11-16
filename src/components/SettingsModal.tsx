@@ -1,5 +1,6 @@
 import React from "react";
 import { View, Text, Modal, TouchableOpacity, Switch, StyleSheet } from "react-native";
+import { useMusic } from "../../src/context/MusicContext";
 
 type SettingsModalProps = {
   visible: boolean;
@@ -18,29 +19,41 @@ export default function SettingsModal({
   soundEffects,
   setSoundEffects,
 }: SettingsModalProps) {
+
+  const { setShouldPlay, stopAllMusic } = useMusic(); // ⭐ CONNECT TO GLOBAL MUSIC
+
   return (
     <Modal animationType="fade" transparent={true} visible={visible} onRequestClose={onClose}>
       <View style={styles.modalOverlay}>
         <View style={styles.modalContent}>
           <Text style={styles.modalTitle}>Settings</Text>
 
+          {/* ⭐ FIXED BACKGROUND MUSIC SWITCH */}
           <View style={styles.settingRow}>
             <Text style={styles.settingText}>Background Music</Text>
             <Switch
               value={bgMusic}
-              onValueChange={setBgMusic}
+              onValueChange={(value) => {
+                setBgMusic(value);      // keep your UI logic
+                if (value) {
+                  setShouldPlay(true);  // ⭐ TURN MUSIC ON
+                } else {
+                  stopAllMusic();       // ⭐ FULLY STOP MUSIC
+                }
+              }}
               trackColor={{ false: "#ccc", true: "#5E67CC" }}
               thumbColor={bgMusic ? "#5E67CC" : "#5E67CC"}
             />
           </View>
 
+          {/* SOUND EFFECTS (unchanged) */}
           <View style={styles.settingRow}>
             <Text style={styles.settingText}>Sound Effects</Text>
             <Switch
               value={soundEffects}
               onValueChange={setSoundEffects}
               trackColor={{ false: "#ccc", true: "#5E67CC" }}
-              thumbColor={bgMusic ? "#5E67CC" : "#5E67CC"}
+              thumbColor={soundEffects ? "#5E67CC" : "#5E67CC"}
             />
           </View>
 

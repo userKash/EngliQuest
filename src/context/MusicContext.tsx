@@ -4,6 +4,9 @@ import { AudioManager } from "../../utils/AudioManager";
 type MusicMode = "home" | "quiz";
 
 type MusicContextType = {
+    bgMusic: boolean;      
+    setBgMusic: (v: boolean) => void;
+
     shouldPlay: boolean;
     setShouldPlay: (v: boolean) => void;
 
@@ -18,6 +21,8 @@ const MusicContext = createContext<MusicContextType | null>(null);
 export function MusicProvider({ children }: { children: React.ReactNode }) {
     const [shouldPlay, setShouldPlay] = useState(false);
     const [mode, setMode] = useState<MusicMode>("home");
+    const bgMusic = shouldPlay;
+    const setBgMusic = (v: boolean) => setShouldPlay(v);
 
     const stopAllMusic = () => {
         setShouldPlay(false);
@@ -40,6 +45,8 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
     return (
         <MusicContext.Provider
             value={{
+                bgMusic,    
+                setBgMusic,       
                 shouldPlay,
                 setShouldPlay,
                 mode,
