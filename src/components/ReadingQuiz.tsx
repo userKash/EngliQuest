@@ -20,6 +20,7 @@ import PrimaryButton from "../components/PrimaryButton";
 import { unlockBadge } from "../../badges_utility/badgesutil";
 import { BADGES } from "../screens/ProgressScreen";
 import type { RootStackParamList } from "../navigation/type";
+import { AudioManager } from "../../utils/AudioManager"; 
 
 type InQuestion = {
   prompt: string;
@@ -61,7 +62,7 @@ export default function ReadingQuiz({
 
   const [groupIndex, setGroupIndex] = useState(0);
   const [phase, setPhase] = useState<"story" | "questions">("story");
-  const [index, setIndex] = useState(0); // current question index inside current group
+  const [index, setIndex] = useState(0);
   const [selected, setSelected] = useState<number | null>(null);
   const [score, setScore] = useState(0);
   const [showAnswer, setShowAnswer] = useState(false);
@@ -83,24 +84,32 @@ export default function ReadingQuiz({
     setBadgeModal(newBadges.length > 0 ? newBadges[0] : null);
   }, [newBadges]);
 
-  const handleSelect = (ci: number) => {
-    if (showAnswer) return;
-    setSelected(ci);
-    setShowAnswer(true);
+const handleSelect = (ci: number) => {
+  if (showAnswer) return;
 
-    const correct = ci === currentQuestion.correctIndex;
-    if (correct) setScore((s) => s + 10);
+  const correct = ci === currentQuestion.correctIndex;
 
-    setReview((prev) => [
-      ...prev,
-      {
-        question: currentQuestion.prompt,
-        yourAnswer: currentQuestion.choices[ci],
-        isCorrect: correct,
-        correctAnswer: currentQuestion.choices[currentQuestion.correctIndex],
-      },
-    ]);
-  };
+  // Fire-and-forget SFX
+  if (correct) AudioManager.playCorrectSfx();
+  else AudioManager.playWrongSfx();
+
+  // Update state after starting SFX
+  setSelected(ci);
+  setShowAnswer(true);
+
+  setReview((prev) => [
+    ...prev,
+    {
+      question: currentQuestion.prompt,
+      yourAnswer: currentQuestion.choices[ci],
+      isCorrect: correct,
+      correctAnswer: currentQuestion.choices[currentQuestion.correctIndex],
+    },
+  ]);
+};
+
+
+
 
   const handleNext = async () => {
     if (phase === "story") {

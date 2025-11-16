@@ -17,6 +17,7 @@ import ReadingQuiz from "../../../components/ReadingQuiz";
 import { Ionicons } from "@expo/vector-icons";
 import BottomNav from "../../../components/BottomNav";
 import ExitQuizModal from "../../../components/ExitQuizModal";
+import { useMusic } from "../../../context/MusicContext";
 
 type Question = {
   question: string;
@@ -88,6 +89,15 @@ export default function ReadingGameScreen() {
   const [questions, setQuestions] = useState<Question[]>([]);
   const [loading, setLoading] = useState(true);
   const [showExitModal, setShowExitModal] = useState(false);
+
+    const { setMode } = useMusic();
+      useEffect(() => {
+      setMode("quiz"); 
+  
+      return () => {
+        setMode("home"); 
+      };
+    }, []);
 
   // Load quiz
   useEffect(() => {
