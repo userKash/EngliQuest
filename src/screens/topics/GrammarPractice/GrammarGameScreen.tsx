@@ -24,6 +24,7 @@ type Question = {
   options: string[];
   correctIndex: number;
   explanation: string;
+  clue?: string;
 };
 
 const LEVEL_MAP: Record<string, string> = {
@@ -235,6 +236,7 @@ useLayoutEffect(() => {
           choices: q.options,
           correctIndex: q.correctIndex,
           explanation: q.explanation,
+          clue: q.clue,
         }))}
         onProgressChange={setProgress}
         onFinish={async (rawScore: number) => {

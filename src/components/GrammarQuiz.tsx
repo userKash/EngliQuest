@@ -29,6 +29,7 @@ type GrammarQuestion = {
   choices: string[];
   correctIndex: number;
   sentence?: string;
+  clue?: string;
 };
 
 type Props = {
@@ -230,9 +231,14 @@ async function saveProgress(finalScore: number, totalQuestions: number) {
         contentContainerStyle={styles.scrollContainer}
         keyboardShouldPersistTaps="handled"
       >
-        <View style={styles.card}>
+      {question.clue && (
+        <View style={[styles.feedback, styles.clueBox]}>
+          <Text style={[styles.feedbackTitle, styles.clueTitle]}>💡 Hint</Text>
+          <Text style={styles.clueText}>{question.clue}</Text>
+        </View>
+      )}
+  <View style={styles.card}>
   <Text style={styles.prompt}>{question.prompt}</Text>
-
   {question.choices.map((choice, i) => {
     const correct = question.correctIndex === i;
     const isSelected = selected === i;
@@ -244,7 +250,6 @@ async function saveProgress(finalScore: number, totalQuestions: number) {
       else if (isSelected)
         choiceStyle = { ...choiceStyle, ...styles.wrongChoice };
     }
-
     return (
       <TouchableOpacity
         key={i}
@@ -258,7 +263,6 @@ async function saveProgress(finalScore: number, totalQuestions: number) {
     );
   })}
 </View>
-
 {selected !== null && (
   <View style={{ minHeight: 120 }}>
     <View
@@ -301,7 +305,6 @@ async function saveProgress(finalScore: number, totalQuestions: number) {
           />
         </View>
       )}
-
       <ResultModal
   visible={showResult}
   score={score / 10}
@@ -477,5 +480,35 @@ const styles = StyleSheet.create({
   okText: { color: "#1F8F5F" },
   badText: { color: "#C43D3D" },
   feedbackText: { color: "#0F1728", textAlign: "center", marginTop: 4, fontSize: 14 },
+
+clueBox: {
+  backgroundColor: "#F4F6FF",  
+  borderColor: "#5E67CC",     
+  borderWidth: 1,
+  marginBottom: 12,
+  padding: 12,
+  borderRadius: 12,
+  shadowColor: "#000",
+  shadowOffset: { width: 0, height: 4 },
+  shadowOpacity: 0.04,
+  shadowRadius: 6,
+  elevation: 1,
+},
+
+clueTitle: {
+  color: "#5E67CC",         
+  fontSize: 14,
+  fontWeight: "700",
+  marginBottom: 6,
+  textAlign: "left",
+},
+
+clueText: {
+  color: "#0F1728",  
+  fontSize: 14,
+  lineHeight: 20,
+  textAlign: "left",
+},
+
 
 });
