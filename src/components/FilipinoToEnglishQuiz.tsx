@@ -26,6 +26,8 @@ import { initFirebase } from "../../firebaseConfig";
 import { unlockBadge } from "../../badges_utility/badgesutil";
 import { BADGES } from "../screens/ProgressScreen";
 import type { RootStackParamList } from "../navigation/type";
+import { AudioManager } from "../../utils/AudioManager"; 
+
 
 type QA = {
   filipino: string;
@@ -97,6 +99,8 @@ export default function FilipinoToEnglishQuiz({ questions, onFinish, onProgressC
     setIsCorrect(ok);
     setLocked(true);
     if (ok) setScore((s) => s + 10);
+    if (ok) AudioManager.playCorrectSfx();
+    else AudioManager.playWrongSfx();
 
     setReview((r) => [
       ...r,
@@ -356,6 +360,7 @@ const styles = StyleSheet.create({
   feedbackTitle: { fontWeight: "700", marginBottom: 6 },
   correctText: { color: "#1F8F5F" },
   wrongText: { color: "#C43D3D" },
+  feedback: { marginTop: 10, borderRadius: 12, padding: 14, borderWidth: 1 },
   feedbackDetail: { color: "#333" },
   bottomBar: { position: "absolute", left: 16, right: 16, bottom: 0, paddingTop: 10 },
   overlay: {

@@ -17,6 +17,7 @@ import FilipinoToEnglishQuiz from "../../../components/FilipinoToEnglishQuiz";
 import { Ionicons } from "@expo/vector-icons";
 import BottomNav from "../../../components/BottomNav";
 import ExitQuizModal from "../../../components/ExitQuizModal";
+import { useMusic } from "../../../context/MusicContext";
 
 type FirestoreQuestion = {
   question: string;
@@ -93,6 +94,17 @@ export default function FilipinoToEnglishGameScreen() {
   const [questions, setQuestions] = useState<QA[]>([]);
   const [loading, setLoading] = useState(true);
   const [showExitModal, setShowExitModal] = useState(false);
+
+  const { setMode, setShouldPlay } = useMusic();
+  
+  useEffect(() => {
+    setShouldPlay(true);
+    setMode("quiz");  
+  
+    return () => {
+      setMode("home"); 
+    };
+  }, []);
 
   // Load quiz
   useEffect(() => {
