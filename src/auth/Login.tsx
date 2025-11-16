@@ -117,36 +117,38 @@ export default function LoginScreen() {
   //   }
   // };
 
-  const handleLogin = async () => {
-    if (!email || !password) {
-      setErrorMessage("Please enter both email and password.");
-      setErrorVisible(true);
-      return;
+const handleLogin = async () => {
+  if (!email || !password) {
+    setErrorMessage("Please enter both email and password.");
+    setErrorVisible(true);
+    return;
+  }
+  try {
+    const { auth } = await initFirebase();
+    if (isExpoGo) {
+      const { signInWithEmailAndPassword } = await import("firebase/auth");
+      const userCredential = await signInWithEmailAndPassword(
+        auth,
+        email,
+        password
+      );
+      console.log("Email login (Web):", userCredential.user);
+    } else {
+      const userCredential = await auth.signInWithEmailAndPassword(
+        email,
+        password
+      );
+      console.log("Email login (Native):", userCredential.user);
     }
-    try {
-      const { auth } = await initFirebase();
-      if (isExpoGo) {
-        const { signInWithEmailAndPassword } = await import("firebase/auth");
-        const userCredential = await signInWithEmailAndPassword(
-          auth,
-          email,
-          password
-        );
-        console.log("Email login (Web):", userCredential.user);
-      } else {
-        const userCredential = await auth.signInWithEmailAndPassword(
-          email,
-          password
-        );
-        console.log("Email login (Native):", userCredential.user);
-      }
-      navigation.navigate("WordOfTheDay");
-    } catch (error: any) {
-      console.error("Email/Password login error:", error);
-      setErrorMessage(getFirebaseErrorMessage(error));
-      setErrorVisible(true);
-    }
-  };
+    navigation.replace("CloudLoading");
+
+  } catch (error: any) {
+    console.error("Email/Password login error:", error);
+    setErrorMessage(getFirebaseErrorMessage(error));
+    setErrorVisible(true);
+  }
+};
+
 
   return (
     <SafeAreaView style={styles.safeArea}>
