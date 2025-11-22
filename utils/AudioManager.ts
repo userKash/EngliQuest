@@ -1,5 +1,5 @@
 import { Audio } from "expo-av";
-import homeMusicFile from "../assets/sounds/bg_music.mp3";
+import homeMusicFile from "../assets/sounds/EngliQuestTrack.mp3";
 import quizMusicFile from "../assets/sounds/bg_quiz.mp3";
 import correctSfxFile from "../assets/sounds/correct.wav";
 import wrongSfxFile from "../assets/sounds/incorrect.wav";
