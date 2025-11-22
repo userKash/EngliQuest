@@ -72,7 +72,7 @@ export default function App() {
           <Stack.Navigator
             screenOptions={{
               headerBackTitle: '',
-              headerTitleAlign: 'left',
+              headerTitleAlign: 'center',
               headerShadowVisible: false,
             }}
           >
@@ -97,7 +97,6 @@ export default function App() {
                     <Text style={{ fontSize: 14, color: "#555" }}>Choose your difficulty level</Text>
                   </View>
                 ),
-                headerTitleAlign: "left",
               }}
             />
             <Stack.Screen name="VocabularyGame" component={VocabularyGameScreen} />
@@ -112,7 +111,6 @@ export default function App() {
                     <Text style={{ fontSize: 14, color: "#555" }}>Choose your difficulty level</Text>
                   </View>
                 ),
-                headerTitleAlign: "left",
               }}
             />
             <Stack.Screen name="GrammarGame" component={GrammarGameScreen} />
@@ -127,7 +125,6 @@ export default function App() {
                     <Text style={{ fontSize: 14, color: "#555" }}>Choose your difficulty level</Text>
                   </View>
                 ),
-                headerTitleAlign: "left",
               }}
             />
             <Stack.Screen name="ReadingGame" component={ReadingGameScreen} />
@@ -142,7 +139,6 @@ export default function App() {
                     <Text style={{ fontSize: 14, color: "#555" }}>Choose your difficulty level</Text>
                   </View>
                 ),
-                headerTitleAlign: "left",
               }}
             />
             <Stack.Screen name="FilipinoToEnglishGame" component={FilipinoToEnglishGameScreen} />
@@ -157,7 +153,6 @@ export default function App() {
                     <Text style={{ fontSize: 14, color: "#555" }}>Choose your difficulty level</Text>
                   </View>
                 ),
-                headerTitleAlign: "left",
               }}
             />
             <Stack.Screen name="SentenceConstructionGame" component={SentenceConstructionGameScreen} />
