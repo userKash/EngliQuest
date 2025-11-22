@@ -157,7 +157,7 @@ export default function SentenceConstructionQuiz({
               data.questions.map((q: any, i: number) => ({
                 id: `${i}`,
                 answer: q.options[q.correctIndex],
-                points: 12,
+                points: 10,
                 alsoAccept: [],
                 clue: q.clue ?? null, 
               }))
@@ -304,7 +304,7 @@ const check = () => {
 
   setIsCorrect(ok);
   setLocked(true);
-  if (ok) setScore((s) => s + (current.points ?? 12));
+  if (ok) setScore((s) => s + (current.points ?? 10));
   setCorrectCount((c) => (ok ? c + 1 : c));
   setReview((r) => [
     ...r,
@@ -541,7 +541,7 @@ const badgeData = badgeModal
                   ]}
                 >
                   {isCorrect
-                    ? `Correct! +${current.points ?? 12} points`
+                    ? `Correct! +${current.points ?? 10} points`
                     : "Incorrect"}
                 </Text>
                 {!isCorrect && (
