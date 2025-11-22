@@ -1,49 +1,81 @@
-    import React, { useEffect, useRef, useState } from "react";
-    import {
-    View,
-    Text,
-    StyleSheet,
-    Animated,
-    Dimensions,
-    Easing,
-    Platform,
-    } from "react-native";
-    import LottieView from "lottie-react-native";
+import React, { useEffect, useRef, useState } from "react";
+import firestore from "@react-native-firebase/firestore";
+import auth from "@react-native-firebase/auth";
 
-    const { width, height } = Dimensions.get("window");
-    const CLOUD = require("../../assets/clouds/Cloud-1.png");
+import { useNavigation } from "@react-navigation/native";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import type { RootStackParamList } from "../navigation/type";
 
-    const MESSAGES = [
-    "Content Generation in Progress...",
-    "This process typically takes 5–10 minutes...",
-    "Hang tight! We're preparing your personalized content...",
-    ];
+import {
+  View,
+  Text,
+  StyleSheet,
+  Animated,
+  Dimensions,
+  Easing,
+  Platform,
+} from "react-native";
+import LottieView from "lottie-react-native";
 
-    type PeekSide = "top" | "bottom" | "left" | "right" | null;
+const { width, height } = Dimensions.get("window");
+const CLOUD = require("../../assets/clouds/Cloud-1.png");
 
-    export default function GeneratingContentLoader() {
-    const fadeScreen = useRef(new Animated.Value(0)).current;
+const MESSAGES = [
+  "Content Generation in Progress...",
+  "This process typically takes 5–10 minutes...",
+  "Hang tight! We're preparing your personalized content...",
+];
 
-    const cloudLeft = useRef(new Animated.Value(0)).current;
-    const cloudRight = useRef(new Animated.Value(0)).current;
+type PeekSide = "top" | "bottom" | "left" | "right" | null;
 
-    const msgFade = useRef(new Animated.Value(1)).current;
-    const [messageIndex, setMessageIndex] = useState(0);
+export default function GeneratingContentLoader() {
+  const navigation =
+    useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
-    const lastPeekRef = useRef<PeekSide>(null);
-    const [currentPeek, setCurrentPeek] = useState<PeekSide>(null);
+  const fadeScreen = useRef(new Animated.Value(0)).current;
 
-    const topY = useRef(new Animated.Value(-180)).current; 
-    const bottomY = useRef(new Animated.Value(220)).current; 
-    const leftX = useRef(new Animated.Value(-220)).current;
-    const rightX = useRef(new Animated.Value(width + 220)).current; 
+  const cloudLeft = useRef(new Animated.Value(0)).current;
+  const cloudRight = useRef(new Animated.Value(0)).current;
 
-    const peekTopRef = useRef<LottieView | null>(null);
-    const peekBottomRef = useRef<LottieView | null>(null);
-    const peekLeftRef = useRef<LottieView | null>(null);
-    const peekRightRef = useRef<LottieView | null>(null);
+  const msgFade = useRef(new Animated.Value(1)).current;
+  const [messageIndex, setMessageIndex] = useState(0);
 
-    const LOTTIE_SIZE = Math.min(300, Math.round(width * 0.68));
+  const lastPeekRef = useRef<PeekSide>(null);
+  const [currentPeek, setCurrentPeek] = useState<PeekSide>(null);
+
+  const topY = useRef(new Animated.Value(-180)).current;
+  const bottomY = useRef(new Animated.Value(220)).current;
+  const leftX = useRef(new Animated.Value(-220)).current;
+  const rightX = useRef(new Animated.Value(width + 220)).current;
+
+  const peekTopRef = useRef<LottieView | null>(null);
+  const peekBottomRef = useRef<LottieView | null>(null);
+  const peekLeftRef = useRef<LottieView | null>(null);
+  const peekRightRef = useRef<LottieView | null>(null);
+
+  const LOTTIE_SIZE = Math.min(300, Math.round(width * 0.68));
+
+  useEffect(() => {
+    const user = auth().currentUser;
+    if (!user) return;
+
+    const unsubscribe = firestore()
+      .collection("quizzes")
+      .where("userId", "==", user.uid)
+      .where("status", "==", "approved")
+      .onSnapshot((snapshot) => {
+        const approvedCount = snapshot.size;
+
+        console.log("APPROVED QUIZ COUNT:", approvedCount);
+
+        if (approvedCount >= 30) {
+        navigation.navigate("CloudLoading");
+        }
+      });
+
+    return () => unsubscribe();
+  }, [navigation]);
+
     useEffect(() => {
         Animated.timing(fadeScreen, {
         toValue: 1,
