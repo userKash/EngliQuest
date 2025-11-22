@@ -14,9 +14,18 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import Animated, {
+  FadeIn,
+  SlideInDown,
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+  withRepeat,
+  withSequence,
+  withTiming,
+} from 'react-native-reanimated';
 
 import ResultModal from "../components/ResultModal";
-import PrimaryButton from "../components/PrimaryButton";
 import { unlockBadge } from "../../badges_utility/badgesutil";
 import { BADGES } from "../screens/ProgressScreen";
 import type { RootStackParamList } from "../navigation/type";
@@ -76,9 +85,55 @@ export default function ReadingQuiz({
   const lastQuestionInGroup = index === currentGroup.length - 1;
   const lastGroup = groupIndex === groups.length - 1;
 
+  // Progress bar animation
+  const progressWidth = useSharedValue(0);
+  const shimmerTranslate = useSharedValue(-100);
+
+  // Score animation
+  const scoreScale = useSharedValue(1);
+  const scorePulse = useSharedValue(1);
+
   useEffect(() => {
     onProgressChange?.({ current: groupIndex, total: groups.length });
-  }, [groupIndex, groups.length]);
+
+    // Animate progress bar
+    progressWidth.value = withSpring((groupIndex + 1) / groups.length, {
+      damping: 15,
+      stiffness: 100,
+    });
+
+    // Continuous shimmer effect
+    shimmerTranslate.value = withRepeat(
+      withSequence(
+        withTiming(100, { duration: 1500 }),
+        withTiming(-100, { duration: 0 })
+      ),
+      -1,
+      false
+    );
+  }, [groupIndex]);
+
+  // Animate score when it changes
+  useEffect(() => {
+    if (score > 0) {
+      scoreScale.value = withSequence(
+        withSpring(1.3, { damping: 8, stiffness: 200 }),
+        withSpring(1, { damping: 10, stiffness: 150 })
+      );
+    }
+  }, [score]);
+
+  // Continuous pulse for score card
+  useEffect(() => {
+    scorePulse.value = withRepeat(
+      withSequence(
+        withTiming(1.02, { duration: 2000 }),
+        withTiming(1, { duration: 2000 })
+      ),
+      -1,
+      true
+    );
+  }, []);
 
   useEffect(() => {
     setBadgeModal(newBadges.length > 0 ? newBadges[0] : null);
@@ -90,8 +145,12 @@ const handleSelect = (ci: number) => {
   const correct = ci === currentQuestion.correctIndex;
 
   // Fire-and-forget SFX
-  if (correct) AudioManager.playCorrectSfx();
-  else AudioManager.playWrongSfx();
+  if (correct) {
+    AudioManager.playCorrectSfx();
+    setScore((s) => s + 10);
+  } else {
+    AudioManager.playWrongSfx();
+  }
 
   // Update state after starting SFX
   setSelected(ci);
@@ -165,9 +224,144 @@ const handleSelect = (ci: number) => {
     ? BADGES.find((b: { id: string }) => b.id === badgeModal)
     : null;
 
+  // Animated styles for progress bar
+  const animatedProgressStyle = useAnimatedStyle(() => {
+    return {
+      width: `${progressWidth.value * 100}%`,
+    };
+  });
+
+  const animatedShimmerStyle = useAnimatedStyle(() => {
+    return {
+      transform: [{ translateX: shimmerTranslate.value }],
+    };
+  });
+
+  // Animated styles for score
+  const animatedScoreStyle = useAnimatedStyle(() => {
+    return {
+      transform: [{ scale: scoreScale.value }],
+    };
+  });
+
+  const animatedScoreCardStyle = useAnimatedStyle(() => {
+    return {
+      transform: [{ scale: scorePulse.value }],
+    };
+  });
+
+  // Render modern header
+  const renderHeader = () => (
+    <View style={styles.gameHeader}>
+      <View style={styles.statsContainer}>
+        <Animated.View style={[styles.scoreCard, animatedScoreCardStyle]}>
+          <View style={[styles.iconBadge, { borderColor: '#FFD700' }]}>
+            <Text style={styles.iconText}>⭐</Text>
+          </View>
+          <Text style={styles.scoreLabel}>Score</Text>
+          <Animated.View style={[styles.scoreValueContainer, animatedScoreStyle]}>
+            <Text style={styles.scoreValue}>{score}</Text>
+            <Text style={styles.scoreMaxText}>pts</Text>
+          </Animated.View>
+        </Animated.View>
+        <View style={styles.questionCard}>
+          <View style={[styles.iconBadge, { borderColor: '#7C84E8' }]}>
+            <Text style={styles.iconText}>📖</Text>
+          </View>
+          <Text style={styles.questionLabel}>Story</Text>
+          <Text style={styles.questionValue}>
+            <Text style={styles.currentQ}>{groupIndex + 1}</Text>
+            <Text style={styles.totalQ}>/{groups.length}</Text>
+          </Text>
+        </View>
+      </View>
+
+      {/* Gamified progress bar with segments */}
+      <View style={styles.progressBarContainer}>
+        {/* Background segments */}
+        <View style={styles.segmentsContainer}>
+          {Array.from({ length: groups.length }).map((_, idx) => (
+            <View
+              key={idx}
+              style={[
+                styles.segment,
+                { width: `${100 / groups.length}%` }
+              ]}
+            />
+          ))}
+        </View>
+
+        {/* Animated fill */}
+        <Animated.View style={[styles.progressBarFill, animatedProgressStyle]}>
+          {/* Shimmer overlay */}
+          <Animated.View style={[styles.shimmer, animatedShimmerStyle]}>
+            <View style={styles.shimmerGradient} />
+          </Animated.View>
+        </Animated.View>
+
+        {/* Progress dots/milestones */}
+        <View style={styles.milestonesContainer}>
+          {Array.from({ length: groups.length }).map((_, idx) => {
+            const isCompleted = idx < groupIndex + 1;
+            const isActive = idx === groupIndex;
+            return (
+              <View
+                key={idx}
+                style={[
+                  styles.milestone,
+                  isCompleted && styles.milestoneCompleted,
+                  isActive && styles.milestoneActive,
+                ]}
+              >
+                {isCompleted && <View style={styles.milestoneCheck} />}
+              </View>
+            );
+          })}
+        </View>
+      </View>
+    </View>
+  );
+
   // STORY PHASE
   if (phase === "story") {
     return (
+      <View style={{ flex: 1, marginTop: 20, backgroundColor: '#F5F6FA' }}>
+        {renderHeader()}
+        <KeyboardAvoidingView
+          style={{ flex: 1 }}
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
+          keyboardVerticalOffset={insets.top + 50}
+        >
+          <ScrollView
+            style={{ flex: 1 }}
+            contentContainerStyle={[
+              styles.container,
+              { paddingBottom: insets.bottom + 140 },
+            ]}
+          >
+            <View style={styles.passageCard}>
+              <Text style={styles.sectionTitle}>Story {groupIndex + 1}</Text>
+              <Text style={styles.passageText}>
+                {currentGroup[0].passage ?? ""}
+              </Text>
+            </View>
+
+            <TouchableOpacity
+              style={styles.modernButton}
+              onPress={handleNext}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.modernButtonText}>Next: Questions</Text>
+            </TouchableOpacity>
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </View>
+    );
+  }
+
+  return (
+    <View style={{ flex: 1, marginTop: 20, backgroundColor: '#F5F6FA' }}>
+      {renderHeader()}
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
@@ -180,116 +374,112 @@ const handleSelect = (ci: number) => {
             { paddingBottom: insets.bottom + 140 },
           ]}
         >
-          <View style={styles.passageCard}>
-            <Text style={styles.sectionTitle}>Story {groupIndex + 1}</Text>
-            <Text style={styles.passageText}>
-              {currentGroup[0].passage ?? ""}
-            </Text>
+          {currentQuestion.clue && (
+            <Animated.View
+              entering={FadeIn.duration(400)}
+              style={styles.clueBox}
+            >
+              <View style={styles.clueHeader}>
+                <Text style={styles.clueIcon}>💡</Text>
+                <Text style={styles.clueTitle}>Hint</Text>
+              </View>
+              <Text style={styles.clueText}>{currentQuestion.clue}</Text>
+            </Animated.View>
+          )}
+
+          <View style={styles.card}>
+            <Text style={styles.prompt}>{currentQuestion.prompt}</Text>
+            {currentQuestion.choices.map((c, ci) => {
+              const correct = currentQuestion.correctIndex === ci;
+              const isSelected = selected === ci;
+
+              let choiceStyle = styles.choice;
+              if (showAnswer) {
+                if (correct)
+                  choiceStyle = { ...choiceStyle, ...styles.correctChoice };
+                else if (isSelected)
+                  choiceStyle = { ...choiceStyle, ...styles.wrongChoice };
+              }
+
+              return (
+                <Animated.View
+                  key={ci}
+                  entering={FadeIn.delay(ci * 100).duration(400).springify()}
+                >
+                  <TouchableOpacity
+                    style={choiceStyle}
+                    onPress={() => handleSelect(ci)}
+                    disabled={showAnswer}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={styles.choiceLabel}>{String.fromCharCode(65 + ci)}</Text>
+                    <Text style={styles.choiceText}>{c}</Text>
+                  </TouchableOpacity>
+                </Animated.View>
+              );
+            })}
           </View>
 
-          <PrimaryButton
-            label="Next: Questions"
-            onPress={handleNext}
-          />
-        </ScrollView>
-      </KeyboardAvoidingView>
-    );
-  }
-
-  return (
-    <KeyboardAvoidingView
-      style={{ flex: 1 }}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-      keyboardVerticalOffset={insets.top + 50}
-    >
-      <ScrollView
-        style={{ flex: 1 }}
-        contentContainerStyle={[
-          styles.container,
-          { paddingBottom: insets.bottom + 140 },
-        ]}
-      >
-      {currentQuestion.clue && (
-        <View style={[styles.feedback, styles.clueBox]}>
-          <Text style={[styles.feedbackTitle, styles.clueTitle]}>💡 Hint</Text>
-          <Text style={styles.clueText}>{currentQuestion.clue}</Text>
-        </View>
-      )}
-        <View style={styles.questionBlock}>
-          <Text style={styles.prompt}>{currentQuestion.prompt}</Text>
-          {currentQuestion.choices.map((c, ci) => (
-            <TouchableOpacity
-              key={ci}
-              style={[
-                styles.choice,
-                showAnswer &&
-                  ci === currentQuestion.correctIndex &&
-                  styles.choiceCorrect,
-                showAnswer &&
-                  selected === ci &&
-                  ci !== currentQuestion.correctIndex &&
-                  styles.choiceWrong,
-              ]}
-              onPress={() => handleSelect(ci)}
-              disabled={showAnswer}
+          {showAnswer && (
+            <Animated.View
+              style={{ minHeight: 120 }}
+              entering={SlideInDown.duration(300).springify()}
             >
-              <Text style={styles.choiceText}>{c}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-
-        {showAnswer && (
-          <View style={{ minHeight: 120 }}>
-            <View
-              style={[
-                styles.feedback,
-                selected === currentQuestion.correctIndex
-                  ? styles.okBox
-                  : styles.badBox,
-              ]}
-            >
-              <Text
+              <Animated.View
+                entering={FadeIn.delay(100).duration(300)}
                 style={[
-                  styles.feedbackTitle,
+                  styles.feedback,
                   selected === currentQuestion.correctIndex
-                    ? styles.okText
-                    : styles.badText,
+                    ? styles.okBox
+                    : styles.badBox,
                 ]}
               >
-                {selected === currentQuestion.correctIndex
-                  ? "Correct! +10 points"
-                  : "Incorrect"}
-              </Text>
-
-              {selected !== currentQuestion.correctIndex && (
-                <Text style={styles.feedbackText}>
-                  Correct answer:{" "}
-                  {currentQuestion.choices[currentQuestion.correctIndex]}
+                <Text
+                  style={[
+                    styles.feedbackTitle,
+                    selected === currentQuestion.correctIndex
+                      ? styles.okText
+                      : styles.badText,
+                  ]}
+                >
+                  {selected === currentQuestion.correctIndex
+                    ? "Correct! +10 points"
+                    : "Incorrect"}
                 </Text>
-              )}
 
-              {currentQuestion.explanation && (
-                <Text style={styles.feedbackText}>
-                  {currentQuestion.explanation}
-                </Text>
-              )}
-            </View>
+                {selected !== currentQuestion.correctIndex && (
+                  <Text style={styles.feedbackText}>
+                    Correct answer:{" "}
+                    {currentQuestion.choices[currentQuestion.correctIndex]}
+                  </Text>
+                )}
 
-            <View style={{ marginTop: 20 }}>
-              <PrimaryButton
-                label={
-                  lastQuestionInGroup
-                    ? lastGroup
-                      ? "Finish Quiz"
-                      : "Next Story"
-                    : "Next Question"
-                }
-                onPress={handleNext}
-              />
-            </View>
-          </View>
-        )}
-      </ScrollView>
+                {currentQuestion.explanation && (
+                  <Text style={styles.feedbackText}>
+                    {currentQuestion.explanation}
+                  </Text>
+                )}
+              </Animated.View>
+
+              <View style={{ marginTop: 20 }}>
+                <TouchableOpacity
+                  style={styles.modernButton}
+                  onPress={handleNext}
+                  activeOpacity={0.85}
+                >
+                  <Text style={styles.modernButtonText}>
+                    {lastQuestionInGroup
+                      ? lastGroup
+                        ? "Finish Quiz"
+                        : "Next Story"
+                      : "Next Question"}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </Animated.View>
+          )}
+        </ScrollView>
+      </KeyboardAvoidingView>
 
       <ResultModal
         visible={showResult}
@@ -338,12 +528,12 @@ const handleSelect = (ci: number) => {
           <View style={styles.modalCard}>
             {badgeData && (
               <>
-                <Image source={badgeData.image} style={styles.modalImg} />
+                <Image source={badgeData.image} style={styles.modalImg} resizeMode="contain" />
                 <Text style={styles.modalTitle}>{badgeData.title}</Text>
                 {badgeData.subtitle && (
                   <Text style={styles.modalSub}>{badgeData.subtitle}</Text>
                 )}
-                <Text style={styles.modalHint}>Unlocked! 🎉</Text>
+                <Text style={styles.modalHint}>Unlocked! ��</Text>
                 <TouchableOpacity
                   onPress={handleBadgeContinue}
                   style={styles.modalBtn}
@@ -355,7 +545,7 @@ const handleSelect = (ci: number) => {
           </View>
         </Pressable>
       </Modal>
-    </KeyboardAvoidingView>
+    </View>
   );
 }
 
@@ -363,110 +553,453 @@ const styles = StyleSheet.create({
   container: {
     flexGrow: 1,
     padding: 16,
-    backgroundColor: "#fff",
+  },
+  // Modern game header
+  gameHeader: {
+    backgroundColor: '#fff',
+    paddingTop: 16,
+    paddingBottom: 12,
+    shadowColor: '#5E67CC',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  statsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    paddingHorizontal: 20,
+    marginBottom: 16,
+  },
+  scoreCard: {
+    alignItems: 'center',
+    backgroundColor: '#FFFBF0',
+    paddingVertical: 14,
+    paddingHorizontal: 26,
+    borderRadius: 20,
+    borderWidth: 3,
+    borderColor: '#FFD700',
+    minWidth: 130,
+    shadowColor: '#FFD700',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 6,
+    position: 'relative',
+  },
+  iconBadge: {
+    position: 'absolute',
+    top: -12,
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    width: 32,
+    height: 32,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  iconText: {
+    fontSize: 16,
+  },
+  scoreLabel: {
+    fontSize: 11,
+    color: '#B8860B',
+    fontWeight: '700',
+    marginBottom: 2,
+    marginTop: 12,
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+  },
+  scoreValueContainer: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+  },
+  scoreValue: {
+    fontSize: 36,
+    fontWeight: '900',
+    color: '#DAA520',
+    lineHeight: 40,
+    textShadowColor: 'rgba(218, 165, 32, 0.2)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 4,
+  },
+  scoreMaxText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#B8860B',
+    marginLeft: 4,
+  },
+  questionCard: {
+    alignItems: 'center',
+    backgroundColor: '#5E67CC',
+    paddingVertical: 14,
+    paddingHorizontal: 26,
+    borderRadius: 20,
+    minWidth: 130,
+    shadowColor: '#5E67CC',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.35,
+    shadowRadius: 10,
+    elevation: 8,
+    borderWidth: 3,
+    borderColor: '#7C84E8',
+    position: 'relative',
+  },
+  questionLabel: {
+    fontSize: 11,
+    color: '#E8E5FF',
+    fontWeight: '700',
+    marginBottom: 2,
+    marginTop: 12,
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+  },
+  questionValue: {
+    fontSize: 24,
+    fontWeight: '800',
+    color: '#fff',
+  },
+  currentQ: {
+    fontSize: 28,
+    fontWeight: '800',
+  },
+  totalQ: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#E8E5FF',
+  },
+  // Gamified progress bar
+  progressBarContainer: {
+    height: 12,
+    marginHorizontal: 20,
+    borderRadius: 20,
+    position: 'relative',
+    marginBottom: 8,
+  },
+  segmentsContainer: {
+    position: 'absolute',
+    width: '100%',
+    height: '100%',
+    flexDirection: 'row',
+    gap: 3,
+    paddingHorizontal: 1,
+  },
+  segment: {
+    height: '100%',
+    backgroundColor: '#E8E5FF',
+    borderRadius: 6,
+  },
+  progressBarFill: {
+    position: 'absolute',
+    height: '100%',
+    borderRadius: 20,
+    overflow: 'hidden',
+    backgroundColor: '#5E67CC',
+    shadowColor: '#5E67CC',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.4,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  shimmer: {
+    position: 'absolute',
+    width: '40%',
+    height: '100%',
+    left: 0,
+  },
+  shimmerGradient: {
+    width: '100%',
+    height: '100%',
+    backgroundColor: 'rgba(255, 255, 255, 0.25)',
+    borderRadius: 20,
+  },
+  milestonesContainer: {
+    position: 'absolute',
+    width: '100%',
+    height: '100%',
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'center',
+    paddingHorizontal: 4,
+  },
+  milestone: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: '#fff',
+    borderWidth: 3,
+    borderColor: '#E8E5FF',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  milestoneCompleted: {
+    borderColor: '#5E67CC',
+    backgroundColor: '#5E67CC',
+  },
+  milestoneActive: {
+    borderColor: '#7C84E8',
+    backgroundColor: '#fff',
+    borderWidth: 4,
+    shadowColor: '#5E67CC',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.6,
+    shadowRadius: 6,
+    elevation: 5,
+  },
+  milestoneCheck: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#fff',
   },
   passageCard: {
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
-    borderRadius: 12,
-    padding: 14,
-    marginBottom: 16,
-    backgroundColor: "#F9FAFB",
+    borderWidth: 0,
+    padding: 24,
+    borderRadius: 20,
+    marginBottom: 20,
+    backgroundColor: "#fff",
+    shadowColor: '#5E67CC',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 4,
   },
-  sectionTitle: { fontWeight: "700", marginBottom: 8, fontSize: 17 },
-  passageText: { fontSize: 16, lineHeight: 22, color: "#111827" },
-  questionBlock: { marginBottom: 16 },
-  prompt: {
-    fontSize: 17,
-    fontWeight: "600",
+  sectionTitle: {
+    fontWeight: "700",
     marginBottom: 12,
-    color: "#1F2937",
+    fontSize: 18,
+    color: '#2D2D3A',
+  },
+  passageText: {
+    fontSize: 16,
+    lineHeight: 24,
+    color: "#2D2D3A",
+  },
+  card: {
+    borderWidth: 0,
+    padding: 24,
+    borderRadius: 20,
+    backgroundColor: "#fff",
+    shadowColor: '#5E67CC',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 4,
+    marginBottom: 16,
+  },
+  prompt: {
+    textAlign: "center",
+    fontSize: 20,
+    marginBottom: 24,
+    fontWeight: "700",
+    color: '#2D2D3A',
+    lineHeight: 28,
   },
   choice: {
-    borderWidth: 1,
-    borderColor: "#D1D5DB",
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 10,
-    backgroundColor: "#fff",
+    flexDirection: "row",
+    alignItems: "center",
+    borderWidth: 2,
+    borderColor: "#E8E5FF",
+    borderRadius: 16,
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+    marginBottom: 12,
+    width: "100%",
+    backgroundColor: "#F8F7FF",
+    shadowColor: '#5E67CC',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
   },
-  choiceText: { fontSize: 15, color: "#111827" },
-  choiceCorrect: { backgroundColor: "#DCFCE7", borderColor: "#16A34A" },
-  choiceWrong: { backgroundColor: "#FEE2E2", borderColor: "#DC2626" },
-  feedback: { marginTop: 10, borderRadius: 12, padding: 14, borderWidth: 1 },
-  okBox: { backgroundColor: "#E9F8EE", borderColor: "#2EB872" },
-  badBox: { backgroundColor: "#FDECEC", borderColor: "#F26D6D" },
-  feedbackTitle: { fontWeight: "800", marginBottom: 6, textAlign: "center" },
+  choiceLabel: {
+    fontWeight: "800",
+    marginRight: 12,
+    color: "#5E67CC",
+    fontSize: 16,
+    backgroundColor: '#E8E5FF',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+    minWidth: 32,
+    textAlign: 'center',
+  },
+  choiceText: {
+    fontSize: 15,
+    flexShrink: 1,
+    color: '#2D2D3A',
+    fontWeight: '500',
+  },
+  correctChoice: {
+    backgroundColor: "#E7F9ED",
+    borderColor: "#2EB872",
+    borderWidth: 3,
+    shadowColor: '#2EB872',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  wrongChoice: {
+    backgroundColor: "#FFEBEE",
+    borderColor: "#F26D6D",
+    borderWidth: 3,
+    shadowColor: '#F26D6D',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  feedback: {
+    marginTop: 16,
+    borderRadius: 16,
+    padding: 18,
+    borderWidth: 0,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  okBox: {
+    backgroundColor: "#E7F9ED",
+  },
+  badBox: {
+    backgroundColor: "#FFEBEE",
+  },
+  feedbackTitle: {
+    fontWeight: "800",
+    marginBottom: 8,
+    textAlign: "center",
+    fontSize: 16,
+  },
   okText: { color: "#1F8F5F" },
   badText: { color: "#C43D3D" },
   feedbackText: {
-    color: "#0F1728",
+    color: "#2D2D3A",
     textAlign: "center",
-    marginTop: 4,
     fontSize: 14,
+    lineHeight: 20,
+    fontWeight: '500',
+    marginTop: 4,
   },
+  modernButton: {
+    backgroundColor: '#5E67CC',
+    borderWidth: 0,
+    borderRadius: 16,
+    paddingVertical: 18,
+    paddingHorizontal: 24,
+    shadowColor: '#5E67CC',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
+    elevation: 8,
+    width: '100%',
+    alignItems: 'center',
+  },
+  modernButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+  },
+  // Badge modal styles
   overlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0,0,0,0.45)",
+    backgroundColor: "rgba(46,45,70,0.85)",
     justifyContent: "center",
     alignItems: "center",
   },
   modalCard: {
     backgroundColor: "#fff",
-    borderRadius: 16,
-    padding: 20,
+    borderRadius: 24,
+    padding: 28,
     alignItems: "center",
-    width: "80%",
+    width: "85%",
+    shadowColor: '#5E67CC',
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.3,
+    shadowRadius: 20,
+    elevation: 10,
   },
-  modalImg: { width: 96, height: 96, marginBottom: 12, resizeMode: "contain" },
+  modalImg: {
+    width: 120,
+    height: 120,
+    marginBottom: 16,
+  },
   modalTitle: {
-    fontSize: 18,
-    fontWeight: "700",
+    fontSize: 22,
+    fontWeight: "800",
     textAlign: "center",
-    marginBottom: 6,
+    marginBottom: 8,
+    color: '#2D2D3A',
   },
-  modalSub: { fontSize: 14, textAlign: "center", marginBottom: 8, color: "#555" },
-  modalHint: { fontSize: 14, color: "#111", marginBottom: 12 },
+  modalSub: {
+    fontSize: 15,
+    textAlign: "center",
+    marginBottom: 12,
+    color: "#666",
+    fontWeight: '500',
+  },
+  modalHint: {
+    fontSize: 16,
+    color: "#5E67CC",
+    marginBottom: 20,
+    fontWeight: '700',
+  },
   modalBtn: {
-    backgroundColor: "#6B6EF9",
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 10,
-    marginTop: 10,
+    backgroundColor: "#5E67CC",
+    paddingHorizontal: 32,
+    paddingVertical: 14,
+    borderRadius: 12,
+    shadowColor: '#5E67CC',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
   },
   modalBtnText: {
     color: "#fff",
-    fontWeight: "700",
-    fontSize: 16,
-    textAlign: "center",
+    fontWeight: "800",
+    fontSize: 15,
+    letterSpacing: 0.5,
   },
   clueBox: {
-  backgroundColor: "#F4F6FF",  
-  borderColor: "#5E67CC",     
-  borderWidth: 1,
-  marginBottom: 12,
-  padding: 12,
-  borderRadius: 12,
-  shadowColor: "#000",
-  shadowOffset: { width: 0, height: 4 },
-  shadowOpacity: 0.04,
-  shadowRadius: 6,
-  elevation: 1,
-},
-
-clueTitle: {
-  color: "#5E67CC",         
-  fontSize: 14,
-  fontWeight: "700",
-  marginBottom: 6,
-  textAlign: "left",
-},
-
-clueText: {
-  color: "#0F1728",  
-  fontSize: 14,
-  lineHeight: 20,
-  textAlign: "left",
-},
-
+    backgroundColor: "#F8F7FF",
+    borderLeftWidth: 4,
+    borderLeftColor: "#5E67CC",
+    borderRadius: 12,
+    marginBottom: 16,
+    padding: 16,
+    shadowColor: '#5E67CC',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  clueHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  clueIcon: {
+    fontSize: 20,
+    marginRight: 8,
+  },
+  clueTitle: {
+    color: "#5E67CC",
+    fontSize: 15,
+    fontWeight: "700",
+  },
+  clueText: {
+    color: "#2D2D3A",
+    fontSize: 14,
+    lineHeight: 22,
+    fontWeight: '500',
+  },
 });
