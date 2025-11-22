@@ -25,6 +25,6 @@ export type RootStackParamList = {
   ReadingComprehension: undefined;
 
   FilipinoToEnglish: undefined;
-
+  LoadingGeneration: undefined;
   SentenceConstruction: undefined;
 };

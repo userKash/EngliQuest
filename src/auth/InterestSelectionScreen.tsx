@@ -94,96 +94,95 @@ export default function InterestSelectionScreen() {
     });
   };
 
-  const handleCreateAccount = async () => {
-    if (selected.length !== 3) {
-      showModal("Selection Required", "Please select exactly 3 interests to continue.", "info");
+const handleCreateAccount = async () => {
+  if (selected.length !== 3) {
+    showModal("Selection Required", "Please select exactly 3 interests to continue.", "info");
+    return;
+  }
+
+  try {
+    setLoading(true);
+
+    const { auth, db } = await initFirebase();
+    const user = auth.currentUser;
+
+    if (!user) {
+      showModal("Error", "No authenticated user found. Please try logging in again.", "error");
+      setLoading(false);
       return;
     }
 
-    try {
-      setLoading(true);
+    const uid = user.uid;
+    if (db.collection) {
+      const firestore = db;
+      const { serverTimestamp } = firestore.constructor;
 
-      const { auth, db } = await initFirebase();
-      const user = auth.currentUser;
-      
-      if (!user) {
-        showModal("Error", "No authenticated user found. Please try logging in again.", "error");
-        setLoading(false);
-        return;
-      }
-
-      const uid = user.uid;
-
-      // Save user profile
-      if (db.collection) {
-        const firestore = db;
-        const { serverTimestamp } = firestore.constructor;
-        await firestore.collection("users").doc(uid).set(
-          {
-            name: fullName,
-            email,
-            interests: selected,
-            createdAt: serverTimestamp?.() ?? new Date(),
-          },
-          { merge: true }
-        );
-
-        // Save quiz generation request
-        await firestore.collection("quizzes").doc(uid).set({
-          userId: uid,
+      await firestore.collection("users").doc(uid).set(
+        {
+          name: fullName,
+          email,
           interests: selected,
-          status: "pending",
           createdAt: serverTimestamp?.() ?? new Date(),
-          updatedAt: serverTimestamp?.() ?? new Date(),
-        });
-      } else {
-        const { doc, setDoc, serverTimestamp } = await import("firebase/firestore");
-        
-        await setDoc(
-          doc(db, "users", uid),
-          {
-            name: fullName,
-            email,
-            interests: selected,
-            createdAt: serverTimestamp(),
-          },
-          { merge: true }
-        );
+        },
+        { merge: true }
+      );
 
-        // Save quiz generation request
-        await setDoc(doc(db, "quizzes", uid), {
-          userId: uid,
+      await firestore.collection("quizzes").doc(uid).set({
+        userId: uid,
+        interests: selected,
+        status: "pending",
+        createdAt: serverTimestamp?.() ?? new Date(),
+        updatedAt: serverTimestamp?.() ?? new Date(),
+      });
+
+    } else {
+      const { doc, setDoc, serverTimestamp } = await import("firebase/firestore");
+
+      await setDoc(
+        doc(db, "users", uid),
+        {
+          name: fullName,
+          email,
           interests: selected,
-          status: "pending",
           createdAt: serverTimestamp(),
-          updatedAt: serverTimestamp(),
-        });
-      }
-
-      setLoading(false);
-      setGenerationStatus("pending");
-      
-      showModal(
-        "Account Created!",
-        "Your personalized learning content is being generated. Feel free to close the app and return later!",
-        "success"
+        },
+        { merge: true }
       );
-
-      // Don't navigate yet - let user see the pending status
-      setTimeout(() => {
-        setModalVisible(false);
-      }, 3000);
-
-    } catch (err: any) {
-      console.error("Account creation error:", err);
-      setLoading(false);
-      showModal(
-        "Error", 
-        err.message || "Something went wrong while creating your account. Please try again.",
-        "error"
-      );
+      await setDoc(doc(db, "quizzes", uid), {
+        userId: uid,
+        interests: selected,
+        status: "pending",
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      });
     }
-  };
+
+    setLoading(false);
+    setGenerationStatus("pending");
+    showModal(
+      "Account Created!",
+      "Your personalized learning content is being generated. Feel free to close the app and return later!",
+      "success"
+    );
+
+    setTimeout(() => {
+      setModalVisible(false);
+
+      navigation.navigate("LoadingGeneration"); 
+
+    }, 1500); 
+
+  } catch (err: any) {
+    console.error("Account creation error:", err);
+    setLoading(false);
+    showModal(
+      "Error",
+      err.message || "Something went wrong while creating your account. Please try again.",
+      "error"
+    );
+  }
+};
+
 
   const handleProceed = () => {
     if (generationStatus === "completed") {

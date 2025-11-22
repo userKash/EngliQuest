@@ -32,6 +32,7 @@ import FilipinoToEnglishScreen from './src/screens/topics/FilipinoToEnglish/Fili
 import FilipinoToEnglishGameScreen from './src/screens/topics/FilipinoToEnglish/FilipinoToEnglishGameScreen';
 import SentenceConstructionScreen from './src/screens/topics/SentenceConstruction/SentenceConstructionScreen';
 import SentenceConstructionGameScreen from './src/screens/topics/SentenceConstruction/SentenceConstructionGameScreen';
+import LoadingGenerationScreen from '~/components/LoadingGenerationScreen';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -160,14 +161,13 @@ export default function App() {
               }}
             />
             <Stack.Screen name="SentenceConstructionGame" component={SentenceConstructionGameScreen} />
-
+            <Stack.Screen name="LoadingGeneration"component={LoadingGenerationScreen} options={{ headerShown: false }}/>
             {/* MAIN APP GROUP */}
             <Stack.Group screenOptions={{ animation: "fade_from_bottom", headerShown: false }}>
               <Stack.Screen name="Home" component={HomeScreen} />
               <Stack.Screen name="Progress" component={ProgressScreen} />
               <Stack.Screen name="Profile" component={ProfileScreen} />
             </Stack.Group>
-
           </Stack.Navigator>
 
           {/* BOTTOM NAV ALWAYS SAFE */}
@@ -177,7 +177,8 @@ export default function App() {
             "ReadingGame",
             "FilipinoToEnglishGame",
             "SentenceConstructionGame",
-            "CloudLoading", // ✅ Added here to hide BottomNav during loading
+            "CloudLoading",
+            "LoadingGeneration",
           ].includes(currentRoute ?? "") && (
             <BottomNav
               currentRoute={currentRoute}
