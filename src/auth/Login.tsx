@@ -19,9 +19,11 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 
 import { auth, configureGoogleSignin, initFirebase } from "../../firebaseConfig";
 import Constants from "expo-constants";
-import * as GoogleAuthSession from "expo-auth-session/providers/google";
 import * as WebBrowser from "expo-web-browser";
 import ErrorModal from "../components/ErrorModal";
+import firestore from "@react-native-firebase/firestore";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -46,108 +48,48 @@ export default function LoginScreen() {
   const [errorVisible, setErrorVisible] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
 
-
-  // const [request, response, promptAsync] =
-  //   GoogleAuthSession.useIdTokenAuthRequest({
-  //     webClientId:
-  //       "1072058760841-l2dfoc318glg28rlrubevsl0447alikd.apps.googleusercontent.com",
-  //     androidClientId:
-  //       "1072058760841-m1etg934ctag3g9b3b5616tvadmbbp5t.apps.googleusercontent.com",
-  //     iosClientId:
-  //       "1072058760841-npc57ujq8omfm079qiomb2ls0ljmq7rn.apps.googleusercontent.com",
-  //   });
-
-  // useEffect(() => {
-  //   if (isExpoGo && response?.type === "success") {
-  //     const { id_token } = response.params;
-  //     if (!id_token) {
-  //       setErrorMessage("Google Sign-In Failed: No ID token received.");
-  //       setErrorVisible(true);
-  //       return;
-  //     }
-
-  //     (async () => {
-  //       const { auth } = await initFirebase();
-  //       const { GoogleAuthProvider, signInWithCredential } = await import(
-  //         "firebase/auth"
-  //       );
-
-  //       const credential = GoogleAuthProvider.credential(id_token);
-  //       signInWithCredential(auth, credential)
-  //         .then((userCredential) => {
-  //           console.log("Google Sign-In (Expo Go):", userCredential.user);
-  //           navigation.navigate("WordOfTheDay");
-  //         })
-  //         .catch((error) => {
-  //           console.error("Firebase Google Sign-In Error:", error);
-  //           setErrorMessage(getFirebaseErrorMessage(error));
-  //           setErrorVisible(true);
-  //         });
-  //     })();
-  //   }
-  // }, [response]);
-
-  // const handleNativeGoogleLogin = async () => {
-  //   try {
-  //     await initFirebase();
-  //     await configureGoogleSignin();
-
-  //     await GoogleSignin.hasPlayServices({
-  //       showPlayServicesUpdateDialog: true,
-  //     });
-  //     const { idToken } = await GoogleSignin.signIn();
-
-  //     if (!idToken)
-  //       throw new Error(
-  //         "No ID token returned. Check Firebase SHA-1/256 config."
-  //       );
-
-  //     const { GoogleAuthProvider, signInWithCredential } = await import(
-  //       "firebase/auth"
-  //     );
-  //     const credential = GoogleAuthProvider.credential(idToken);
-  //     const userCredential = await signInWithCredential(auth, credential);
-
-  //     console.log("Google Sign-In (Native):", userCredential.user);
-  //     navigation.navigate("WordOfTheDay");
-  //   } catch (error: any) {
-  //     console.error("Native Google Sign-In Error:", error);
-  //     setErrorMessage(getFirebaseErrorMessage(error));
-  //     setErrorVisible(true);
-  //   }
-  // };
-
 const handleLogin = async () => {
   if (!email || !password) {
     setErrorMessage("Please enter both email and password.");
     setErrorVisible(true);
     return;
   }
+
   try {
     const { auth } = await initFirebase();
+    let userCredential;
+
     if (isExpoGo) {
       const { signInWithEmailAndPassword } = await import("firebase/auth");
-      const userCredential = await signInWithEmailAndPassword(
-        auth,
-        email,
-        password
-      );
-      console.log("Email login (Web):", userCredential.user);
+      userCredential = await signInWithEmailAndPassword(auth, email, password);
     } else {
-      const userCredential = await auth.signInWithEmailAndPassword(
-        email,
-        password
-      );
-      console.log("Email login (Native):", userCredential.user);
+      userCredential = await auth.signInWithEmailAndPassword(email, password);
     }
-    navigation.replace("CloudLoading");
+
+    const user = userCredential.user;
+
+    const approvedSnapshot = await firestore()
+      .collection("quizzes")
+      .where("userId", "==", user.uid)
+      .where("status", "==", "approved")
+      .get();
+
+    const approvedCount = approvedSnapshot.size;
+
+    if (approvedCount >= 30) {
+      await AsyncStorage.setItem("GENERATION_STATUS", "completed");
+      navigation.replace("CloudLoading");
+    } else {
+      await AsyncStorage.setItem("GENERATION_STATUS", "generating");
+      navigation.replace("LoadingGeneration");
+    }
 
   } catch (error: any) {
-    console.error("Email/Password login error:", error);
     setErrorMessage(getFirebaseErrorMessage(error));
     setErrorVisible(true);
   }
 };
+
 
 
   return (
