@@ -16,6 +16,7 @@ import {
   Platform,
 } from "react-native";
 import LottieView from "lottie-react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const { width, height } = Dimensions.get("window");
 const CLOUD = require("../../assets/clouds/Cloud-1.png");
@@ -63,14 +64,16 @@ export default function GeneratingContentLoader() {
       .collection("quizzes")
       .where("userId", "==", user.uid)
       .where("status", "==", "approved")
-      .onSnapshot((snapshot) => {
+      .onSnapshot(async (snapshot) => {
         const approvedCount = snapshot.size;
 
         console.log("APPROVED QUIZ COUNT:", approvedCount);
 
         if (approvedCount >= 30) {
+        await AsyncStorage.setItem("GENERATION_STATUS", "completed");
         navigation.navigate("CloudLoading");
         }
+
       });
 
     return () => unsubscribe();

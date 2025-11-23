@@ -15,13 +15,10 @@ import ProfileScreen from './src/screens/ProfileScreen';
 import RegistrationForm from './src/auth/Registration';
 import InterestSelectionScreen from './src/auth/InterestSelectionScreen';
 
-// ⭐ GLOBAL MUSIC
 import { MusicProvider } from "./src/context/MusicContext";
 
-// ⭐ CLOUD LOADING
 import CloudLoadingScreen from './src/components/CloudLoadingScreen';
 
-// Topic Screens
 import VocabularyBuilderScreen from './src/screens/topics/VocabularyBuilder/VocabularyBuilderScreen';
 import VocabularyGameScreen from './src/screens/topics/VocabularyBuilder/VocabularyGameScreen';
 import GrammarPracticeScreen from './src/screens/topics/GrammarPractice/GrammarPracticeScreen';
@@ -32,7 +29,12 @@ import FilipinoToEnglishScreen from './src/screens/topics/FilipinoToEnglish/Fili
 import FilipinoToEnglishGameScreen from './src/screens/topics/FilipinoToEnglish/FilipinoToEnglishGameScreen';
 import SentenceConstructionScreen from './src/screens/topics/SentenceConstruction/SentenceConstructionScreen';
 import SentenceConstructionGameScreen from './src/screens/topics/SentenceConstruction/SentenceConstructionGameScreen';
+
 import LoadingGenerationScreen from '~/components/LoadingGenerationScreen';
+
+import auth from "@react-native-firebase/auth";
+import firestore from "@react-native-firebase/firestore";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -47,13 +49,74 @@ export default function App() {
 
   const navRef = useNavigationContainerRef();
   const [currentRoute, setCurrentRoute] = useState<string | undefined>(undefined);
+  const [initialRoute, setInitialRoute] =
+    useState<keyof RootStackParamList>("Login");
+
+useEffect(() => {
+  const init = async () => {
+    const user = auth().currentUser;
+
+    // User NOT logged in → go to Login
+    if (!user) {
+      setInitialRoute("Login");
+      return;
+    }
+
+    const uid = user.uid;
+
+    // 1) LOCAL PERSISTENCE — if app was closed during generation
+    const localGeneration = await AsyncStorage.getItem("GENERATION_STATUS");
+
+    if (localGeneration === "pending") {
+      setInitialRoute("LoadingGeneration");
+      return;
+    }
+
+    if (localGeneration === "completed") {
+      setInitialRoute("Home");
+      return;
+    }
+
+    // 2) CHECK FIRESTORE QUIZZES — server truth
+    const quizDoc = await firestore()
+      .collection("quizzes")
+      .doc(uid)
+      .get();
+
+    if (quizDoc.exists()) {
+      const data = quizDoc.data();
+
+      // If backend still generating content
+      if (data?.status === "pending") {
+        await AsyncStorage.setItem("GENERATION_STATUS", "pending");
+        setInitialRoute("LoadingGeneration");
+        return;
+      }
+
+      // If backend finished generating
+      if (data?.status === "completed" || data?.status === "approved") {
+        await AsyncStorage.setItem("GENERATION_STATUS", "completed");
+        setInitialRoute("Home");
+        return;
+      }
+    }
+
+    // 3) If no quiz doc: user still onboarding → Interest Selection
+    setInitialRoute("InterestSelection");
+  };
+
+  init();
+}, []);
+
 
   // Default font globally
   (Text as any).defaultProps = (Text as any).defaultProps || {};
   (Text as any).defaultProps.style = { fontFamily: 'PoppinsRegular' };
 
   useEffect(() => {
-    if (fontsLoaded) SplashScreen.hideAsync();
+    if (fontsLoaded) {
+      SplashScreen.hideAsync(); // ✅ FIXED: MUST CALL THE FUNCTION
+    }
   }, [fontsLoaded]);
 
   if (!fontsLoaded) {
@@ -70,6 +133,7 @@ export default function App() {
         <View style={{ flex: 1 }}>
 
           <Stack.Navigator
+            initialRouteName={initialRoute}
             screenOptions={{
               headerBackTitle: '',
               headerTitleAlign: 'center',
@@ -86,87 +150,32 @@ export default function App() {
             {/* CLOUD LOADING SCREEN */}
             <Stack.Screen name="CloudLoading" component={CloudLoadingScreen} options={{ headerShown: false }} />
 
+            {/* CONTENT GENERATION LOADING */}
+            <Stack.Screen name="LoadingGeneration" component={LoadingGenerationScreen} options={{ headerShown: false }} />
+
             {/* TOPIC SELECT SCREENS */}
-            <Stack.Screen
-              name="VocabularyBuilder"
-              component={VocabularyBuilderScreen}
-              options={{
-                headerTitle: () => (
-                  <View>
-                    <Text style={{ fontSize: 16, fontWeight: "bold" }}>Vocabulary Builder</Text>
-                    <Text style={{ fontSize: 14, color: "#555" }}>Choose your difficulty level</Text>
-                  </View>
-                ),
-              }}
-            />
+            <Stack.Screen name="VocabularyBuilder" component={VocabularyBuilderScreen} />
             <Stack.Screen name="VocabularyGame" component={VocabularyGameScreen} />
-
-            <Stack.Screen
-              name="GrammarPractice"
-              component={GrammarPracticeScreen}
-              options={{
-                headerTitle: () => (
-                  <View>
-                    <Text style={{ fontSize: 16, fontWeight: "bold" }}>Grammar Practice</Text>
-                    <Text style={{ fontSize: 14, color: "#555" }}>Choose your difficulty level</Text>
-                  </View>
-                ),
-              }}
-            />
+            <Stack.Screen name="GrammarPractice" component={GrammarPracticeScreen} />
             <Stack.Screen name="GrammarGame" component={GrammarGameScreen} />
-
-            <Stack.Screen
-              name="ReadingComprehension"
-              component={ReadingComprehensionScreen}
-              options={{
-                headerTitle: () => (
-                  <View>
-                    <Text style={{ fontSize: 16, fontWeight: "bold" }}>Reading Comprehension</Text>
-                    <Text style={{ fontSize: 14, color: "#555" }}>Choose your difficulty level</Text>
-                  </View>
-                ),
-              }}
-            />
+            <Stack.Screen name="ReadingComprehension" component={ReadingComprehensionScreen} />
             <Stack.Screen name="ReadingGame" component={ReadingGameScreen} />
-
-            <Stack.Screen
-              name="FilipinoToEnglish"
-              component={FilipinoToEnglishScreen}
-              options={{
-                headerTitle: () => (
-                  <View>
-                    <Text style={{ fontSize: 16, fontWeight: "bold" }}>Filipino to English</Text>
-                    <Text style={{ fontSize: 14, color: "#555" }}>Choose your difficulty level</Text>
-                  </View>
-                ),
-              }}
-            />
+            <Stack.Screen name="FilipinoToEnglish" component={FilipinoToEnglishScreen} />
             <Stack.Screen name="FilipinoToEnglishGame" component={FilipinoToEnglishGameScreen} />
-
-            <Stack.Screen
-              name="SentenceConstruction"
-              component={SentenceConstructionScreen}
-              options={{
-                headerTitle: () => (
-                  <View>
-                    <Text style={{ fontSize: 16, fontWeight: "bold" }}>Sentence Construction</Text>
-                    <Text style={{ fontSize: 14, color: "#555" }}>Choose your difficulty level</Text>
-                  </View>
-                ),
-              }}
-            />
+            <Stack.Screen name="SentenceConstruction" component={SentenceConstructionScreen} />
             <Stack.Screen name="SentenceConstructionGame" component={SentenceConstructionGameScreen} />
-            <Stack.Screen name="LoadingGeneration"component={LoadingGenerationScreen} options={{ headerShown: false }}/>
+
             {/* MAIN APP GROUP */}
             <Stack.Group screenOptions={{ animation: "fade_from_bottom", headerShown: false }}>
               <Stack.Screen name="Home" component={HomeScreen} />
               <Stack.Screen name="Progress" component={ProgressScreen} />
               <Stack.Screen name="Profile" component={ProfileScreen} />
             </Stack.Group>
+
           </Stack.Navigator>
 
-          {/* BOTTOM NAV ALWAYS SAFE */}
-          {![
+          {/* Bottom Navigation */}
+          {![ 
             "VocabularyGame",
             "GrammarGame",
             "ReadingGame",

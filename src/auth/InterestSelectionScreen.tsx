@@ -13,6 +13,8 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../navigation/type";
 import type { RouteProp } from "@react-navigation/native";
 import { initFirebase } from "../../firebaseConfig";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+
 
 export default function InterestSelectionScreen() {
   const [selected, setSelected] = useState<string[]>([]);
@@ -126,6 +128,8 @@ const handleCreateAccount = async () => {
         },
         { merge: true }
       );
+    await AsyncStorage.setItem("GENERATION_STATUS", "pending");
+    await AsyncStorage.setItem("ONBOARDING_COMPLETED", "true");
 
       await firestore.collection("quizzes").doc(uid).set({
         userId: uid,
