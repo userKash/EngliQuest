@@ -103,7 +103,7 @@ export default function CloudLoadingScreen({ navigation }: any) {
         }),
       ]).start(() => {
         setShouldPlay(true);
-        navigation.replace("Home");
+        navigation.replace("WordOfTheDay");
       });
     }, 3600);
 

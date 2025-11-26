@@ -1,345 +1,38 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
-// import db from "./node_scripts/firebase-admin.js";
 import { initFirebase } from "./firebaseConfig";
-import AsyncStorage from '@react-native-async-storage/async-storage';
-
-const GEMINI_API_KEY = "AIzaSyDQc11ZcStQfUn6D-wSiZQNR6j7lwYRTW8"
-const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-
-export interface Question {
-    passage?: string;
-    question: string;
-    options: string[];
-    correctIndex: number;
-    explanation: string;
-}
-
-export interface Quiz {
-    userId: string;
-    gameMode: string;
-    difficulty: string;
-    questions: Question[];
-}
-
-type CEFRLevel = "A1" | "A2" | "B1" | "B2" | "C1" | "C2";
-
-function cleanJSONResponse(raw: string): string {
-    return raw.replace(/```(?:json)?\s*([\s\S]*?)\s*```/g, "$1").trim();
-}
-
-function capitalizeFirstLetter(text: string): string {
-    return text ? text.charAt(0).toUpperCase() + text.slice(1) : text;
-}
-
-function validateAndFormatQuestions(raw: string): Question[] {
-    const cleaned = cleanJSONResponse(raw);
-    let questions: Question[] = JSON.parse(cleaned);
-
-    if (
-        !Array.isArray(questions) ||
-        !questions.every(
-            q =>
-                typeof q.question === "string" &&
-                Array.isArray(q.options) &&
-                q.options.length === 4 &&
-                typeof q.correctIndex === "number" &&
-                typeof q.explanation === "string"
-        )
-    ) {
-        throw new Error("Invalid question format from Gemini API");
-    }
-
-    return questions.map(q => ({
-        ...q,
-        question: capitalizeFirstLetter(q.question),
-        options: q.options.map(opt => capitalizeFirstLetter(opt)),
-        explanation: capitalizeFirstLetter(q.explanation),
-    }));
-}
-
-function getLevelDescription(level: CEFRLevel): string {
-    switch (level) {
-        case "A1": return "Beginner (Elementary English learners)";
-        case "A2": return "Elementary (Pre-intermediate English learners)";
-        case "B1": return "Threshold (Intermediate English learners)";
-        case "B2": return "Vantage (Upper-intermediate English learners)";
-        case "C1": return "Effective Operational Proficiency (Advanced English learners)";
-        case "C2": return "Mastery (Proficient English users)";
-    }
-}
-
-function getLevelGuidelines(level: CEFRLevel): string {
-    switch (level) {
-        case "A1": return "simple grammar, everyday words, short explanations";
-        case "A2": return "slightly more complex grammar, basic connectors, everyday contexts";
-        case "B1": return "intermediate grammar, common idioms, workplace/school contexts, more detail in explanations";
-        case "B2": return "upper-intermediate grammar, academic/workplace vocabulary, longer explanations with nuance";
-        case "C1": return "advanced grammar, complex idioms, academic and professional vocabulary, nuanced explanations";
-        case "C2": return "near-native proficiency, highly precise vocabulary, academic/technical contexts, very detailed explanations";
-    }
-}
-
-function vocabularyPrompt(
-    level: CEFRLevel,
-    interests: string[],
-    gameMode: string,
-    difficulty: string
-): string {
-    return `
-        You are a quiz creator for EngliQuest, a mobile English learning app.
-
-        Generate a quiz set of 15 multiple-choice questions in JSON format.
-
-        Details:
-        - Target Level: ${level} (${getLevelDescription(level)})
-        - Game Mode: ${gameMode}
-        - Difficulty: ${difficulty}
-        - Interests: ${interests.join(", ")}
-
-        Vocabulary Focus:
-        - Vocabulary refers to a learner’s understanding and correct use of words.
-        - Questions must test vocabulary in context, where learners choose the correct word to complete a sentence.
-        - Use context clues (e.g., contrast, definition, or example clues) to guide learners.
-        - All sentences and words should be appropriate for ${level} level learners: ${getLevelGuidelines(level)}.
-
-        Rules:
-        1. Each question must be directly connected to the user’s interests listed above.
-        2. Each question must present a short sentence with one missing word, requiring the learner to select the correct word.
-        3. Provide exactly 4 answer options per question.
-        4. For each question, set "correctIndex" to the 0-based index of the correct option.
-        5. Include a short and simple explanation that shows why the correct option fits the context.
-        6. Return only valid JSON, no extra text or formatting.
-
-        Example JSON:
-        [
-            {
-                "question": "She was tired, ___ she went to bed early.",
-                "options": ["but", "so", "because", "and"],
-                "correctIndex": 1,
-                "explanation": "The word 'so' shows the result of being tired."
-            }
-        ]
-    `;
-}
-
-function grammarPrompt(
-    level: CEFRLevel,
-    interests: string[],
-    gameMode: string,
-    difficulty: string
-): string {
-    return `
-        You are a grammar quiz creator for EngliQuest, a mobile English learning app.
-
-        Generate a quiz set of 15 multiple-choice questions in JSON format.
-
-        Details:
-        - Target Level: ${level} (${getLevelDescription(level)})
-        - Focus: Grammar
-        - Difficulty: ${difficulty}
-        - Interests: ${interests.join(", ")}
-
-        Grammar Focus:
-        - Grammar is the way words are put together to make correct sentences.
-        - Activities: Fill-in-the-blank and Error Spotting.
-        - Target common grammar issues like subject-verb agreement, tense usage, and misuse/omission of verbs.
-        - Learners should practice identifying and correcting errors.
-
-        Rules:
-        1. Each question must be either:
-            - A sentence with a blank (fill-in-the-blank), or
-            - A sentence with a grammar error (error spotting).
-        2. Provide exactly 4 answer options per question.
-        3. For each question, set "correctIndex" to the 0-based index of the correct option.
-        4. Include a short and simple explanation showing why the correct answer is correct and, if applicable, what the error was.
-        5. Each question must still tie back to the learner’s interests when possible.
-        6. Return only valid JSON, no extra text or formatting.
-
-        Example JSON:
-        [
-            {
-                "question": "He ___ to the market yesterday.",
-                "options": ["go", "goes", "went", "gone"],
-                "correctIndex": 2,
-                "explanation": "The past tense of 'go' is 'went'."
-            },
-            {
-                "question": "She don't like apples.",
-                "options": ["Correct as is", "She doesn't likes apples", "She doesn't like apples", "She not like apples"],
-                "correctIndex": 2,
-                "explanation": "The correct form is 'She doesn't like apples'."
-            }
-        ]
-    `;
-}
-
-function translationPrompt(
-    level: CEFRLevel,
-    interests: string[],
-    gameMode: string,
-    difficulty: string  
-): string {
-    return `
-    You are a translation quiz creator for EngliQuest, a mobile English learning app.
-
-    Generate a quiz set of 15 multiple-choice questions in JSON format.
-
-    Details:
-    - Target Level: ${level} (${getLevelDescription(level)})
-    - Focus: Translation (Filipino → English)
-    - Difficulty: ${difficulty}
-    - Interests: ${interests.join(", ")}
-
-    Translation Focus:
-    - Learners must translate **Filipino words or short phrases into English**.
-    - Activities: Word or short-phrase translation (input-based recall).
-    - Encourage bilingual development by reinforcing both Filipino and English.
-    - Questions should still connect to the learner’s interests when possible.
-
-    Rules:
-    1. Each question must provide a Filipino word or phrase, and the learner chooses the correct English equivalent.
-    2. Provide exactly 4 answer options per question.
-    3. For each question, set "correctIndex" to the 0-based index of the correct option.
-    4. Include a short explanation that shows why the correct English translation is correct.
-    5. Keep translations age-appropriate and aligned with everyday vocabulary.
-
-    Example JSON:
-    [
-        {
-        "question": "Translate to English: 'Aso'",
-        "options": ["Cat", "Dog", "Bird", "Fish"],
-        "correctIndex": 1,
-        "explanation": "'Aso' means 'Dog' in English."
-        },
-        {
-        "question": "Translate to English: 'Maganda'",
-        "options": ["Ugly", "Beautiful", "Small", "Big"],
-        "correctIndex": 1,
-        "explanation": "'Maganda' means 'Beautiful' in English."
-        }
-    ]
-    `;
-}
-
-function sentenceConstructionPrompt(
-  level: CEFRLevel,
-  interests: string[],
-  gameMode: string,
-  difficulty: string
-): string {
-  return `
-    You are a quiz creator for EngliQuest, a mobile English learning app.
-
-    Generate a quiz set of 15 multiple-choice questions in **strict JSON format only**.
-    Do not include explanations, notes, markdown, or code fences outside of JSON.
-
-    Details:
-    - Target Level: ${level} (${getLevelDescription(level)})
-    - Game Mode: ${gameMode}
-    - Difficulty: ${difficulty}
-    - Interests: ${interests.join(", ")}
-
-    Sentence Construction Focus:
-    - A sentence is a grammatically complete string of words expressing a complete thought.
-    - Learners often struggle with verb tenses, capitalization, and punctuation errors.
-    - Sentence Construction mode presents jumbled words that learners must rearrange into grammatically correct sentences.
-    - This helps learners improve syntax, word order, and logical flow of English grammar.
-
-    Rules:
-    1. Each question must provide a string like: "Rearrange the words: ['word1', 'word2', ...]".
-    2. Provide exactly 4 answer options: each option should be a possible sentence arrangement.
-    3. Only one option should be grammatically correct.
-    4. Set "correctIndex" to the 0-based index of the correct option.
-    5. Add a short and simple "explanation" showing why the correct arrangement is correct.
-    6. Each question must tie back to the learner’s interests when possible.
-    7. Return valid JSON only. No trailing commas, no escape characters, no markdown.
-
-    Example JSON:
-    [
-      {
-        "question": "Rearrange the words: ['the', 'dog', 'brown', 'big', 'ran']",
-        "options": [
-          "The dog brown big ran.",
-          "Big brown the dog ran.",
-          "The big brown dog ran.",
-          "Dog ran the big brown."
-        ],
-        "correctIndex": 2,
-        "explanation": "The correct sentence is 'The big brown dog ran.' because adjectives should precede the noun in proper order."
-      }
-    ]
-  `;
-}
-
-function readingComprehensionPrompt(
-  level: CEFRLevel,
-  interests: string[],
-  gameMode: string,
-  difficulty: string
-): string {
-  return `
-    You are a quiz creator for EngliQuest, a mobile English learning app.
-
-    Generate a quiz set of 15 reading comprehension questions in **strict JSON format only**.
-    Do not include explanations, notes, markdown, or code fences outside of JSON.
-
-    Details:
-    - Target Level: ${level} (${getLevelDescription(level)})
-    - Game Mode: ${gameMode}
-    - Difficulty: ${difficulty}
-    - Interests: ${interests.join(", ")}
-
-    Reading Comprehension Focus:
-    - Learners will read short passages tailored to their interests.
-    - Passages must be simple, age-appropriate, and engaging for ${level} level: ${getLevelGuidelines(level)}.
-    - Each passage should be 2–4 sentences long.
-    - Questions should check understanding of main idea, details, inference, and "what happens next".
-
-    Rules:
-    1. Each item must contain:
-       - "passage": a short story or text (2–4 sentences).
-       - "question": a comprehension question about the passage.
-       - "options": exactly 4 answer choices (multiple-choice only).
-       - "correctIndex": the 0-based index of the correct option.
-       - "explanation": a short reason why the correct answer is correct.
-    2. Questions must tie back to the learner’s interests when possible.
-    3. Return valid JSON only. No trailing commas, no escape characters, no markdown.
-
-    Example JSON:
-    [
-      {
-        "passage": "Anna loves basketball. She practices every afternoon after school.",
-        "question": "What does Anna do after school?",
-        "options": ["She studies math", "She plays basketball", "She goes shopping", "She cooks dinner"],
-        "correctIndex": 1,
-        "explanation": "The passage says Anna practices basketball after school."
-      }
-    ]
-  `;
-}
 
 export type WordData = {
   word: string;
   definition: string;
 };
 
+const GEMINI_API_KEY = process.env.EXPO_PUBLIC_GEMINI_API_KEY;
+
+if (!GEMINI_API_KEY) {
+  throw new Error("Missing EXPO_PUBLIC_GEMINI_API_KEY in .env.local");
+}
+
+const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+
+function cleanJSONResponse(raw: string): string {
+  return raw.replace(/```(?:json)?\s*([\s\S]*?)\s*```/g, "$1").trim();
+}
+
+
 export function wordOfTheDayPrompt(seed: string): string {
   return `
     You are an English vocabulary assistant for EngliQuest.
 
-    Generate the word of the day in **strict JSON format only**.
-    Do not include any extra text, markdown, or code fences.
+    Generate the word of the day in strict JSON format only.
 
     Rules:
-    1. Use the provided seed ("${seed}") to select the word.
-       - The same seed must always return the same word.
-       - Different seeds must return different words.
-    2. Choose a real English word suitable for learners (not slang, not overly technical).
+    1. Use the provided seed ("${seed}") so the same seed always produces the same word.
+    2. Choose a real English word suitable for learners.
     3. Provide exactly one word and its definition.
-    4. Keep the definition simple, clear, and learner-friendly.
-    5. Return only valid JSON.
+    4. Keep definition simple and clear.
+    5. Return VALID JSON ONLY.
 
-    Example JSON:
+    Example:
     {
       "word": "Serendipity",
       "definition": "The occurrence of events by chance in a happy or beneficial way."
@@ -347,327 +40,66 @@ export function wordOfTheDayPrompt(seed: string): string {
   `;
 }
 
-async function generateVocabularyQuiz(
-    level: CEFRLevel,       
-    interests: string[],
-    gameMode: string,        
-    difficulty: string       
-): Promise<Question[]> {
-    const prompt = vocabularyPrompt(level, interests, gameMode, difficulty);
-    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash-lite" });
-
-    try {
-        const result = await model.generateContent(prompt);
-        const rawText = result.response.text();
-        return validateAndFormatQuestions(rawText);
-    } catch (err) {
-        console.error(`[${level}VocabQuiz] Failed to parse Gemini response:`, err);
-        throw new Error("Quiz generation failed. Please try again.");
-    }
-}
-
-async function generateGrammarQuiz(
-    level: CEFRLevel,
-    interests: string[],
-    gameMode: string, 
-    difficulty: string
-): Promise<Question[]> {
-    const prompt = grammarPrompt(level, interests, gameMode, difficulty);
-    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
-
-    try {
-        const result = await model.generateContent(prompt);
-        const rawText = result.response.text();
-        return validateAndFormatQuestions(rawText);
-    } catch (err) {
-        console.error(`[${level}GrammarQuiz] Failed to parse Gemini response:`, err);
-        throw new Error("Grammar quiz generation failed. Please try again.");
-    }
-}
-
-async function generateTranslationQuiz(
-    level: CEFRLevel,
-    interests: string[],
-    gameMode: string,
-    difficulty: string
-    ): Promise<Question[]> {
-    const prompt = translationPrompt(level, interests, gameMode, difficulty);
-    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
-
-    try {
-        const result = await model.generateContent(prompt);
-        const rawText = result.response.text();
-        return validateAndFormatQuestions(rawText);
-    } catch (err) {
-        console.error(`[${level}TranslationQuiz] Failed to parse Gemini response:`, err);
-        throw new Error("Translation quiz generation failed. Please try again.");
-    }
-}
-
-async function generateSentenceQuiz(
-  level: CEFRLevel,       
-  interests: string[],
-  gameMode: string,        
-  difficulty: string       
-): Promise<Question[]> {
-  const prompt = sentenceConstructionPrompt(level, interests, gameMode, difficulty);
-  const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
-
-  try {
-    const result = await model.generateContent(prompt);
-    const rawText = result.response.text();
-    return validateAndFormatQuestions(rawText);
-  } catch (err) {
-    console.error(`[${level}SentenceConstructionQuiz] Failed to parse Gemini response:`, err);
-    throw new Error("Sentence Construction quiz generation failed. Please try again.");
-  }
-}
-
-async function generateReadingComprehensionQuiz(
-  level: CEFRLevel,
-  interests: string[],
-  gameMode: string,
-  difficulty: string
-): Promise<Question[]> {
-  const prompt = readingComprehensionPrompt(level, interests, gameMode, difficulty);
-  const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
-
-  try {
-    const result = await model.generateContent(prompt);
-    const rawText = result.response.text();
-    return validateAndFormatQuestions(rawText);
-  } catch (err) {
-    console.error(`[${level}ReadingComprehensionQuiz] Failed to parse Gemini response:`, err);
-    throw new Error("Reading Comprehension quiz generation failed. Please try again.");
-  }
-}
-
-// Exported wrappers
-export function EasyLevel1VocabQuiz(interests: string[], gameMode: string) {
-    return generateVocabularyQuiz("A1", interests, gameMode, "easy");
-}
-
-export function EasyLevel2VocabQuiz(interests: string[], gameMode: string) {
-    return generateVocabularyQuiz("A2", interests, gameMode, "easy");
-}
-
-export function MediumLevel1VocabQuiz(interests: string[], gameMode: string) {
-    return generateVocabularyQuiz("B1", interests, gameMode, "medium");
-}
-
-export function MediumLevel2VocabQuiz(interests: string[], gameMode: string) {
-    return generateVocabularyQuiz("B2", interests, gameMode, "medium");
-}
-export function HardLevel1VocabQuiz(interests: string[], gameMode: string) {
-    return generateVocabularyQuiz("C1", interests, gameMode, "hard");
-}
-
-export function HardLevel2VocabQuiz(interests: string[], gameMode: string) {
-    return generateVocabularyQuiz("C2", interests, gameMode, "hard");
-}
-
-//Grammar
-export function EasyLevel1GrammarQuiz(interests: string[], gameMode: string) {
-    return generateGrammarQuiz("A1", interests, gameMode, "easy");
-}
-
-export function EasyLevel2GrammarQuiz(interests: string[], gameMode: string) {
-    return generateGrammarQuiz("A2", interests, gameMode, "easy");
-}
-
-export function MediumLevel1GrammarQuiz(interests: string[], gameMode: string) {
-    return generateGrammarQuiz("B1", interests, gameMode, "medium");
-}
-
-export function MediumLevel2GrammarQuiz(interests: string[], gameMode: string) {
-    return generateGrammarQuiz("B2", interests, gameMode, "medium");
-}
-
-export function HardLevel1GrammarQuiz(interests: string[], gameMode: string) {
-    return generateGrammarQuiz("C1", interests, gameMode, "hard");
-}
-
-export function HardLevel2GrammarQuiz(interests: string[], gameMode: string) {
-    return generateGrammarQuiz("C2", interests, gameMode, "hard");
-}
-
-//Translation
-
-export function EasyLevel1TranslationQuiz(interests: string[], gameMode: string) {
-    return generateTranslationQuiz("A1", interests, gameMode, "easy");
-}
-
-export function EasyLevel2TranslationQuiz(interests: string[], gameMode: string) {
-    return generateTranslationQuiz("A2", interests, gameMode, "easy");
-}
-
-export function MediumLevel1TranslationQuiz(interests: string[], gameMode: string) {
-    return generateTranslationQuiz("B1", interests, gameMode, "medium");
-}
-
-export function MediumLevel2TranslationQuiz(interests: string[], gameMode: string) {
-    return generateTranslationQuiz("B2", interests, gameMode, "medium");
-}
-
-export function HardLevel1TranslationQuiz(interests: string[], gameMode: string) {
-    return generateTranslationQuiz("C1", interests, gameMode, "hard");
-}
-
-export function HardLevel2TranslationQuiz(interests: string[], gameMode: string) {
-    return generateTranslationQuiz("C2", interests, gameMode, "hard");
-}
-
-//Sentence
-export function EasyLevel1SentenceQuiz(interests: string[], gameMode: string) {
-    return generateSentenceQuiz("A1", interests, gameMode, "easy");
-}
-
-export function EasyLevel2SentenceQuiz(interests: string[], gameMode: string) {
-    return generateSentenceQuiz("A2", interests, gameMode, "easy");
-}
-
-export function MediumLevel1SentenceQuiz(interests: string[], gameMode: string) {
-    return generateSentenceQuiz("B1", interests, gameMode, "medium");
-}
-
-export function MediumLevel2SentenceQuiz(interests: string[], gameMode: string) {
-    return generateSentenceQuiz("B2", interests, gameMode, "medium");
-}
-
-export function HardLevel1SentenceQuiz(interests: string[], gameMode: string) {
-    return generateSentenceQuiz("C1", interests, gameMode, "hard");
-}
-export function HardLevel2SentenceQuiz(interests: string[], gameMode: string) {
-    return generateSentenceQuiz("C2", interests, gameMode, "hard");
-}
-
-//Reading Comprehension
-
-export function EasyLevel1ReadingQuiz(interests: string[], gameMode: string) {
-    return generateReadingComprehensionQuiz("A1", interests, gameMode, "easy");
-}
-
-export function EasyLevel2ReadingQuiz(interests: string[], gameMode: string) {
-    return generateReadingComprehensionQuiz("A2", interests, gameMode, "easy");
-}
-
-export function MediumLevel1ReadingQuiz(interests: string[], gameMode: string) {
-    return generateReadingComprehensionQuiz("B1", interests, gameMode, "medium");
-}
-
-export function MediumLevel2ReadingQuiz(interests: string[], gameMode: string) {
-    return generateReadingComprehensionQuiz("B2", interests, gameMode, "medium");
-}
-
-export function HardLevel1ReadingQuiz(interests: string[], gameMode: string) {
-    return generateReadingComprehensionQuiz("C1", interests, gameMode, "hard");
-}
-
-export function HardLevel2ReadingQuiz(interests: string[], gameMode: string) {
-    return generateReadingComprehensionQuiz("C2", interests, gameMode, "hard");
-}
-
-export async function createPersonalizedQuiz(
-    userId: string,
-    level: CEFRLevel,
-    interests: string[],
-    gameMode: string,     
-    difficulty: string,
-    quiz?: Question[]       
-): Promise<{ quizId: string; questions: Question[] }> {
-    // Initialize Firebase first
-    const { db } = await initFirebase();
-    
-    let questions: Question[];
-
-    if (quiz) {
-        questions = quiz;
-    } else {
-        // ... rest of your existing logic
-        if (gameMode === "Grammar") {
-            questions = await generateGrammarQuiz(level, interests, gameMode, difficulty);
-        } else if (gameMode === "Vocabulary") {
-            questions = await generateVocabularyQuiz(level, interests, gameMode, difficulty);
-        } else if (gameMode === "Sentence Construction") {
-            questions = await generateSentenceQuiz(level, interests, gameMode, difficulty);
-        } else if (gameMode === "Reading Comprehension") {
-            questions = await generateReadingComprehensionQuiz(level, interests, gameMode, difficulty);
-        } else if (gameMode === "Translation") {
-            questions = await generateTranslationQuiz(level, interests, gameMode, difficulty);
-        } else {
-            throw new Error(`Unsupported game mode: ${gameMode}`);
-        }
-    }
-
-    // Now use the initialized db
-    const quizRef = await db.collection("quizzes").add({
-        userId,
-        level,
-        gameMode,
-        difficulty,
-        questions,
-        createdAt: new Date(),
-    });
-
-    return { quizId: quizRef.id, questions };
-}
-
+/**
+ * Fetch or Generate Word of the Day
+ */
 export async function fetchWordOfTheDayFromGemini(userId: string): Promise<WordData> {
   const { db } = await initFirebase();
   const today = new Date().toDateString();
-  const docId = `${userId}_${today}`; 
-  
+  const docId = `${userId}_${today}`;
+
+  // 1. Check Firestore cached version
   try {
-    const wordDoc = await db.collection('userDailyWords').doc(docId).get();
-    
+    const wordDoc = await db.collection("userDailyWords").doc(docId).get();
+
     if (wordDoc.exists()) {
-      console.log(`✅ Using cached word from Firestore for user ${userId}`);
       const data = wordDoc.data();
       return {
-        word: data?.word || "Serendipity",
-        definition: data?.definition || "The occurrence of events by chance in a happy or beneficial way."
+        word: data?.word,
+        definition: data?.definition
       };
     }
-  } catch (firestoreError) {
-    console.log("Firestore read error:", firestoreError);
+  } catch (err) {
+    console.log("Firestore read error:", err);
   }
-  
-  console.log(`🆕 Generating new word for user ${userId}`);
-  
+
+  // 2. Generate new word
   const seed = `${userId}_${today}`;
-  const prompt = wordOfTheDayPrompt(seed); 
-  
+  const prompt = wordOfTheDayPrompt(seed);
+
   const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash-lite" });
-  
+
   try {
     const result = await model.generateContent(prompt);
     const rawText = result.response.text();
     const cleaned = cleanJSONResponse(rawText);
     const wordData = JSON.parse(cleaned);
-    
+
     if (!wordData.word || !wordData.definition) {
       throw new Error("Invalid word data structure");
     }
-    
-    await db.collection('userDailyWords').doc(docId).set({
+
+    // Cache result
+    await db.collection("userDailyWords").doc(docId).set({
       word: wordData.word,
       definition: wordData.definition,
       createdAt: new Date(),
       expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) 
     });
-    
+
     return wordData;
   } catch (err) {
-    console.error("Error generating word from Gemini:", err);
-    
+    console.error("Gemini word generation error:", err);
+
+    // Fallback word list
     const fallbackWords = [
       { word: "Serendipity", definition: "The occurrence of events by chance in a happy or beneficial way." },
-      { word: "Ephemeral", definition: "Lasting for a very short time; temporary." },
+      { word: "Ephemeral", definition: "Lasting for a very short time." },
       { word: "Resilience", definition: "The ability to recover quickly from difficulties." },
-      { word: "Wanderlust", definition: "A strong desire to travel and explore the world." },
-      { word: "Nostalgia", definition: "A sentimental longing for the past." }
+      { word: "Wanderlust", definition: "A strong desire to travel." },
+      { word: "Nostalgia", definition: "A longing for the past." }
     ];
-    
+
     const fallbackIndex = Math.abs(seed.charCodeAt(0)) % fallbackWords.length;
     return fallbackWords[fallbackIndex];
   }
