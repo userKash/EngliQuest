@@ -51,14 +51,14 @@ export default function App() {
   const [currentRoute, setCurrentRoute] = useState<string | undefined>(undefined);
   const [initialRoute, setInitialRoute] =
     useState<keyof RootStackParamList>("Login");
+  const [isAuthReady, setIsAuthReady] = useState(false);
 
 useEffect(() => {
-  const init = async () => {
-    const user = auth().currentUser;
-
+  const unsubscribe = auth().onAuthStateChanged(async (user) => {
     // User NOT logged in → go to Login
     if (!user) {
       setInitialRoute("Login");
+      setIsAuthReady(true);
       return;
     }
 
@@ -69,11 +69,13 @@ useEffect(() => {
 
     if (localGeneration === "pending") {
       setInitialRoute("LoadingGeneration");
+      setIsAuthReady(true);
       return;
     }
 
     if (localGeneration === "completed") {
       setInitialRoute("Home");
+      setIsAuthReady(true);
       return;
     }
 
@@ -90,6 +92,7 @@ useEffect(() => {
       if (data?.status === "pending") {
         await AsyncStorage.setItem("GENERATION_STATUS", "pending");
         setInitialRoute("LoadingGeneration");
+        setIsAuthReady(true);
         return;
       }
 
@@ -97,15 +100,17 @@ useEffect(() => {
       if (data?.status === "completed" || data?.status === "approved") {
         await AsyncStorage.setItem("GENERATION_STATUS", "completed");
         setInitialRoute("Home");
+        setIsAuthReady(true);
         return;
       }
     }
 
     // 3) If no quiz doc: user still onboarding → Interest Selection
     setInitialRoute("InterestSelection");
-  };
+    setIsAuthReady(true);
+  });
 
-  init();
+  return unsubscribe;
 }, []);
 
 
@@ -114,12 +119,12 @@ useEffect(() => {
   (Text as any).defaultProps.style = { fontFamily: 'PoppinsRegular' };
 
   useEffect(() => {
-    if (fontsLoaded) {
+    if (fontsLoaded && isAuthReady) {
       SplashScreen.hideAsync(); // ✅ FIXED: MUST CALL THE FUNCTION
     }
-  }, [fontsLoaded]);
+  }, [fontsLoaded, isAuthReady]);
 
-  if (!fontsLoaded) {
+  if (!fontsLoaded || !isAuthReady) {
     return <View style={{ flex: 1, backgroundColor: 'white' }} />;
   }
 
@@ -154,15 +159,35 @@ useEffect(() => {
             <Stack.Screen name="LoadingGeneration" component={LoadingGenerationScreen} options={{ headerShown: false }} />
 
             {/* TOPIC SELECT SCREENS */}
-            <Stack.Screen name="VocabularyBuilder" component={VocabularyBuilderScreen} />
+            <Stack.Screen
+              name="VocabularyBuilder"
+              component={VocabularyBuilderScreen}
+              options={{ title: "Vocabulary Builder" }}
+            />
             <Stack.Screen name="VocabularyGame" component={VocabularyGameScreen} />
-            <Stack.Screen name="GrammarPractice" component={GrammarPracticeScreen} />
+            <Stack.Screen
+              name="GrammarPractice"
+              component={GrammarPracticeScreen}
+              options={{ title: "Grammar Practice" }}
+            />
             <Stack.Screen name="GrammarGame" component={GrammarGameScreen} />
-            <Stack.Screen name="ReadingComprehension" component={ReadingComprehensionScreen} />
+            <Stack.Screen
+              name="ReadingComprehension"
+              component={ReadingComprehensionScreen}
+              options={{ title: "Reading Comprehension" }}
+            />
             <Stack.Screen name="ReadingGame" component={ReadingGameScreen} />
-            <Stack.Screen name="FilipinoToEnglish" component={FilipinoToEnglishScreen} />
+            <Stack.Screen
+              name="FilipinoToEnglish"
+              component={FilipinoToEnglishScreen}
+              options={{ title: "Filipino to English" }}
+            />
             <Stack.Screen name="FilipinoToEnglishGame" component={FilipinoToEnglishGameScreen} />
-            <Stack.Screen name="SentenceConstruction" component={SentenceConstructionScreen} />
+            <Stack.Screen
+              name="SentenceConstruction"
+              component={SentenceConstructionScreen}
+              options={{ title: "Sentence Construction" }}
+            />
             <Stack.Screen name="SentenceConstructionGame" component={SentenceConstructionGameScreen} />
 
             {/* MAIN APP GROUP */}
