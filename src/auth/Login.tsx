@@ -106,6 +106,7 @@ const handleLogin = async () => {
             <TextInput
               style={styles.inputField}
               placeholder="Enter your email"
+              placeholderTextColor="#9ca3af"
               value={email}
               onChangeText={setEmail}
               autoCapitalize="none"
@@ -118,6 +119,7 @@ const handleLogin = async () => {
             <TextInput
               style={styles.inputField}
               placeholder="Enter your password"
+              placeholderTextColor="#9ca3af"
               secureTextEntry
               value={password}
               onChangeText={setPassword}
