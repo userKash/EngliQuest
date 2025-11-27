@@ -135,7 +135,16 @@ useEffect(() => {
     } else {
       navigation.setOptions({
         gestureEnabled: true,
-        headerTitle: "Sentence Construction",
+        headerTitle: () => (
+          <View style={{ alignItems: "center" }}>
+            <Text style={{ fontSize: 18, fontWeight: "bold" }}>
+              Sentence Construction
+            </Text>
+            <Text style={{ fontSize: 14, color: "#555" }}>
+              Read the instructions carefully
+            </Text>
+          </View>
+        ),
         headerLeft: undefined,
       });
     }

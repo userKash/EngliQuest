@@ -131,7 +131,7 @@ useLayoutEffect(() => {
     navigation.setOptions({
       gestureEnabled: true,
       headerTitle: () => (
-        <View style={{ alignItems: "flex-start" }}>
+        <View style={{ alignItems: "center" }}>
           <Text style={{ fontSize: 18, fontWeight: "bold" }}>
             Vocabulary Builder
           </Text>
