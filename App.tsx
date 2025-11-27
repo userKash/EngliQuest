@@ -159,15 +159,35 @@ useEffect(() => {
             <Stack.Screen name="LoadingGeneration" component={LoadingGenerationScreen} options={{ headerShown: false }} />
 
             {/* TOPIC SELECT SCREENS */}
-            <Stack.Screen name="VocabularyBuilder" component={VocabularyBuilderScreen} />
+            <Stack.Screen
+              name="VocabularyBuilder"
+              component={VocabularyBuilderScreen}
+              options={{ title: "Vocabulary Builder" }}
+            />
             <Stack.Screen name="VocabularyGame" component={VocabularyGameScreen} />
-            <Stack.Screen name="GrammarPractice" component={GrammarPracticeScreen} />
+            <Stack.Screen
+              name="GrammarPractice"
+              component={GrammarPracticeScreen}
+              options={{ title: "Grammar Practice" }}
+            />
             <Stack.Screen name="GrammarGame" component={GrammarGameScreen} />
-            <Stack.Screen name="ReadingComprehension" component={ReadingComprehensionScreen} />
+            <Stack.Screen
+              name="ReadingComprehension"
+              component={ReadingComprehensionScreen}
+              options={{ title: "Reading Comprehension" }}
+            />
             <Stack.Screen name="ReadingGame" component={ReadingGameScreen} />
-            <Stack.Screen name="FilipinoToEnglish" component={FilipinoToEnglishScreen} />
+            <Stack.Screen
+              name="FilipinoToEnglish"
+              component={FilipinoToEnglishScreen}
+              options={{ title: "Filipino to English" }}
+            />
             <Stack.Screen name="FilipinoToEnglishGame" component={FilipinoToEnglishGameScreen} />
-            <Stack.Screen name="SentenceConstruction" component={SentenceConstructionScreen} />
+            <Stack.Screen
+              name="SentenceConstruction"
+              component={SentenceConstructionScreen}
+              options={{ title: "Sentence Construction" }}
+            />
             <Stack.Screen name="SentenceConstructionGame" component={SentenceConstructionGameScreen} />
 
             {/* MAIN APP GROUP */}
