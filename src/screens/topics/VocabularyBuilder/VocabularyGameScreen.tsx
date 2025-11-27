@@ -288,6 +288,7 @@ useEffect(() => {
           titleIcon={instructions.titleIcon}
           tipIcon={instructions.tipIcon}
           onNext={() => setStep("quiz")}
+          nextLabel="Start Quiz"
         />
       ) : (
         <VocabularyQuiz
