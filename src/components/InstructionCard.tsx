@@ -125,6 +125,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 20,
+    flexWrap: 'wrap',
+    width: '100%',
   },
   iconBadge: {
     width: 56,
@@ -159,6 +161,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     color: '#2D2D3A',
     letterSpacing: 0.3,
+    flexShrink: 1,
   },
   body: {
     marginTop: 24,
