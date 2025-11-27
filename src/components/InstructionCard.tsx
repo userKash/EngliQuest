@@ -1,5 +1,5 @@
-import React, { useEffect } from 'react';
-import { View, Text, StyleSheet, Image, ImageSourcePropType, TouchableOpacity } from 'react-native';
+import { useEffect } from 'react';
+import { View, Text, StyleSheet, Image, ImageSourcePropType, TouchableOpacity, ScrollView, Dimensions } from 'react-native';
 import Animated, {
   FadeIn,
   SlideInDown,
@@ -9,6 +9,8 @@ import Animated, {
   withSequence,
   withTiming,
 } from 'react-native-reanimated';
+
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 type Props = {
   title: string;
@@ -49,53 +51,61 @@ export default function InstructionCard({
 
   return (
     <View style={styles.screen}>
-      {/* Main card with animation */}
-      <Animated.View
-        entering={FadeIn.duration(500)}
-        style={[styles.card, animatedCardStyle]}
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        bounces={false}
       >
-        <View style={styles.rowCenter}>
-          {titleIcon ? (
-            <View style={styles.iconBadge}>
-              <Image source={titleIcon} style={styles.icon} />
-            </View>
-          ) : null}
-          <Text style={styles.title}>{title}</Text>
-        </View>
-
-        <Text style={styles.body}>{body}</Text>
-
-        {tip ? (
-          <Animated.View
-            entering={SlideInDown.delay(300).duration(400).springify()}
-            style={styles.tipBox}
-          >
-            <View style={styles.tipHeader}>
-              {tipIcon ? (
-                <Image source={tipIcon} style={styles.iconSmall} />
-              ) : (
-                <Text style={styles.tipIcon}>💡</Text>
-              )}
-              <Text style={styles.tipLabel}>Tip</Text>
-            </View>
-            <Text style={styles.tip}>{tip}</Text>
-          </Animated.View>
-        ) : null}
-      </Animated.View>
-
-      {/* Modern button pinned bottom */}
-      <Animated.View
-        entering={SlideInDown.delay(500).duration(400).springify()}
-        style={styles.bottomButton}
-      >
-        <TouchableOpacity
-          style={styles.modernButton}
-          onPress={onNext}
-          activeOpacity={0.85}
+        {/* Main card with animation */}
+        <Animated.View
+          entering={FadeIn.duration(500)}
+          style={[styles.card, animatedCardStyle]}
         >
-          <Text style={styles.modernButtonText}>{nextLabel}</Text>
-        </TouchableOpacity>
-      </Animated.View>
+          <View style={styles.cardInner}>
+            <View style={styles.rowCenter}>
+              {titleIcon ? (
+                <View style={styles.iconBadge}>
+                  <Image source={titleIcon} style={styles.icon} />
+                </View>
+              ) : null}
+              <Text style={styles.title}>{title}</Text>
+            </View>
+
+            <Text style={styles.body}>{body}</Text>
+
+            {tip ? (
+              <Animated.View
+                entering={SlideInDown.delay(300).duration(400).springify()}
+                style={styles.tipBox}
+              >
+                <View style={styles.tipHeader}>
+                  {tipIcon ? (
+                    <Image source={tipIcon} style={styles.iconSmall} />
+                  ) : (
+                    <Text style={styles.tipIcon}>💡</Text>
+                  )}
+                  <Text style={styles.tipLabel}>Tip</Text>
+                </View>
+                <Text style={styles.tip}>{tip}</Text>
+              </Animated.View>
+            ) : null}
+          </View>
+        </Animated.View>
+
+        {/* Modern button outside card */}
+        <Animated.View
+          entering={SlideInDown.delay(500).duration(400).springify()}
+          style={styles.bottomButton}
+        >
+          <TouchableOpacity
+            style={styles.modernButton}
+            onPress={onNext}
+            activeOpacity={0.85}
+          >
+            <Text style={styles.modernButtonText}>{nextLabel}</Text>
+          </TouchableOpacity>
+        </Animated.View>
+      </ScrollView>
     </View>
   );
 }
@@ -104,21 +114,30 @@ const styles = StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: '#F5F6FA',
-    padding: 20,
+  },
+  scrollContent: {
+    flexGrow: 1,
+    padding: SCREEN_WIDTH > 768 ? 32 : 20,
+    paddingBottom: 100,
   },
   card: {
-    flex: 1,
     borderWidth: 0,
     borderRadius: 24,
     backgroundColor: '#fff',
-    padding: 32,
-    justifyContent: 'center',
+    padding: SCREEN_WIDTH > 768 ? 40 : SCREEN_WIDTH > 375 ? 32 : 24,
     alignItems: 'center',
     shadowColor: '#5E67CC',
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.15,
     shadowRadius: 20,
     elevation: 10,
+    maxWidth: SCREEN_WIDTH > 768 ? 700 : '100%',
+    alignSelf: 'center',
+    width: '100%',
+  },
+  cardInner: {
+    width: '100%',
+    alignItems: 'center',
   },
   rowCenter: {
     flexDirection: 'row',
@@ -129,9 +148,9 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   iconBadge: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: SCREEN_WIDTH > 768 ? 64 : SCREEN_WIDTH > 375 ? 56 : 48,
+    height: SCREEN_WIDTH > 768 ? 64 : SCREEN_WIDTH > 375 ? 56 : 48,
+    borderRadius: SCREEN_WIDTH > 768 ? 32 : SCREEN_WIDTH > 375 ? 28 : 24,
     backgroundColor: '#E8E5FF',
     justifyContent: 'center',
     alignItems: 'center',
@@ -145,8 +164,8 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   icon: {
-    width: 32,
-    height: 32,
+    width: SCREEN_WIDTH > 768 ? 36 : SCREEN_WIDTH > 375 ? 32 : 28,
+    height: SCREEN_WIDTH > 768 ? 36 : SCREEN_WIDTH > 375 ? 32 : 28,
     resizeMode: 'contain',
   },
   iconSmall: {
@@ -156,21 +175,23 @@ const styles = StyleSheet.create({
     resizeMode: 'contain',
   },
   title: {
-    fontSize: 28,
+    fontSize: SCREEN_WIDTH > 768 ? 32 : SCREEN_WIDTH > 375 ? 28 : 24,
     fontWeight: '800',
     textAlign: 'center',
     color: '#2D2D3A',
     letterSpacing: 0.3,
     flexShrink: 1,
+    maxWidth: '100%',
   },
   body: {
     marginTop: 24,
-    fontSize: 17,
-    lineHeight: 26,
+    fontSize: SCREEN_WIDTH > 768 ? 18 : SCREEN_WIDTH > 375 ? 17 : 15,
+    lineHeight: SCREEN_WIDTH > 768 ? 28 : SCREEN_WIDTH > 375 ? 26 : 23,
     marginBottom: 20,
     textAlign: 'center',
     color: '#4A5568',
     fontWeight: '500',
+    width: '100%',
   },
   tipBox: {
     backgroundColor: "#F8F7FF",
@@ -209,14 +230,17 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   bottomButton: {
-    marginTop: 24,
-    marginBottom: 70,
+    marginTop: 16,
+    marginBottom: 20,
+    width: '100%',
+    maxWidth: SCREEN_WIDTH > 768 ? 700 : '100%',
+    alignSelf: 'center',
   },
   modernButton: {
     backgroundColor: '#5E67CC',
     borderWidth: 0,
     borderRadius: 16,
-    paddingVertical: 18,
+    paddingVertical: SCREEN_WIDTH > 768 ? 20 : SCREEN_WIDTH > 375 ? 18 : 16,
     paddingHorizontal: 32,
     shadowColor: '#5E67CC',
     shadowOffset: { width: 0, height: 6 },
@@ -228,7 +252,7 @@ const styles = StyleSheet.create({
   },
   modernButtonText: {
     color: '#fff',
-    fontSize: 17,
+    fontSize: SCREEN_WIDTH > 768 ? 18 : SCREEN_WIDTH > 375 ? 17 : 16,
     fontWeight: '800',
     letterSpacing: 0.5,
   },
