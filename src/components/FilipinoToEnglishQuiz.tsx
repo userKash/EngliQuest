@@ -36,7 +36,7 @@ import { unlockBadge } from "../../badges_utility/badgesutil";
 import { BADGES } from "../screens/ProgressScreen";
 import type { RootStackParamList } from "../navigation/type";
 import { AudioManager } from "../../utils/AudioManager"; 
-
+import auth from "@react-native-firebase/auth";
 
 type QA = {
   filipino: string;
@@ -47,7 +47,6 @@ type QA = {
 
 type ReviewItem = { question: string; yourAnswer: string; isCorrect: boolean; correctAnswer?: string };
 
-const STORAGE_KEY = "TranslationProgress";
 
 if (Platform.OS === "android" && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -66,6 +65,10 @@ export default function FilipinoToEnglishQuiz({ questions, onFinish, onProgressC
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const route = useRoute<any>();
   const { levelId } = route.params || {};
+
+  const user = auth().currentUser;
+  const uid = user?.uid;
+  const STORAGE_KEY = `TranslationProgress_${uid}`;
 
   const [index, setIndex] = useState(0);
   const [value, setValue] = useState("");
@@ -133,15 +136,16 @@ export default function FilipinoToEnglishQuiz({ questions, onFinish, onProgressC
   }, []);
   
   // keep badgeModal in sync
-  useEffect(() => {
-    if (newBadges.length > 0) {
-      const normalized = newBadges[0].replace(/-\d+$/, "");
-      console.log("Opening badge modal for:", normalized);
-      setBadgeModal(normalized);
-    } else {
-      setBadgeModal(null);
-    }
-  }, [newBadges]);
+useEffect(() => {
+  if (newBadges.length > 0) {
+    const normalized = newBadges[0].replace(/-\d+$/, "");
+    console.log("Opening badge modal for:", normalized);
+    setBadgeModal(normalized);
+  } else {
+    setBadgeModal(null);
+  }
+}, [newBadges]);
+
 
   const normalize = (s: string) => s.toLowerCase().trim().replace(/\s+/g, " ");
 
@@ -233,18 +237,20 @@ export default function FilipinoToEnglishQuiz({ questions, onFinish, onProgressC
   }
 
   // handle badge continue (like Vocabulary)
-  const handleBadgeContinue = () => {
-    if (newBadges.length > 1) {
-      const [, ...rest] = newBadges;
-      setNewBadges(rest);
-    } else {
-      setNewBadges([]);
-      navigation.reset({
-        index: 0,
-        routes: [{ name: "Home" }],
-      });
-    }
-  };
+const handleBadgeContinue = () => {
+  console.log("Badge Continue clicked. Remaining badges:", newBadges);
+  if (newBadges.length > 1) {
+    const [, ...rest] = newBadges;
+    setNewBadges(rest);
+    return;
+  }
+  setNewBadges([]);
+  navigation.reset({
+    index: 0,
+    routes: [{ name: "Home" }],
+  });
+};
+
 
   const badgeData = badgeModal ? BADGES.find((b) => b.id === badgeModal) : null;
 
@@ -460,8 +466,12 @@ export default function FilipinoToEnglishQuiz({ questions, onFinish, onProgressC
           });
         }}
       />
-
-      <Modal visible={!!badgeData} transparent animationType="fade" onRequestClose={handleBadgeContinue}>
+      <Modal
+        visible={!!badgeData}
+        transparent
+        animationType="fade"
+        onRequestClose={handleBadgeContinue}
+      >
         <Pressable style={styles.overlay} onPress={handleBadgeContinue}>
           <View style={styles.modalCard}>
             {badgeData && (
@@ -470,6 +480,7 @@ export default function FilipinoToEnglishQuiz({ questions, onFinish, onProgressC
                 <Text style={styles.modalTitle}>{badgeData.title}</Text>
                 {badgeData.subtitle && <Text style={styles.modalSub}>{badgeData.subtitle}</Text>}
                 <Text style={styles.modalHint}>Unlocked! 🎉</Text>
+
                 <TouchableOpacity
                   onPress={handleBadgeContinue}
                   style={styles.modalBtn}

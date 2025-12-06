@@ -14,6 +14,9 @@ import type { RootStackParamList } from "../navigation/type";
 import type { RouteProp } from "@react-navigation/native";
 import { initFirebase } from "../../firebaseConfig";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import InterestPicker from "~/components/InterestPicker";
+import { deleteUserQuizData } from "../../utils/deleteUserQuizData";
+
 
 
 export default function InterestSelectionScreen() {
@@ -23,6 +26,7 @@ export default function InterestSelectionScreen() {
       NativeStackNavigationProp<RootStackParamList, "InterestSelection">
     >();
   const route = useRoute<RouteProp<RootStackParamList, "InterestSelection">>();
+  const isReQuest = "mode" in route.params && route.params.mode === "reQuest";
   const { fullName, email } = route.params;
 
   const [loading, setLoading] = useState(false);
@@ -42,9 +46,95 @@ export default function InterestSelectionScreen() {
     setModalVisible(true);
   };
 
+
+
+
+
+async function resetUserFirestoreProgress(uid: string) {
+  const { db } = await initFirebase();
+
+  // Collections where progress is stored
+  const collections = [
+    "VocabularyProgress",
+    "GrammarProgress",
+    "ReadingProgress",
+    "TranslationProgress",
+    "SentenceConstructionProgress",
+    "progress", // some screens use this generic name
+    "userProgress"
+  ];
+
+  for (const col of collections) {
+    try {
+      const ref = db.collection(col).doc(uid);
+      await ref.delete();
+    } catch (err) {
+      console.log(`⚠️ Could not delete progress in ${col}`, err);
+    }
+  }
+}
+
+
+  async function resetAllAsyncStorageForQuizzes(uid: string): Promise<void> {
+  try {
+    // Ensure we have a typed string[] from AsyncStorage
+    const keys: string[] = await AsyncStorage.getAllKeys();
+
+    // Base patterns to look for (covers both exact and prefixed keys)
+    const patterns: string[] = [
+      "VocabularyProgress",
+      "GrammarProgress",
+      "ReadingProgress",
+      "TranslationProgress",
+      "SentenceConstructionProgress",
+      "progress",
+      "userProgress",
+      "GENERATION_STATUS",
+      "ONBOARDING_COMPLETED",
+      "badge",
+      "vocab_",
+      "reading_",
+      "grammar_",
+      "sentence_",
+      "trans_",
+    ];
+
+    // Also include UID-suffixed variants (e.g. VocabularyProgress_<uid>)
+    const patternsWithUid: string[] = patterns.flatMap((p: string) => [p, `${p}_${uid}`]);
+
+    // Filter with typed parameters to satisfy noImplicitAny
+    const keysToDelete: string[] = keys.filter((key: string) =>
+      patternsWithUid.some((prefix: string) => key.startsWith(prefix))
+    );
+
+    if (keysToDelete.length === 0) {
+      console.log("🧹 No matching quiz-related keys found to delete.");
+      return;
+    }
+
+    console.log("🧹 Deleting ALL quiz-related keys:", keysToDelete);
+
+    // multiRemove expects string[]
+    await AsyncStorage.multiRemove(keysToDelete);
+
+    console.log("✔ All quiz + progress + badge local data wiped");
+  } catch (err) {
+    console.error("❌ resetAllAsyncStorageForQuizzes error:", err);
+    throw err;
+  }
+}
+
+
+
+
   // Check generation status on mount
   useEffect(() => {
-    checkGenerationStatus();
+    if (!isReQuest) {
+      checkGenerationStatus();
+    } else {
+      // Reset status so screen behaves normally
+      setGenerationStatus(null);
+    }
   }, []);
 
   const checkGenerationStatus = async () => {
@@ -81,25 +171,96 @@ export default function InterestSelectionScreen() {
     }
   };
 
-  const toggleInterest = (title: string) => {
-    setSelected((prev) => {
-      if (prev.includes(title)) {
-        return prev.filter((i) => i !== title);
-      } else {
-        if (prev.length < 3) {
-          return [...prev, title];
-        } else {
-          showModal("Limit Reached", "You can only select up to 3 interests.", "info");
-          return prev;
-        }
-      }
+const handleReQuestSubmit = async () => {
+  if (selected.length !== 3) {
+    showModal("Selection Required", "Please select exactly 3 interests.", "info");
+    return;
+  }
+
+  try {
+    setLoading(true);
+
+    const { auth, db } = await initFirebase();
+    const uid = auth.currentUser?.uid;
+
+    if (!uid) {
+      showModal("Error", "No authenticated user found.", "error");
+      return;
+    }
+
+    console.log("🔁 RE-QUEST STARTED for UID:", uid);
+    console.log("🎯 Selected Interests:", selected);
+
+    const firestore = db;
+    const { serverTimestamp } = firestore.constructor;
+
+    console.log("🗑 Deleting Quiz Data...");
+    await deleteUserQuizData(uid);
+    console.log("✔ Quiz data deleted");
+    await resetAllAsyncStorageForQuizzes(uid);
+    await firestore.collection("users").doc(uid).set(
+      { 
+        interests: selected,
+        regenerationInProgress: true  
+      },
+      { merge: true }
+    );
+
+    console.log("📨 Creating Re-Quest document...");
+    await firestore.collection("RequestQUEST").doc(uid).set({
+      userId: uid,
+      newInterests: selected,
+      requestStatus: "pending",
+      createdAt: serverTimestamp?.() ?? new Date(),
     });
-  };
+
+    console.log("🗃 Updating quizzes status -> pending...");
+    await firestore.collection("quizzes").doc(uid).set({
+      userId: uid,
+      interests: selected,
+      status: "pending",
+      createdAt: serverTimestamp?.() ?? new Date(),
+      updatedAt: serverTimestamp?.() ?? new Date(),
+    });
+
+    await AsyncStorage.setItem("GENERATION_STATUS", "pending");
+    console.log("📦 GENERATION_STATUS saved as 'pending'");
+
+    console.log("✅ RE-QUEST FINISHED — All resets completed!");
+
+    showModal(
+      "Re-Quest Submitted!",
+      "Your new personalized quizzes are being prepared.",
+      "success"
+    );
+
+    setTimeout(() => {
+      setModalVisible(false);
+      navigation.navigate("LoadingGeneration");
+    }, 1200);
+
+  } catch (err: any) {
+    console.error("❌ Re-Quest error:", err);
+    showModal("Error", err.message || "Failed to submit your request.", "error");
+  } finally {
+    console.log("🔚 Re-Quest process ended.");
+    setLoading(false);
+  }
+};
+
+
+
+
+
 
 const handleCreateAccount = async () => {
   if (selected.length !== 3) {
     showModal("Selection Required", "Please select exactly 3 interests to continue.", "info");
     return;
+  }
+
+    if (isReQuest) {
+    return handleReQuestSubmit();
   }
 
   try {
@@ -209,7 +370,7 @@ const handleCreateAccount = async () => {
           <Text style={styles.counter}>{selected.length}/3 selected</Text>
 
           {/* Generation Status Banner */}
-          {generationStatus === "pending" && (
+          {!isReQuest && generationStatus === "pending" && (
             <View style={styles.statusBanner}>
               <Feather name="clock" size={20} color="#F59E0B" />
               <View style={styles.statusTextContainer}>
@@ -222,7 +383,7 @@ const handleCreateAccount = async () => {
             </View>
           )}
 
-          {generationStatus === "completed" && (
+          {!isReQuest && generationStatus === "completed" && (
             <View style={[styles.statusBanner, styles.statusBannerSuccess]}>
               <Feather name="check-circle" size={20} color="#10B981" />
               <View style={styles.statusTextContainer}>
@@ -235,94 +396,20 @@ const handleCreateAccount = async () => {
               </View>
             </View>
           )}
-
-          <View style={styles.row}>
-            <InterestCard
-              title="Adventure Stories"
-              description="Exciting journeys and quests"
-              icon="compass"
-              color="#FAA030"
-              selected={selected}
-              toggle={toggleInterest}
-              disabled={generationStatus !== null}
-            />
-            <InterestCard
-              title="Friendship"
-              description="Stories about bonds and relationships"
-              icon="users"
-              color="#F59E0B"
-              selected={selected}
-              toggle={toggleInterest}
-              disabled={generationStatus !== null}
-            />
-          </View>
-
-          <View style={styles.row}>
-            <InterestCard
-              title="Fantasy & Magic"
-              description="Spells and mythical creatures"
-              icon="star"
-              color="#8B5CF6"
-              selected={selected}
-              toggle={toggleInterest}
-              disabled={generationStatus !== null}
-            />
-            <InterestCard
-              title="Music & Arts"
-              description="Creative expression and performance"
-              icon="music"
-              color="#10B981"
-              selected={selected}
-              toggle={toggleInterest}
-              disabled={generationStatus !== null}
-            />
-          </View>
-
-          <View style={styles.row}>
-            <InterestCard
-              title="Sports & Games"
-              description="Athletic activities and competition"
-              icon="activity"
-              color="#3B82F6"
-              selected={selected}
-              toggle={toggleInterest}
-              disabled={generationStatus !== null}
-            />
-            <InterestCard
-              title="Nature & Animals"
-              description="Wildlife and environmental themes"
-              icon="globe"
-              color="#22C55E"
-              selected={selected}
-              toggle={toggleInterest}
-              disabled={generationStatus !== null}
-            />
-          </View>
-
-          <View style={styles.row}>
-            <InterestCard
-              title="Filipino Culture"
-              description="Traditional stories and customs"
-              icon="flag"
-              color="#EC4899"
-              selected={selected}
-              toggle={toggleInterest}
-              disabled={generationStatus !== null}
-            />
-            <InterestCard
-              title="Family Values"
-              description="Family bonds and traditions"
-              icon="heart"
-              color="#EF4444"
-              selected={selected}
-              toggle={toggleInterest}
-              disabled={generationStatus !== null}
-            />
-          </View>
+          <InterestPicker
+            selected={selected}
+            onChange={(list) => {
+              if (list.length <= 3) setSelected(list);
+              if (list.length > 3)
+                showModal("Limit Reached", "Select exactly 3 interests only.");
+            }}
+            disabled={!isReQuest && generationStatus !== null}
+            showModal={showModal}
+          />
         </ScrollView>
 
         <View style={styles.buttonWrapper}>
-          {generationStatus === "completed" ? (
+          {!isReQuest && generationStatus === "completed" ? (
             <TouchableOpacity style={styles.createBtn} onPress={handleProceed}>
               <Text style={styles.createText}>Start Learning</Text>
             </TouchableOpacity>
@@ -339,14 +426,16 @@ const handleCreateAccount = async () => {
               <Text style={styles.createText}>Generation in Progress...</Text>
             </TouchableOpacity>
           ) : (
-            <TouchableOpacity 
-              style={styles.createBtn} 
-              onPress={handleCreateAccount}
-              disabled={loading}
-            >
-              <Text style={styles.createText}>
-                {loading ? "Creating Account..." : "Create Account"}
-              </Text>
+          <TouchableOpacity
+            style={styles.createBtn}
+            onPress={isReQuest ? handleReQuestSubmit : handleCreateAccount}
+            disabled={loading}
+          >
+            <Text style={styles.createText}>
+              {loading
+                ? (isReQuest ? "Submitting Re-Quest..." : "Creating Account...")
+                : (isReQuest ? "Submit RE QUEST" : "Create Account")}
+            </Text>
             </TouchableOpacity>
           )}
         </View>

@@ -8,22 +8,56 @@
       "developmentClient": true,
       "distribution": "internal",
       "android": {
-        "buildType": "apk"   // ✅ Easier to sideload for testing
+        "buildType": "apk"
       },
       "ios": {
-        "simulator": true    // ✅ You can test on iOS simulator (no App Store install)
+        "simulator": true
+      },
+      "env": {
+        "EXPO_PUBLIC_FIREBASE_API_KEY": "AIzaSyBhsLpAp0TX53UCNaW0jWT1jQ_7rENpwow",
+        "EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN": "engliquest-788b6.firebaseapp.com",
+        "EXPO_PUBLIC_FIREBASE_PROJECT_ID": "engliquest-788b6",
+        "EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET": "engliquest-788b6.firebasestorage.app",
+        "EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID": "1072058760841",
+        "EXPO_PUBLIC_FIREBASE_APP_ID": "1:1072058760841:android:fab8bc8627f39155521058",
+        "EXPO_PUBLIC_GEMINI_API_KEY":"AIzaSyDgg2Ybk-Pgs6FDU0uesZBazRu6K0jzXwU",
+        "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": "1072058760841-l2dfoc318glg28rlrubevsl0447alikd.apps.googleusercontent.com"
+        
       }
     },
     "preview": {
-      "distribution": "internal"
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_FIREBASE_API_KEY": "AIzaSyBhsLpAp0TX53UCNaW0jWT1jQ_7rENpwow",
+        "EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN": "engliquest-788b6.firebaseapp.com",
+        "EXPO_PUBLIC_FIREBASE_PROJECT_ID": "engliquest-788b6",
+        "EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET": "engliquest-788b6.firebasestorage.app",
+        "EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID": "1072058760841",
+        "EXPO_PUBLIC_FIREBASE_APP_ID": "1:1072058760841:android:fab8bc8627f39155521058",
+        "EXPO_PUBLIC_GEMINI_API_KEY":"AIzaSyDgg2Ybk-Pgs6FDU0uesZBazRu6K0jzXwU",
+        "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": "1072058760841-l2dfoc318glg28rlrubevsl0447alikd.apps.googleusercontent.com"
+      }
     },
     "production": {
       "autoIncrement": true,
       "android": {
-        "buildType": "app-bundle" // ✅ Required for Play Store
+        "buildType": "app-bundle"
       },
       "ios": {
-        "simulator": false        // ✅ For real devices/App Store submission
+        "simulator": false
+      },
+      "env": {
+        "EXPO_PUBLIC_FIREBASE_API_KEY": "AIzaSyBhsLpAp0TX53UCNaW0jWT1jQ_7rENpwow",
+        "EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN": "engliquest-788b6.firebaseapp.com",
+        "EXPO_PUBLIC_FIREBASE_PROJECT_ID": "engliquest-788b6",
+        "EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET": "engliquest-788b6.firebasestorage.app",
+        "EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID": "1072058760841",
+        "EXPO_PUBLIC_FIREBASE_APP_ID": "1:1072058760841:android:fab8bc8627f39155521058",
+        "EXPO_PUBLIC_GEMINI_API_KEY":"AIzaSyDgg2Ybk-Pgs6FDU0uesZBazRu6K0jzXwU",
+        "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": "1072058760841-l2dfoc318glg28rlubevsl0447alikd.apps.googleusercontent.com"
       }
     }
   },

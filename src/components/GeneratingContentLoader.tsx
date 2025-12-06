@@ -56,28 +56,54 @@ export default function GeneratingContentLoader() {
 
   const LOTTIE_SIZE = Math.min(300, Math.round(width * 0.68));
 
-  useEffect(() => {
-    const user = auth().currentUser;
-    if (!user) return;
+useEffect(() => {
+  const user = auth().currentUser;
+  if (!user) return;
 
-    const unsubscribe = firestore()
-      .collection("quizzes")
-      .where("userId", "==", user.uid)
-      .where("status", "==", "approved")
-      .onSnapshot(async (snapshot) => {
-        const approvedCount = snapshot.size;
+  const userRef = firestore().collection("users").doc(user.uid);
 
-        console.log("APPROVED QUIZ COUNT:", approvedCount);
+  let quizUnsub: (() => void) | null = null;
 
-        if (approvedCount >= 30) {
-        await AsyncStorage.setItem("GENERATION_STATUS", "completed");
-        navigation.navigate("CloudLoading");
-        }
+  const unsubUser = userRef.onSnapshot((docSnap) => {
+    const uData = docSnap.data();
+    if (!uData) return;
 
-      });
+    const regenActive = uData.regenerationInProgress === true;
+    if (regenActive) {
+      console.log("🔒 RE-GENERATION ACTIVE — waiting...");
+      if (quizUnsub) {
+        quizUnsub();  
+        quizUnsub = null;
+      }
+      return;
+    }
+    console.log("🔓 LOCK CLEARED — watching approved quizzes...");
 
-    return () => unsubscribe();
-  }, [navigation]);
+    if (!quizUnsub) {
+      quizUnsub = firestore()
+        .collection("quizzes")
+        .where("userId", "==", user.uid)
+        .where("status", "==", "approved")
+        .onSnapshot(async (snapshot) => {
+          const approvedCount = snapshot.size;
+          console.log("📊 Approved quizzes →", approvedCount);
+
+          if (approvedCount >= 30) {
+            await AsyncStorage.setItem("GENERATION_STATUS", "completed");
+            navigation.navigate("CloudLoading");
+          }
+        });
+    }
+  });
+
+  return () => {
+    if (quizUnsub) quizUnsub();
+    unsubUser();
+  };
+}, []);
+
+
+
 
     useEffect(() => {
         Animated.timing(fadeScreen, {

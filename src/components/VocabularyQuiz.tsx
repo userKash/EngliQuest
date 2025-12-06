@@ -27,12 +27,13 @@ import Animated, {
 } from 'react-native-reanimated';
 
 import ResultModal from "../components/ResultModal";
-import { initFirebase } from "../../firebaseConfig";
+import auth from "@react-native-firebase/auth";
 import { unlockBadge } from "../../badges_utility/badgesutil";
 import { BADGES } from "../screens/ProgressScreen";
 import type { RootStackParamList } from "../navigation/type";
 import { AudioManager } from "../../utils/AudioManager";
-const STORAGE_KEY = "VocabularyProgress";
+import { initFirebase } from "firebaseConfig";
+
 
 type VocabQuestion = {
   prompt: string;
@@ -60,6 +61,9 @@ export default function VocabularyQuiz({
 
   const { levelId } = route.params; // "easy" | "med" | "hard"
 
+  const uid = auth().currentUser?.uid;
+  const STORAGE_KEY = `VocabularyProgress_${uid}`;
+
   const [qIndex, setQIndex] = useState(0);
   const [selected, setSelected] = useState<number | null>(null);
   const [answers, setAnswers] = useState<number[]>(
@@ -75,6 +79,9 @@ export default function VocabularyQuiz({
   const choiceLabels = ["A", "B", "C", "D"];
   const question = questions[qIndex];
   const last = qIndex === questions.length - 1;
+
+  const [badgeFlowComplete, setBadgeFlowComplete] = useState(false);
+  
 
   // Progress bar animation
   const progressWidth = useSharedValue(0);
@@ -147,15 +154,22 @@ const handleSelect = (i: number) => {
 
 
   // --- keep badgeModal in sync with newBadges ---
-  useEffect(() => {
-    if (newBadges.length > 0) {
-      const normalized = newBadges[0].replace(/-\d+$/, "");
-      console.log("Opening badge modal for:", normalized);
-      setBadgeModal(normalized);
-    } else {
-      setBadgeModal(null);
-    }
-  }, [newBadges]);
+
+useEffect(() => {
+  if (badgeFlowComplete) return;
+
+  if (newBadges.length > 0) {
+    const normalized = newBadges[0].replace(/-\d+$/, "");
+    console.log("Opening badge modal for:", normalized);
+    setBadgeModal(normalized);
+  } else {
+    setBadgeModal(null);
+  }
+}, [newBadges, badgeFlowComplete]);
+
+
+
+  
 
 // --- saveProgress just saves local progress, no badges ---
 async function saveProgress(finalScore: number, totalQuestions: number) {
@@ -179,7 +193,6 @@ async function saveProgress(finalScore: number, totalQuestions: number) {
     console.error("Error saving progress:", err);
   }
 }
-
 
   async function saveScoreToFirestore(
     finalScore: number,
@@ -271,18 +284,27 @@ async function saveProgress(finalScore: number, totalQuestions: number) {
   );
 
   // --- handle continue after badges ---
-  const handleBadgeContinue = () => {
-    if (newBadges.length > 1) {
-      const [, ...rest] = newBadges;
-      setNewBadges(rest); 
-    } else {
-      setNewBadges([]);
+const handleBadgeContinue = () => {
+  console.log("Badge Continue clicked");
+  setNewBadges(prev => {
+    const next = prev.slice(1);
+    if (next.length === 0) {
+      console.log("Last badge, navigating Home");
+      setBadgeFlowComplete(true);
+      setBadgeModal(null);
+
       navigation.reset({
         index: 0,
-        routes: [{ name: "Home" as keyof RootStackParamList }],
+        routes: [{ name: "Home" }],
       });
     }
-  };
+    return next;
+  });
+};
+
+
+
+
 
   const badgeData = badgeModal
     ? BADGES.find((b: { id: string }) => b.id === badgeModal)
@@ -497,11 +519,9 @@ async function saveProgress(finalScore: number, totalQuestions: number) {
       title="Congratulations!"
       onContinue={async () => {
         setShowResult(false);
-
         const finalScore = score;
         const correctAnswers = finalScore / 10;
         const percentage = Math.round((correctAnswers / questions.length) * 100);
-
         if (percentage >= 70) {
           console.log("Passed quiz, unlocking badges...");
           try {
@@ -509,19 +529,21 @@ async function saveProgress(finalScore: number, totalQuestions: number) {
             const progress = stored ? JSON.parse(stored) : {};
             const unlocked = await unlockBadge("vocab", levelId, progress);
             if (unlocked.length > 0) {
-              setNewBadges(unlocked); 
-              return; 
+              const uniqueUnlocked = Array.from(new Set(unlocked));
+              console.log("Unlocked badges (deduplicated):", uniqueUnlocked);
+              setNewBadges(uniqueUnlocked);
+              return;
             }
           } catch (err) {
             console.error("Error unlocking badge after result:", err);
           }
-        } else {
-          console.log("Quiz failed — no badges unlocked");
         }
-        navigation.reset({
-          index: 0,
-          routes: [{ name: "Home" as keyof RootStackParamList }],
-        });
+        if (newBadges.length === 0) {
+          navigation.reset({
+            index: 0,
+            routes: [{ name: "Home" as keyof RootStackParamList }],
+          });
+        }
       }}
     />
 
@@ -557,6 +579,13 @@ async function saveProgress(finalScore: number, totalQuestions: number) {
           </View>
         </Pressable>
       </Modal>
+      <View style={{
+        position: "absolute",
+        top: 10,
+        right: 10,
+        zIndex: 999,
+      }}>
+      </View>
     </View>
   );
 }

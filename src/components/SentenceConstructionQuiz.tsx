@@ -34,6 +34,7 @@ import { unlockBadge } from "../../badges_utility/badgesutil";
 import { BADGES } from "../screens/ProgressScreen";
 import type { RootStackParamList } from "../navigation/type";
 import { AudioManager } from "../../utils/AudioManager"; 
+import auth from "@react-native-firebase/auth";
 
 type Item = {
   id: string;
@@ -93,6 +94,10 @@ export default function SentenceConstructionQuiz({
   const insets = useSafeAreaInsets();
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+
+    const user = auth().currentUser;
+    const uid = user?.uid;
+    const STORAGE_KEY = `SentenceProgress_${uid}`;
 
   // State
   const [items, setItems] = useState<Item[]>([]);
@@ -223,15 +228,16 @@ export default function SentenceConstructionQuiz({
     );
   }, []);
 
-  useEffect(() => {
-    if (newBadges.length > 0) {
-      const normalized = newBadges[0].replace(/-\d+$/, "");
-      console.log("Opening badge modal for:", normalized);
-      setBadgeModal(normalized);
-    } else {
-      setBadgeModal(null);
-    }
-  }, [newBadges]);
+useEffect(() => {
+  if (newBadges.length > 0) {
+    const normalized = newBadges[0].replace(/-\d+$/, "");
+    console.log("Opening badge modal for:", normalized);
+    setBadgeModal(normalized);
+  } else {
+    setBadgeModal(null);
+  }
+}, [newBadges]);
+
 
   // Animated styles for progress bar
   const animatedProgressStyle = useAnimatedStyle(() => {
@@ -268,8 +274,7 @@ const saveResults = async () => {
 
     const percentage = Math.round((correctCount / total) * 100);
 
-    // consistent storage key for all users (no uid suffix needed)
-    const STORAGE_KEY = "SentenceProgress";
+
     const stored = await AsyncStorage.getItem(STORAGE_KEY);
     let progress = stored ? JSON.parse(stored) : {};
 
@@ -317,7 +322,6 @@ const check = () => {
   ]);
 };
 
-
 const next = async () => {
   if (!locked) return;
   if (!last) {
@@ -327,7 +331,6 @@ const next = async () => {
     setShowResult(true);
   }
 };
-
   //  Render
   if (loading) {
     return (
@@ -356,6 +359,7 @@ const handleBadgeContinue = () => {
     });
   }
 };
+
 
 const badgeData = badgeModal
   ? BADGES.find((b: { id: string }) => b.id === badgeModal)
@@ -577,34 +581,30 @@ const badgeData = badgeModal
       onRequestClose={() => setShowResult(false)}
       title="Congratulations!"
       onContinue={async () => {
-        setShowResult(false);
+      setShowResult(false);
+      const finalPercentage = Math.round((correctCount / total) * 100);
+      if (finalPercentage >= 70) {
+        try {
+          const stored = await AsyncStorage.getItem(STORAGE_KEY);
+          const progress = stored ? JSON.parse(stored) : {};
+          const unlocked = await unlockBadge("sentence", levelId ?? "", progress);
 
-        const finalPercentage = Math.round((correctCount / total) * 100);
-        const STORAGE_KEY = "SentenceProgress";
-
-        if (finalPercentage >= 70) {
-          try {
-            const stored = await AsyncStorage.getItem(STORAGE_KEY);
-            const progress = stored ? JSON.parse(stored) : {};
-            const unlocked = await unlockBadge("sentence", levelId ?? "", progress);
-            if (unlocked.length > 0) {
-              setNewBadges(unlocked);
-              return; 
-            }
-          } catch (err) {
-            console.error("Error unlocking sentence badge:", err);
+          if (unlocked.length > 0) {
+            setNewBadges(unlocked); 
+            return;
           }
-        } else {
-          console.log("Sentence Construction quiz failed — no badges unlocked");
+        } catch (err) {
+          console.error("Error unlocking sentence badge:", err);
         }
-        navigation.reset({
-          index: 0,
-          routes: [{ name: "Home" as keyof RootStackParamList }],
-        });
-      }}
+      } else {
+        console.log("Sentence Construction quiz failed — no badges unlocked");
+      }
+      navigation.reset({
+        index: 0,
+        routes: [{ name: "Home" }],
+      });
+    }}
     />
-
-
 <Modal
   visible={!!badgeData}
   transparent
@@ -636,7 +636,6 @@ const badgeData = badgeModal
     </View>
   </Pressable>
 </Modal>
-
     </View>
   );
 }

@@ -20,6 +20,9 @@
   import { EmailAuthProvider, reauthenticateWithCredential, updatePassword } from "firebase/auth";
   import LogoutModal from '../components/LogoutModal';
   import ChangePasswordModal from '../components/ChangePasswordModal';
+import { QueryDocumentSnapshot } from 'firebase/firestore';
+import ReQuestConfirmModal from '~/components/ReQuestConfirmModal';
+import BlazingReQuestButton from '~/components/BlazingReQuestButton';
 
   const AVATARS = [
     require('../../assets/avatars/Ellipse1.png'),
@@ -36,6 +39,21 @@
 
   type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'Profile'>;
 
+
+  function compute(raw: string | null): number {
+  if (!raw) return 0;
+  try {
+    const obj = JSON.parse(raw);
+    const values = Object.values(obj) as { score: number }[];
+    if (!values.length) return 0;
+    return Math.round(
+      (values.reduce((s, x) => s + (x.score || 0), 0) / (values.length * 100)) * 100
+    );
+  } catch {
+    return 0;
+  }
+}
+
   export default function ProfileScreen() {
     const [selectedAvatar, setSelectedAvatar] = useState<any>(AVATARS[0]);
     const [email, setEmail] = useState<string>('');
@@ -44,53 +62,87 @@
     const [changePassVisible, setChangePassVisible] = useState(false);
 
     const navigation = useNavigation<NavigationProp>();
+    const [canReQuest, setCanReQuest] = useState(false);
 
-    useFocusEffect(
-      useCallback(() => {
-        const loadProfileData = async () => {
-          try {
-            const saved = await AsyncStorage.getItem('selectedAvatar');
-            if (saved) setSelectedAvatar(JSON.parse(saved));
+    //MODAL FOR ALERT RE QUEST
+    const [requestModalVisible, setRequestModalVisible] = useState(false);
+    const [resetModalVisible, setResetModalVisible] = useState(false);
 
-            const { auth, db } = await initFirebase();
 
-            const unsubscribe = onAuthStateChanged(auth, async (user) => {
-              if (user?.email && user?.uid) {
-                setEmail(user.email);
-                console.log('🔑 Logged-in user UID:', user.uid);
+    
+const handleReQuest = () => {
+  setRequestModalVisible(true);
+};
 
-                try {
-                  // same API as HomeScreen
-                  const userDoc = await db.collection('users').doc(user.uid).get();
-                  if (userDoc.exists) {
-                    const data = userDoc.data();
-                    console.log('Firestore user data:', data);
 
-                    if (Array.isArray(data?.interests)) {
-                      console.log(' Interests found:', data.interests);
-                      setInterests(data.interests);
-                    } else {
-                      console.log('No interests field or not an array.');
-                    }
-                  } else {
-                    console.log('No Firestore doc found for this user UID.');
-                  }
-                } catch (err) {
-                  console.error('Error fetching Firestore user doc:', err);
-                }
-              } else {
-                console.log('No authenticated user found.');
-              }
-            });
+useFocusEffect(
+  useCallback(() => {
+    const loadProfileData = async () => {
+      try {
+        const saved = await AsyncStorage.getItem("selectedAvatar");
+        if (saved) setSelectedAvatar(JSON.parse(saved));
 
-            return unsubscribe;
-          } catch (err) {
-            console.error('Error loading profile:', err);
+        const { auth, db } = await initFirebase();
+
+        const unsubscribe = onAuthStateChanged(auth, async (user) => {
+          if (!user?.uid) {
+            console.log("No authenticated user found.");
+            setCanReQuest(false);
+            return;
           }
-        };
-        loadProfileData();
-      }, [])
-    );
+
+          const uid = user.uid;
+          setEmail(user.email ?? "");
+
+          /* ------------------- Load Interests ------------------- */
+          try {
+            const userDoc = await db.collection("users").doc(uid).get();
+            if (userDoc.exists) {
+              const data = userDoc.data();
+              setInterests(Array.isArray(data?.interests) ? data.interests : []);
+            }
+          } catch (err) {
+            console.error("Error loading user data:", err);
+          }
+
+          /* ------------------- Compute Local Progress ------------------- */
+          try {
+            const vocabRaw = await AsyncStorage.getItem(`VocabularyProgress_${uid}`);
+            const grammarRaw = await AsyncStorage.getItem(`GrammarProgress_${uid}`);
+            const readingRaw = await AsyncStorage.getItem(`ReadingProgress_${uid}`);
+            const translationRaw = await AsyncStorage.getItem(`TranslationProgress_${uid}`);
+            const sentenceRaw = await AsyncStorage.getItem(`SentenceConstructionProgress_${uid}`);
+
+            const vocab = compute(vocabRaw);
+            const grammar = compute(grammarRaw);
+            const reading = compute(readingRaw);
+            const translation = compute(translationRaw);
+            const sentence = compute(sentenceRaw);
+
+            const overall = (vocab + grammar + reading + translation + sentence) / 5;
+
+            console.log("Overall progress:", overall);
+
+            setCanReQuest(overall === 100);
+          } catch (err) {
+            console.error("Error computing Re-Quest progress:", err);
+            setCanReQuest(false);
+          }
+        });
+
+        return unsubscribe;
+
+      } catch (err) {
+        console.error("Error loading profile:", err);
+      }
+    };
+
+    loadProfileData();
+  }, [])
+);
+
+
+
 
     const handleAvatarSelect = async (avatar: any) => {
       setSelectedAvatar(avatar);
@@ -168,6 +220,15 @@
             <Text style={styles.actionButtonText}>Change Password</Text>
           </TouchableOpacity>
 
+        {/* Re-Quest Button (Always Visible) */}
+        <BlazingReQuestButton
+          canReQuest={canReQuest}
+          onPress={() => {
+            if (!canReQuest) return;
+            setResetModalVisible(true);
+          }}
+        />
+
           {/* Logout */}
           <TouchableOpacity
             style={[styles.actionButton, styles.logout]}
@@ -197,7 +258,30 @@
             }
           }}
         />
+        <ReQuestConfirmModal
+        visible={requestModalVisible}
+        title="Re-Quest?"
+        message="You will be able to choose 3 new interests. An admin will review your request."
+        confirmLabel="Continue"
+        onCancel={() => setRequestModalVisible(false)}
+        onConfirm={() => {
+          setRequestModalVisible(false);
+          navigation.navigate("InterestSelection", { mode: "reQuest" });
+        }}
+      />
 
+      <ReQuestConfirmModal
+        visible={resetModalVisible}
+        title="Re-Quest?"
+        destructive
+        message="This will reset all your quizzes, scores, badges and allow you to select new interests."
+        confirmLabel="Continue"
+        onCancel={() => setResetModalVisible(false)}
+        onConfirm={() => {
+          setResetModalVisible(false);
+          handleReQuest();
+        }}
+      />
         <ChangePasswordModal
           visible={changePassVisible}
           onCancel={() => setChangePassVisible(false)}
@@ -330,4 +414,39 @@
     },
     actionButtonText: { fontSize: 15, color: '#111', fontWeight: '600' },
     logout: { backgroundColor: '#fff7f7', borderColor: '#fde2e2' },
+
+    reQuestButton: {
+  height: 46,
+  borderRadius: 10,
+  borderWidth: 1,
+  flexDirection: "row",
+  alignItems: "center",
+  paddingHorizontal: 14,
+  marginTop: 10,
+  justifyContent: "flex-start",
+},
+
+reQuestEnabled: {
+  borderColor: "#3b82f6",
+  backgroundColor: "#ebf4ff",
+},
+
+reQuestDisabled: {
+  borderColor: "#d1d5db", 
+  backgroundColor: "#f3f4f6",
+},
+
+reQuestText: {
+  fontSize: 15,
+  fontWeight: "600",
+},
+
+reQuestTextEnabled: {
+  color: "#3b82f6",
+},
+
+reQuestTextDisabled: {
+  color: "#9ca3af",
+},
+
   });

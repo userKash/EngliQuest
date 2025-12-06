@@ -169,7 +169,6 @@ export default function ProgressScreen() {
   const { width } = Dimensions.get("window");
   const CARD_W = Math.floor((width - 16 * 2 - 12) / 2);
 
-  // --- Load all progress categories ---
 useEffect(() => {
   (async () => {
     try {
@@ -187,20 +186,24 @@ useEffect(() => {
         badgeDoc = snap.exists() ? snap.data() : {};
       }
 
-      // Normalize keys so "reading_read-easy" → "reading_easy"
-      const normalize = (key: string) =>
-        key
-          .replace("read-easy", "easy")
-          .replace("read-med", "med")
-          .replace("read-hard", "hard");
+      // --- VALID BADGE IDs (whitelist) ---
+      const VALID_BADGES = new Set([
+        "vocab_easy", "vocab_med", "vocab_hard", "vocab_champ",
+        "grammar_easy", "grammar_med", "grammar_hard", "grammar_champ",
+        "reading_easy", "reading_med", "reading_hard", "reading_champ",
+        "sentence_easy", "sentence_med", "sentence_hard", "sentence_champ",
+        "trans_easy", "trans_med", "trans_hard", "trans_champ",
+        "ultimate",
+      ]);
 
+      // --- Collect ONLY valid badges ---
       const unlockedSet = new Set(
         Object.keys(badgeDoc)
-          .filter((k) => badgeDoc[k])
-          .map(normalize)
+          .filter((k) => badgeDoc[k] === true)
+          .filter((k) => VALID_BADGES.has(k)) // ignore invalid keys like vocab_med-2
       );
 
-      // --- Ultimate Badge (if all 5 hard unlocked) ---
+      // --- Auto award ultimate badge ---
       const hardIds = [
         "vocab_hard",
         "grammar_hard",
@@ -208,8 +211,12 @@ useEffect(() => {
         "sentence_hard",
         "trans_hard",
       ];
-      if (hardIds.every((id) => unlockedSet.has(id))) {
+
+      const hasUltimateNow = hardIds.every((id) => unlockedSet.has(id));
+
+      if (hasUltimateNow && !unlockedSet.has("ultimate")) {
         unlockedSet.add("ultimate");
+
         if (db.collection) {
           await db
             .collection("userbadges")
@@ -227,10 +234,11 @@ useEffect(() => {
 
       setUnlocked(unlockedSet);
     } catch (err) {
-      console.error(" Failed to load badges:", err);
+      console.error("❌ Failed to load badges:", err);
     }
   })();
 }, []);
+
 
 
 

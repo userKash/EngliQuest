@@ -30,6 +30,8 @@ import { unlockBadge } from "../../badges_utility/badgesutil";
 import { BADGES } from "../screens/ProgressScreen";
 import type { RootStackParamList } from "../navigation/type";
 import { AudioManager } from "../../utils/AudioManager"; 
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import auth from "@react-native-firebase/auth";
 
 type InQuestion = {
   prompt: string;
@@ -92,6 +94,8 @@ export default function ReadingQuiz({
   // Score animation
   const scoreScale = useSharedValue(1);
   const scorePulse = useSharedValue(1);
+    const [autoMode, setAutoMode] = useState(false);
+ 
 
   useEffect(() => {
     onProgressChange?.({ current: groupIndex, total: groups.length });
@@ -135,9 +139,14 @@ export default function ReadingQuiz({
     );
   }, []);
 
-  useEffect(() => {
-    setBadgeModal(newBadges.length > 0 ? newBadges[0] : null);
-  }, [newBadges]);
+useEffect(() => {
+  if (newBadges.length > 0) {
+    const normalized = newBadges[0].replace(/-\d+$/, "");
+    setBadgeModal(normalized);
+  } else {
+    setBadgeModal(null);
+  }
+}, [newBadges]);
 
 const handleSelect = (ci: number) => {
   if (showAnswer) return;
@@ -168,6 +177,29 @@ const handleSelect = (ci: number) => {
 };
 
 
+const uid = auth().currentUser?.uid;
+const STORAGE_KEY = `ReadingProgress_${uid}`;
+
+async function saveProgress(finalScore: number, totalQuestions: number) {
+  try {
+    const correct = finalScore / 10;
+    const percentage = Math.round((correct / totalQuestions) * 100);
+
+    const stored = await AsyncStorage.getItem(STORAGE_KEY);
+    let progress = stored ? JSON.parse(stored) : {};
+
+    progress[levelId] = {
+      score: Math.max(progress[levelId]?.score ?? 0, percentage),
+      attempted: true,
+    };
+
+    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(progress));
+
+    console.log("📘 Reading progress saved:", progress);
+  } catch (err) {
+    console.error("❌ Error saving reading progress", err);
+  }
+}
 
 
   const handleNext = async () => {
@@ -208,17 +240,20 @@ const handleSelect = (ci: number) => {
     }
   };
 
-  const handleBadgeContinue = () => {
-    if (newBadges.length > 1) {
-      setNewBadges(newBadges.slice(1));
-    } else {
-      setNewBadges([]);
+const handleBadgeContinue = () => {
+  setNewBadges((prev) => {
+    const next = prev.slice(1);
+    if (next.length === 0) {
+      setBadgeModal(null);
       navigation.reset({
         index: 0,
-        routes: [{ name: "Home" as keyof RootStackParamList }],
+        routes: [{ name: "Home" }],
       });
     }
-  };
+    return next;
+  });
+};
+
 
   const badgeData = badgeModal
     ? BADGES.find((b: { id: string }) => b.id === badgeModal)
@@ -490,26 +525,27 @@ const handleSelect = (ci: number) => {
         title="Well done!"
         onContinue={async () => {
           setShowResult(false);
+
           const correctAnswers = score / 10;
           const percentage = Math.round(
             (correctAnswers / questions.length) * 100
           );
-
           if (percentage >= 70) {
+            console.log("Passed reading quiz, unlocking badges...");
             try {
-              const AsyncStorage = (await import("@react-native-async-storage/async-storage")).default;
-              const STORAGE_KEY = "ReadingProgress";
               const stored = await AsyncStorage.getItem(STORAGE_KEY);
               const progress = stored ? JSON.parse(stored) : {};
-
               const unlocked = await unlockBadge("reading", levelId, progress);
               if (unlocked.length > 0) {
+                console.log("Unlocked reading badges:", unlocked);
                 setNewBadges(unlocked);
                 return;
               }
             } catch (err) {
-              console.error("Error unlocking badge after Reading result:", err);
+              console.error("Error unlocking badge after reading result:", err);
             }
+          } else {
+            console.log("Reading quiz failed — no badge unlock.");
           }
           navigation.reset({
             index: 0,
@@ -517,7 +553,6 @@ const handleSelect = (ci: number) => {
           });
         }}
       />
-
       <Modal
         visible={!!badgeData}
         transparent
@@ -533,7 +568,7 @@ const handleSelect = (ci: number) => {
                 {badgeData.subtitle && (
                   <Text style={styles.modalSub}>{badgeData.subtitle}</Text>
                 )}
-                <Text style={styles.modalHint}>Unlocked! ��</Text>
+                <Text style={styles.modalHint}>Unlocked! ✓</Text>
                 <TouchableOpacity
                   onPress={handleBadgeContinue}
                   style={styles.modalBtn}

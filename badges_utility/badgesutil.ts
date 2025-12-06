@@ -35,7 +35,6 @@ export async function unlockBadge(
         .replace(/^medium/, "med");
     }
 
-
     console.log("Normalized values:", { raw, base, normalizedLevel });
 
     const score = progress[raw]?.score ?? 0;
@@ -45,22 +44,25 @@ export async function unlockBadge(
     const requiredSublevels = [
       "easy-1",
       "easy-2",
-      "med-1",
-      "med-2",
+      "medium-1",
+      "medium-2",
       "hard-1",
       "hard-2",
     ];
 
     const allPerfect = requiredSublevels.every((sub) => {
-      // Check with prefix if category uses it
-      const key =
-        category === "trans" || category === "sentence"
-          ? `${category}-${sub}`
-          : sub;
-      return progress[key]?.score === 100;
-    });
+      const keyWithPrefix = `${category}-${sub}`;
+      const shortSentence = `sc-${sub}`;   
+      const keyWithoutPrefix = sub;
 
-    console.log("🏆 Champion check:", { allPerfect });
+      const score =
+        progress[keyWithPrefix]?.score ??
+        progress[shortSentence]?.score ??
+        progress[keyWithoutPrefix]?.score ??
+        0;
+
+      return score === 100;
+    });
 
     if (allPerfect) {
       const champId = `${category}_champ`;
@@ -72,8 +74,7 @@ export async function unlockBadge(
         await setDoc(doc(db, "userbadges", uid), { [champId]: true }, { merge: true });
       }
       unlocked.push(champId);
-
-      return unlocked; // Champion overrides
+      // Do NOT return early — allow other badges like Hard to also unlock
     }
 
     // ---------------- Hard Badge ----------------
@@ -88,7 +89,6 @@ export async function unlockBadge(
           await setDoc(doc(db, "userbadges", uid), { [hardId]: true }, { merge: true });
         }
         unlocked.push(hardId);
-        return unlocked; // skip normal if hard unlocked
       }
     }
 
@@ -112,8 +112,6 @@ export async function unlockBadge(
       return progress[key]?.score >= 70;
     });
 
-    console.log("🔥 Ultimate check:", { allHard2Passed });
-
     if (allHard2Passed) {
       const ultimateId = "ultimate_word_warrior";
       console.log(`✅ Unlocking Ultimate Word Warrior: ${ultimateId}`);
@@ -125,6 +123,7 @@ export async function unlockBadge(
       }
       unlocked.push(ultimateId);
     }
+
   } catch (err) {
     console.error("❌ Error unlocking badge:", err);
   }

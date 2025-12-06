@@ -30,8 +30,8 @@ import { unlockBadge } from "../../badges_utility/badgesutil";
 import { BADGES } from "../screens/ProgressScreen";
 import type { RootStackParamList } from "../navigation/type";
 import { AudioManager } from "../../utils/AudioManager"; 
+import auth from "@react-native-firebase/auth";
 
-const STORAGE_KEY = "GrammarProgress";
 
 type GrammarQuestion = {
   explanation: any;
@@ -57,6 +57,9 @@ export default function GrammarQuiz({
   const route = useRoute<any>();
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+
+    const uid = auth().currentUser?.uid;
+    const STORAGE_KEY = `GrammarProgress_${uid}`;
 
   const { levelId } = route.params; // "easy" | "med" | "hard"
 
@@ -270,18 +273,30 @@ async function saveProgress(finalScore: number, totalQuestions: number) {
   );
 
   // --- handle continue after badges ---
-  const handleBadgeContinue = () => {
-    if (newBadges.length > 1) {
-      const [, ...rest] = newBadges;
-      setNewBadges(rest);
-    } else {
-      setNewBadges([]);
+const handleBadgeContinue = () => {
+  setNewBadges(prev => {
+    const next = prev.slice(1);
+    if (next.length === 0) {
       navigation.reset({
         index: 0,
-        routes: [{ name: "Home" as keyof RootStackParamList }],
+        routes: [{ name: "Home" }],
       });
     }
-  };
+    return next;
+  });
+};
+
+
+useEffect(() => {
+  if (newBadges.length > 0) {
+    const normalized = newBadges[0].replace(/-\d+$/, "");
+    setBadgeModal(normalized);
+  } else {
+    setBadgeModal(null);
+  }
+}, [newBadges]);
+
+
 
   const badgeData = badgeModal
     ? BADGES.find((b: { id: string }) => b.id === badgeModal)
@@ -488,74 +503,77 @@ async function saveProgress(finalScore: number, totalQuestions: number) {
         </View>
       )}
       <ResultModal
-  visible={showResult}
-  score={score / 10}
-  total={questions.length}
-  review={review}
-  onRequestClose={() => setShowResult(false)}
-  title="Congratulations!"
-  onContinue={async () => {
-    setShowResult(false);
+        visible={showResult}
+        score={score / 10}
+        total={questions.length}
+        review={review}
+        onRequestClose={() => setShowResult(false)}
+        title="Congratulations!"
+        onContinue={async () => {
+          setShowResult(false);
 
-    const finalScore = score;
-    const correctAnswers = finalScore / 10;
-    const percentage = Math.round((correctAnswers / questions.length) * 100);
+          const finalScore = score;
+          const correctAnswers = finalScore / 10;
+          const percentage = Math.round((correctAnswers / questions.length) * 100);
 
-    if (percentage >= 70) {
-      console.log("Passed grammar quiz, unlocking badges...");
-      try {
-        const stored = await AsyncStorage.getItem(STORAGE_KEY);
-        const progress = stored ? JSON.parse(stored) : {};
-        const unlocked = await unlockBadge("grammar", levelId, progress);
-        if (unlocked.length > 0) {
-          setNewBadges(unlocked);
-          return; 
-        }
-      } catch (err) {
-        console.error("Error unlocking badge after result:", err);
-      }
-    } else {
-      console.log("Grammar quiz failed — no badges unlocked");
-    }
-    navigation.reset({
-      index: 0,
-      routes: [{ name: "Home" as keyof RootStackParamList }],
-    });
-  }}
-/>
+          if (percentage >= 70) {
+            console.log("Passed grammar quiz, unlocking badges...");
 
+            try {
+              const stored = await AsyncStorage.getItem(STORAGE_KEY);
+              const progress = stored ? JSON.parse(stored) : {};
+              const unlocked = await unlockBadge("grammar", levelId, progress);
 
-      <Modal
-        visible={!!badgeData}
-        transparent
-        animationType="fade"
-        onRequestClose={handleBadgeContinue}
-      >
-        <Pressable style={styles.overlay} onPress={handleBadgeContinue}>
-          <View style={styles.modalCard}>
-            {badgeData && (
-              <>
-                <Image
-                  source={badgeData.image}
-                  style={styles.modalImg}
-                  resizeMode="contain"
-                />
-                <Text style={styles.modalTitle}>{badgeData.title}</Text>
-                {badgeData.subtitle && (
-                  <Text style={styles.modalSub}>{badgeData.subtitle}</Text>
-                )}
-                <Text style={styles.modalHint}>Unlocked! 🎉</Text>
-                <TouchableOpacity
-                  onPress={handleBadgeContinue}
-                  style={styles.modalBtn}
-                >
-                  <Text style={styles.modalBtnText}>Continue</Text>
-                </TouchableOpacity>
-              </>
-            )}
-          </View>
-        </Pressable>
-      </Modal>
+              if (unlocked.length > 0) {
+                const unique = [...new Set(unlocked)];
+                console.log("Deduped grammar badges:", unique);
+                setNewBadges(unique);
+                return;
+              }
+
+            } catch (err) {
+              console.error("Error unlocking badge after result:", err);
+            }
+          } else {
+            console.log("Grammar quiz failed — no badges unlocked");
+          }
+
+          navigation.reset({
+            index: 0,
+            routes: [{ name: "Home" as keyof RootStackParamList }],
+          });
+        }}
+      />
+    <Modal
+      visible={!!badgeData}
+      transparent
+      animationType="fade"
+      onRequestClose={handleBadgeContinue}
+    >
+      <Pressable style={styles.overlay} onPress={handleBadgeContinue}>
+        <View style={styles.modalCard}>
+          {badgeData && (
+            <>
+              <Image source={badgeData.image} style={styles.modalImg} />
+              <Text style={styles.modalTitle}>{badgeData.title}</Text>
+              {badgeData.subtitle && <Text style={styles.modalSub}>{badgeData.subtitle}</Text>}
+              <Text style={styles.modalHint}>Unlocked! 🎉</Text>
+
+              <TouchableOpacity onPress={handleBadgeContinue} style={styles.modalBtn}>
+                <Text style={styles.modalBtnText}>Continue</Text>
+              </TouchableOpacity>
+            </>
+          )}
+        </View>
+      </Pressable>
+    </Modal>
+      <View style={{
+              position: "absolute",
+              top: 10,
+              right: 10,
+              zIndex: 999,
+            }}>
+            </View>
     </View>
   );
 }
@@ -955,10 +973,13 @@ const styles = StyleSheet.create({
     elevation: 10,
   },
   modalImg: {
-    width: 120,
-    height: 120,
-    marginBottom: 16,
+    width: "45%",        
+    height: undefined,
+    aspectRatio: 1,    
+    resizeMode: "contain",
+    marginBottom: 10,
   },
+
   modalTitle: {
     fontSize: 22,
     fontWeight: "800",
@@ -1029,4 +1050,5 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     fontWeight: '500',
   },
+
 });

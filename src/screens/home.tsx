@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, Image, TouchableOpacity, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, Image, TouchableOpacity, ScrollView, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -30,6 +30,13 @@ export default function HomeScreen() {
   const [sentencePct, setSentencePct] = useState<number>(0);
   const [overallPct, setOverallPct] = useState<number>(0);
 
+
+  const [userBadges, setUserBadges] = useState<Record<string, boolean>>({});
+  const hasUltimate = userBadges["ultimate"] === true;
+  const [showUltimateModal, setShowUltimateModal] = useState(false);
+  const [neverShowUltimate, setNeverShowUltimate] = useState(false);
+
+
   // helper to compute overall progress exactly like your builders:
   function computeOverallProgress(progressData: Record<string, { score: number }>, sublevels: string[]) {
     const contribution = 100 / sublevels.length;
@@ -53,6 +60,29 @@ export default function HomeScreen() {
         if (savedAvatar) setAvatar(JSON.parse(savedAvatar));
         const userDoc = await db.collection('users').doc(user.uid).get();
         if (userDoc.exists) setUserName(userDoc.data().name || 'User');
+
+        //ultimade badge display
+        // ---- FETCH USER BADGES SAFELY ----
+        const badgeSnap = await db.collection("userbadges").doc(user.uid).get();
+        const badgeDataRaw = badgeSnap.exists ? badgeSnap.data() : {};
+
+        // Always ensure badgeData is an object
+        const badgeData = badgeDataRaw && typeof badgeDataRaw === "object"
+          ? badgeDataRaw
+          : {};
+
+        setUserBadges(badgeData);
+
+        // ---- LOCAL PREF ----
+        const hideUltimate = await AsyncStorage.getItem("hideUltimateBadge");
+        const hide = hideUltimate === "true";
+        setNeverShowUltimate(hide);
+
+        // ---- ONLY SHOW IF USER HAS BADGE ----
+        if (badgeData?.ultimate === true && !hide) {
+          setShowUltimateModal(true);
+        }
+
 
         // Keys used by your builder screens:
         const vocabKey = `VocabularyProgress_${user.uid}`;
@@ -79,14 +109,13 @@ export default function HomeScreen() {
         // Fetch Firestore scores and merge into the local objects
         const snap = await db.collection('scores').where('userId', '==', user.uid).get();
 
-        snap.forEach((doc: any) => {
+        snap.forEach(async (doc: any) => {
           const data = doc.data() || {};
           const qtRaw = String(data.quizType ?? data.quiz_type ?? '').toLowerCase();
           const subId = String(data.levelId ?? data.difficulty ?? data.level ?? data.sublevel ?? '') || '';
           const score = Number(data.score ?? data.userscore ?? data.userscore ?? 0);
 
           if (!subId) return; // no level info -> skip
-
           // Decide which progress object to update based on quizType string
           if (qtRaw.includes('vocab') || qtRaw.includes('vocabulary')) {
             const prev = vocabProgress[subId]?.score ?? 0;
@@ -197,9 +226,66 @@ export default function HomeScreen() {
 
             <Text style={styles.totalQuizzes}>Game Modes: 5</Text>
           </View>
-
           <Text style={styles.sectionTitle}>Recommended topics</Text>
+          {/* ULTIMATE BADGE MODAL */}
+          <Modal
+            visible={showUltimateModal}
+            transparent
+            animationType="fade"
+          >
+            <View style={{
+              flex: 1,
+              justifyContent: "center",
+              alignItems: "center",
+              backgroundColor: "rgba(0,0,0,0.5)",
+            }}>
+              <View style={{
+                width: "80%",
+                backgroundColor: "#fff",
+                borderRadius: 16,
+                padding: 20,
+                alignItems: "center",
+              }}>
+                <Image
+                  source={require("../../assets/Badges/Ultimate Word Warrior.png")}
+                  style={{ width: 150, height: 150, marginBottom: 15, resizeMode: "contain" }}
+                />
+                <Text style={{ fontSize: 20, fontWeight: "700", color: "#5E67CC", marginBottom: 15 }}>
+                  Congratulations!
+                </Text>
+                <Text style={{ fontSize: 16, color: "#444", textAlign: "center", marginBottom: 20 }}>
+                  You unlocked the **Ultimate Word Warrior** badge!
+                </Text>
 
+                {/* Close button */}
+                <TouchableOpacity
+                  onPress={() => setShowUltimateModal(false)}
+                  style={{
+                    backgroundColor: "#5E67CC",
+                    paddingVertical: 10,
+                    paddingHorizontal: 20,
+                    borderRadius: 10,
+                    marginBottom: 10,
+                  }}
+                >
+                  <Text style={{ color: "#fff", fontWeight: "600" }}>Close</Text>
+                </TouchableOpacity>
+
+                {/* Don't show again */}
+                <TouchableOpacity
+                  onPress={async () => {
+                    await AsyncStorage.setItem("hideUltimateBadge", "true");
+                    setNeverShowUltimate(true);
+                    setShowUltimateModal(false);
+                  }}
+                >
+                  <Text style={{ fontSize: 13, color: "#666", textDecorationLine: "underline" }}>
+                    Don't show this again
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </Modal>
           {/* Vocabulary Builder */}
           <TopicCard
             title="Vocabulary Builder"
@@ -392,4 +478,26 @@ header: {
     paddingHorizontal: 16,
   },
   startText: { color: '#fff', fontWeight: '600', fontSize: 12 },
+  ultimateContainer: {
+  alignItems: "center",
+  marginBottom: 20,
+  padding: 16,
+  backgroundColor: "#f3f4ff",
+  borderRadius: 12,
+  borderWidth: 1,
+  borderColor: "#d8dbff",
+},
+ultimateBadge: {
+    width: "45%",        
+    height: undefined,
+    aspectRatio: 1,    
+    resizeMode: "contain",
+    marginBottom: 10,
+},
+ultimateText: {
+  fontSize: 16,
+  fontWeight: "700",
+  color: "#5E67CC",
+},
+
 });

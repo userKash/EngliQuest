@@ -7,11 +7,19 @@ export type RootStackParamList = {
 
   Login: undefined;
   Register: undefined;
-  InterestSelection: {
-    fullName: string;
-    email: string;
-    password: string;
-  };
+InterestSelection:
+  | {
+      fullName: string;
+      email: string;
+      password: string;
+      mode?: undefined;
+    }
+  | {
+      mode: "reQuest";
+      fullName?: undefined;
+      email?: undefined;
+      password?: undefined;
+    };
   Home: undefined;
   CloudLoading: undefined;
   Progress: undefined;
@@ -27,4 +35,5 @@ export type RootStackParamList = {
   FilipinoToEnglish: undefined;
   LoadingGeneration: undefined;
   SentenceConstruction: undefined;
+  
 };
