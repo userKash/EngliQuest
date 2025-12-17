@@ -19,6 +19,7 @@ import ExitQuizModal from "../../../components/ExitQuizModal";
 import BottomNav from "../../../components/BottomNav";
 import { Ionicons } from "@expo/vector-icons";
 import { useMusic } from "../../../context/MusicContext";
+import type { FirebaseFirestoreTypes } from "@react-native-firebase/firestore";
 
 type Question = {
   question: string;
@@ -26,6 +27,19 @@ type Question = {
   correctIndex: number;
   explanation: string;
   clue?: string;
+};
+
+type FirestoreQuestion = {
+  question: string;
+  options: string[];
+  correctIndex: number;
+  explanation: string;
+  clue?: string;
+  status: "approved" | "pending";
+  questionIndex: number;
+  interest: string;
+  level: string;
+  gameMode: string;
 };
 
 const LEVEL_MAP: Record<string, string> = {
@@ -36,6 +50,10 @@ const LEVEL_MAP: Record<string, string> = {
   "hard-1": "C1",
   "hard-2": "C2",
 };
+
+const QUIZ_KEY = (uid: string, levelId: string) =>
+  `LOCKED_VOCAB_QUIZ_${uid}_${levelId}`;
+
 
 async function saveQuizResult(
   subId: string,
@@ -146,7 +164,6 @@ useLayoutEffect(() => {
 }, [step, progress, levelId]);
 
 
- // Load quiz
 useEffect(() => {
   const loadQuiz = async () => {
     try {
@@ -154,91 +171,98 @@ useEffect(() => {
       const user = auth.currentUser;
       if (!user) return;
 
-      const uid = user.uid;
       const firestoreLevel = LEVEL_MAP[levelId];
+      if (!firestoreLevel) return;
 
-      if (!firestoreLevel) {
-        console.warn(`No mapping for level ${levelId}`);
-        return;
+      const CACHE_KEY = QUIZ_KEY(user.uid, levelId);
+
+      // ============================================
+      // 1️⃣ ALWAYS CHECK STORED QUIZ FIRST
+      // ============================================
+      const cached = await AsyncStorage.getItem(CACHE_KEY);
+      if (cached) {
+        const savedQuestions: Question[] = JSON.parse(cached);
+        setQuestions(savedQuestions);
+        setProgress({ current: 0, total: savedQuestions.length });
+        setLoading(false);
+        return; // 🔒 STOP HERE — NEVER REGENERATE
       }
 
-      const COLLECTION = "quizzes";
+      // ============================================
+      // 2️⃣ FETCH USER INTERESTS (ONLY ON FIRST TIME)
+      // ============================================
+      const userSnap = await db
+        .collection("users")
+        .doc(user.uid)
+        .get();
 
-      if (db.collection) {
-        let snapshot;
+      const userData = userSnap.data();
+      if (!userData?.interests?.length) return;
 
-        try {
-          snapshot = await db
+      const interests: string[] = userData.interests.slice(0, 3);
+
+      const COLLECTION = "quiz_template_questions";
+      const GAME_MODE = "Vocabulary";
+      const MAX_QUESTIONS = 15;
+
+      let allQuestions: FirestoreQuestion[] = [];
+
+      // ============================================
+      // 3️⃣ FETCH QUESTIONS (VOCAB ONLY)
+      // ============================================
+      if ("collection" in db) {
+        for (const interest of interests) {
+          const snap = await db
             .collection(COLLECTION)
-            .where("userId", "==", uid)
+            .where("interest", "==", interest)
             .where("level", "==", firestoreLevel)
-            .where("gameMode", "==", "Vocabulary")   
-            .where("status", "==", "approved")   
-            .orderBy("createdAt", "desc")
-            .limit(1)
+            .where("gameMode", "==", GAME_MODE)
             .get();
-        } catch (err: any) {
-          if (String(err.message).includes("failed-precondition")) {
-            snapshot = await db
-              .collection(COLLECTION)
-              .where("userId", "==", uid)
-              .where("level", "==", firestoreLevel)
-              .where("gameMode", "==", "Vocabulary")  
-              .where("status", "==", "approved")
-              .limit(1)
-              .get();
-          } else throw err;
-        }
 
-        if (!snapshot.empty) {
-          const data = snapshot.docs[0].data();
-          if (data.questions) {
-            setQuestions(data.questions);
-            setProgress({ current: 0, total: data.questions.length });
-          }
-        }
-
-      } else {
-        const { collection, query, where, orderBy, limit, getDocs } =
-          await import("firebase/firestore");
-
-        let q;
-
-        try {
-          q = query(
-            collection(db, COLLECTION),
-            where("userId", "==", uid),
-            where("level", "==", firestoreLevel),
-            where("gameMode", "==", "Vocabulary"),  
-            where("status", "==", "approved"),
-            orderBy("createdAt", "desc"),
-            limit(1)
+          allQuestions.push(
+            ...snap.docs
+              .map((doc: { data: () => FirestoreQuestion; }) => doc.data() as FirestoreQuestion)
+              .filter((q: { status: string; }) => q.status === "approved")
           );
-        } catch (err: any) {
-          if (String(err.message).includes("failed-precondition")) {
-            q = query(
-              collection(db, COLLECTION),
-              where("userId", "==", uid),
-              where("level", "==", firestoreLevel),
-              where("gameMode", "==", "Vocabulary"),
-              where("status", "==", "approved"),
-              limit(1)
-            );
-          } else throw err;
-        }
-
-        const snap = await getDocs(q);
-
-        if (!snap.empty) {
-          const data = snap.docs[0].data();
-          if (data.questions) {
-            setQuestions(data.questions);
-            setProgress({ current: 0, total: data.questions.length });
-          }
         }
       }
+
+      // ============================================
+      // 4️⃣ SHUFFLE ONCE (FOREVER)
+      // ============================================
+      for (let i = allQuestions.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [allQuestions[i], allQuestions[j]] = [
+          allQuestions[j],
+          allQuestions[i],
+        ];
+      }
+
+      const finalQuestions: Question[] = allQuestions
+        .slice(0, MAX_QUESTIONS)
+        .map(q => ({
+          question: q.question,
+          options: q.options,
+          correctIndex: q.correctIndex,
+          explanation: q.explanation,
+          clue: q.clue,
+        }));
+
+      if (!finalQuestions.length) return;
+
+      // ============================================
+      // 5️⃣ LOCK QUIZ FOREVER
+      // ============================================
+      await AsyncStorage.setItem(
+        CACHE_KEY,
+        JSON.stringify(finalQuestions)
+      );
+
+      setQuestions(finalQuestions);
+      setProgress({ current: 0, total: finalQuestions.length });
+
     } catch (err) {
-      console.error("Error fetching vocabulary quiz:", err);
+      console.error("❌ Error loading locked vocabulary quiz:", err);
     } finally {
       setLoading(false);
     }
@@ -246,6 +270,11 @@ useEffect(() => {
 
   loadQuiz();
 }, [levelId]);
+
+
+
+
+
 
 
   const instructions = {

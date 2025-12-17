@@ -19,6 +19,8 @@ import { Ionicons } from "@expo/vector-icons";
 import BottomNav from "../../../components/BottomNav";
 import ExitQuizModal from "../../../components/ExitQuizModal";
 import { useMusic } from "../../../context/MusicContext";
+import { FirebaseFirestoreTypes } from "@react-native-firebase/firestore";
+
 
 type Question = {
   question: string;
@@ -36,6 +38,22 @@ const LEVEL_MAP: Record<string, string> = {
   "hard-1": "C1",
   "hard-2": "C2",
 };
+
+
+type FirestoreQuestion = {
+  question: string;
+  options: string[];
+  correctIndex: number;
+  explanation: string;
+  clue?: string;
+  status: string;
+  level: string;
+  interest: string;
+  gameMode: string;
+};
+
+const QUIZ_KEY = (uid: string, levelId: string) =>
+  `LOCKED_GRAMMAR_QUIZ_${uid}_${levelId}`;
 
 // Save quiz result
 async function saveQuizResult(
@@ -84,60 +102,140 @@ export default function GrammarGameScreen() {
       setMode("home"); 
     };
   }, []);
+
+
   //  Load grammar quiz from Firestore
-  useEffect(() => {
-    const loadQuiz = async () => {
-      try {
-        const { auth, db } = await initFirebase();
-        const user = auth.currentUser;
-        if (!user) return;
+ useEffect(() => {
+  const loadQuiz = async () => {
+    try {
+      const { auth, db } = await initFirebase();
+      const user = auth.currentUser;
+      if (!user) return;
 
-        const uid = user.uid;
-        const firestoreLevel = LEVEL_MAP[levelId];
+      const firestoreLevel = LEVEL_MAP[levelId];
+      if (!firestoreLevel) return;
 
-        if (!firestoreLevel) {
-          console.warn(`No mapping found for levelId: ${levelId}`);
-          return;
-        }
+      const storageKey = QUIZ_KEY(user.uid, levelId);
 
-        let snapshot;
-        try {
-          snapshot = await db
-            .collection("quizzes")
-            .where("userId", "==", uid)
-            .where("level", "==", firestoreLevel)
-            .where("gameMode", "==", "Grammar")
-            .orderBy("createdAt", "desc")
-            .limit(1)
-            .get();
-        } catch (err: any) {
-          if (String(err.message).includes("failed-precondition")) {
-            snapshot = await db
-              .collection("quizzes")
-              .where("userId", "==", uid)
-              .where("level", "==", firestoreLevel)
-              .where("gameMode", "==", "Grammar")
-              .limit(1)
-              .get();
-          } else throw err;
-        }
-
-        if (!snapshot.empty) {
-          const data = snapshot.docs[0].data();
-          if (data.questions) {
-            setQuestions(data.questions);
-            setProgress({ current: 0, total: data.questions.length });
-          }
-        }
-      } catch (err) {
-        console.error("Error fetching grammar quiz:", err);
-      } finally {
+      // 🔒 STEP 1: Try loading locked quiz
+      const cached = await AsyncStorage.getItem(storageKey);
+      if (cached) {
+        const parsed: Question[] = JSON.parse(cached);
+        setQuestions(parsed);
+        setProgress({ current: 0, total: parsed.length });
         setLoading(false);
+        return;
       }
-    };
 
-    loadQuiz();
-  }, [levelId]);
+      // 🔹 STEP 2: Fetch user interests
+      const userSnap = await db
+        .collection("users")
+        .doc(user.uid)
+        .get();
+
+      const userData = userSnap.data();
+      if (!userData?.interests?.length) return;
+
+      const interests: string[] = userData.interests.slice(0, 3);
+      const COLLECTION = "quiz_template_questions";
+      const GAME_MODE = "Grammar";
+      const MAX_QUESTIONS = 15;
+
+      let allQuestions: FirestoreQuestion[] = [];
+
+      // =================================================
+      // 🔵 React Native Firebase
+      // =================================================
+      if ("collection" in db) {
+        for (const interest of interests) {
+          const snap = await db
+            .collection(COLLECTION)
+            .where("interest", "==", interest)
+            .where("level", "==", firestoreLevel)
+            .where("gameMode", "==", GAME_MODE)
+            .get();
+
+          const approved = snap.docs
+            .map(
+              (doc: FirebaseFirestoreTypes.QueryDocumentSnapshot) =>
+                doc.data() as FirestoreQuestion
+            )
+            .filter((q: { status: string; }) => q.status === "approved");
+
+          allQuestions.push(...approved);
+        }
+      }
+
+      // =================================================
+      // 🟠 Web Firebase fallback
+      // =================================================
+      else {
+        const { collection, query, where, getDocs } =
+          await import("firebase/firestore");
+
+        for (const interest of interests) {
+          const q = query(
+            collection(db, COLLECTION),
+            where("interest", "==", interest),
+            where("level", "==", firestoreLevel),
+            where("gameMode", "==", GAME_MODE)
+          );
+
+          const snap = await getDocs(q);
+          const approved = snap.docs
+            .map(doc => doc.data() as FirestoreQuestion)
+            .filter(q => q.status === "approved");
+
+          allQuestions.push(...approved);
+        }
+      }
+
+      // 🛑 Safety
+      allQuestions = allQuestions.filter(
+        q => q.gameMode === "Grammar"
+      );
+
+      // 🔀 Shuffle ONCE
+      for (let i = allQuestions.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [allQuestions[i], allQuestions[j]] = [
+          allQuestions[j],
+          allQuestions[i],
+        ];
+      }
+
+      // ✂️ Pick exactly 15
+      const finalQuestions: Question[] = allQuestions
+        .slice(0, MAX_QUESTIONS)
+        .map(q => ({
+          question: q.question,
+          options: q.options,
+          correctIndex: q.correctIndex,
+          explanation: q.explanation,
+          clue: q.clue,
+        }));
+
+      if (!finalQuestions.length) return;
+
+      // 🔐 Lock quiz
+      await AsyncStorage.setItem(
+        storageKey,
+        JSON.stringify(finalQuestions)
+      );
+
+      setQuestions(finalQuestions);
+      setProgress({ current: 0, total: finalQuestions.length });
+
+    } catch (err) {
+      console.error("❌ Error loading grammar quiz:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  loadQuiz();
+}, [levelId]);
+
 
   //  Handle Android hardware back
   useEffect(() => {

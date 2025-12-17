@@ -18,14 +18,24 @@ import { Ionicons } from "@expo/vector-icons";
 import BottomNav from "../../../components/BottomNav";
 import ExitQuizModal from "../../../components/ExitQuizModal";
 import { useMusic } from "../../../context/MusicContext";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { FirebaseFirestoreTypes } from "@react-native-firebase/firestore";
 
-type FirestoreQuestion = {
+
+type FirestoreTranslationQuestion = {
   question: string;
   options: string[];
   correctIndex: number;
   explanation?: string;
   clue?: string;
+  status: string;
+  level: string;
+  interest: string;
+  gameMode: string;
 };
+
+const QUIZ_KEY = (uid: string, levelId: string) =>
+  `LOCKED_TRANSLATION_QUIZ_${uid}_${levelId}`;
 
 type QA = {
   filipino: string;
@@ -108,73 +118,140 @@ export default function FilipinoToEnglishGameScreen() {
 
   // Load quiz
   useEffect(() => {
-    const loadQuiz = async () => {
-      setLoading(true);
-      try {
-        const { auth, db } = await initFirebase();
-        const user = auth.currentUser;
-        if (!user) return;
+  const loadQuiz = async () => {
+    try {
+      const { auth, db } = await initFirebase();
+      const user = auth.currentUser;
+      if (!user) return;
 
-        const uid = user.uid;
-        const normalized = String(levelId).replace(/^trans-/, "");
-        const firestoreLevel = LEVEL_MAP[normalized];
+      const normalized = String(levelId).replace(/^trans-/, "");
+      const firestoreLevel = LEVEL_MAP[normalized];
+      if (!firestoreLevel) return;
 
-        if (!firestoreLevel) {
-          console.warn(`No mapping found for sublevel: ${normalized}`);
-          return;
-        }
+      const storageKey = QUIZ_KEY(user.uid, normalized);
 
-        let snapshot;
-        try {
-          snapshot = await db
-            .collection("quizzes")
-            .where("userId", "==", uid)
-            .where("level", "==", firestoreLevel)
-            .where("gameMode", "==", "Translation")
-            .orderBy("createdAt", "desc")
-            .limit(1)
-            .get();
-        } catch (err: any) {
-          if (String(err.message).includes("failed-precondition")) {
-            snapshot = await db
-              .collection("quizzes")
-              .where("userId", "==", uid)
-              .where("level", "==", firestoreLevel)
-              .where("gameMode", "==", "Translation")
-              .limit(1)
-              .get();
-          } else {
-            throw err;
-          }
-        }
-
-        if (!snapshot.empty) {
-          const data = snapshot.docs[0].data();
-          const qArr: FirestoreQuestion[] = Array.isArray(data.questions)
-            ? data.questions
-            : [];
-
-          const normalizedQuestions: QA[] = qArr.map((q) => ({
-            filipino: q.question,
-            note: q.explanation ?? "",
-            clue: q.clue ?? "", 
-            accepts: q.options[q.correctIndex] ? [q.options[q.correctIndex]] : [],
-          }));
-
-          setQuestions(normalizedQuestions);
-          setProgress({ current: 0, total: normalizedQuestions.length || 1 });
-        } else {
-          setQuestions([]);
-        }
-      } catch (err) {
-        console.error("Error fetching translation quiz:", err);
-      } finally {
+      // 🔒 STEP 1: Load locked quiz if exists
+      const cached = await AsyncStorage.getItem(storageKey);
+      if (cached) {
+        const parsed: QA[] = JSON.parse(cached);
+        setQuestions(parsed);
+        setProgress({ current: 0, total: parsed.length });
         setLoading(false);
+        return;
       }
-    };
 
-    loadQuiz();
-  }, [levelId]);
+      // 🔹 STEP 2: Fetch user interests
+      const userSnap = await db
+        .collection("users")
+        .doc(user.uid)
+        .get();
+
+      const userData = userSnap.data();
+      if (!userData?.interests?.length) return;
+
+      const interests: string[] = userData.interests.slice(0, 3);
+      const COLLECTION = "quiz_template_questions";
+      const GAME_MODE = "Translation";
+      const MAX_QUESTIONS = 15;
+
+      let allQuestions: FirestoreTranslationQuestion[] = [];
+
+      // =================================================
+      // 🔵 React Native Firebase
+      // =================================================
+      if ("collection" in db) {
+        for (const interest of interests) {
+          const snap = await db
+            .collection(COLLECTION)
+            .where("interest", "==", interest)
+            .where("level", "==", firestoreLevel)
+            .where("gameMode", "==", GAME_MODE)
+            .get();
+
+          const approved = snap.docs
+            .map(
+              (doc: FirebaseFirestoreTypes.QueryDocumentSnapshot) =>
+                doc.data() as FirestoreTranslationQuestion
+            )
+            .filter((q: { status: string; }) => q.status === "approved");
+
+          allQuestions.push(...approved);
+        }
+      }
+
+      // =================================================
+      // 🟠 Web Firebase fallback
+      // =================================================
+      else {
+        const { collection, query, where, getDocs } =
+          await import("firebase/firestore");
+
+        for (const interest of interests) {
+          const q = query(
+            collection(db, COLLECTION),
+            where("interest", "==", interest),
+            where("level", "==", firestoreLevel),
+            where("gameMode", "==", GAME_MODE)
+          );
+
+          const snap = await getDocs(q);
+          const approved = snap.docs
+            .map(doc => doc.data() as FirestoreTranslationQuestion)
+            .filter(q => q.status === "approved");
+
+          allQuestions.push(...approved);
+        }
+      }
+
+      // 🛑 SAFETY CHECK
+      allQuestions = allQuestions.filter(
+        q => q.gameMode === "Translation"
+      );
+
+      // 🔀 Shuffle ONCE
+      for (let i = allQuestions.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [allQuestions[i], allQuestions[j]] = [
+          allQuestions[j],
+          allQuestions[i],
+        ];
+      }
+
+      // ✂️ Pick EXACTLY 15
+      const finalQuestions: QA[] = allQuestions
+        .slice(0, MAX_QUESTIONS)
+        .map(q => ({
+          filipino: q.question,
+          note: q.explanation ?? "",
+          accepts: q.options[q.correctIndex]
+            ? [q.options[q.correctIndex]]
+            : [],
+        }));
+
+      if (!finalQuestions.length) return;
+
+      // 🔐 LOCK quiz
+      await AsyncStorage.setItem(
+        storageKey,
+        JSON.stringify(finalQuestions)
+      );
+
+      setQuestions(finalQuestions);
+      setProgress({
+        current: 0,
+        total: finalQuestions.length,
+      });
+
+    } catch (err) {
+      console.error("❌ Error loading translation quiz:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  loadQuiz();
+}, [levelId]);
+
 
   // Handle Android back button
   useEffect(() => {

@@ -98,6 +98,9 @@ export default function SentenceConstructionQuiz({
     const user = auth().currentUser;
     const uid = user?.uid;
     const STORAGE_KEY = `SentenceProgress_${uid}`;
+    const QUIZ_KEY = `SentenceConstructionQuiz_${uid}_${levelId}`;
+
+    
 
   // State
   const [items, setItems] = useState<Item[]>([]);
@@ -131,53 +134,100 @@ export default function SentenceConstructionQuiz({
   const scorePulse = useSharedValue(1);
 
   // Load Firestore quiz
-  useEffect(() => {
-    const loadQuiz = async () => {
-      try {
-        const { auth, db } = await initFirebase();
-        const user = auth.currentUser;
-        if (!user) return;
+useEffect(() => {
+  const loadQuiz = async () => {
+    try {
+      const { auth, db } = await initFirebase();
+      const user = auth.currentUser;
+      if (!user || !levelId) return;
 
-        const subLevel = levelId?.replace("sc-", "");
-        const firestoreLevel = LEVEL_MAP[subLevel ?? ""];
+      const uid = user.uid;
+      const QUIZ_KEY = `SentenceConstructionQuiz_${uid}_${levelId}`;
 
-        if (!firestoreLevel) {
-          console.warn(`No mapping found for ${levelId}`);
-          setLoading(false);
-          return;
-        }
+      // 1️⃣ Check cache first
+      const cached = await AsyncStorage.getItem(QUIZ_KEY);
+      if (cached) {
+        setItems(JSON.parse(cached));
+        setLoading(false);
+        return;
+      }
 
-        const snapshot = await db
-          .collection("quizzes")
-          .where("userId", "==", user.uid)
+      // 2️⃣ Resolve CEFR level
+      const subLevel = levelId.replace("sc-", "");
+      const firestoreLevel = LEVEL_MAP[subLevel];
+      if (!firestoreLevel) {
+        console.warn("Invalid level mapping");
+        setLoading(false);
+        return;
+      }
+
+      // 3️⃣ Get user interests
+      const userSnap = await db.collection("users").doc(uid).get();
+      const userData = userSnap.data();
+      const interests: string[] = userData?.interests?.slice(0, 3) ?? [];
+
+      if (!interests.length) {
+        console.warn("User has no interests");
+        setLoading(false);
+        return;
+      }
+
+      // 4️⃣ Fetch approved Sentence Construction questions
+      let allQuestions: any[] = [];
+
+      for (const interest of interests) {
+        const snap = await db
+          .collection("quiz_template_questions")
+          .where("interest", "==", interest)
           .where("level", "==", firestoreLevel)
           .where("gameMode", "==", "Sentence Construction")
-          .limit(1)
           .get();
 
-        if (!snapshot.empty) {
-          const data = snapshot.docs[0].data();
-          if (data.questions) {
-            setItems(
-              data.questions.map((q: any, i: number) => ({
-                id: `${i}`,
-                answer: q.options[q.correctIndex],
-                points: 10,
-                alsoAccept: [],
-                clue: q.clue ?? null, 
-              }))
-            );
-          }
-        }
-      } catch (err) {
-        console.error(" Error fetching Sentence Construction quiz:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
+        const approved = snap.docs
+          .map((doc: { data: () => any; }) => doc.data())
+          .filter((q: { status: string; }) => q.status === "approved");
 
-    loadQuiz();
-  }, [levelId]);
+        allQuestions.push(...approved);
+      }
+
+      if (!allQuestions.length) {
+        console.warn("No approved sentence construction questions");
+        setLoading(false);
+        return;
+      }
+
+      // 5️⃣ Shuffle ONCE
+      for (let i = allQuestions.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [allQuestions[i], allQuestions[j]] = [
+          allQuestions[j],
+          allQuestions[i],
+        ];
+      }
+
+      // 6️⃣ Take EXACTLY 15
+      const finalItems: Item[] = allQuestions.slice(0, 15).map((q, i) => ({
+        id: `${i}`,
+        answer: q.options[q.correctIndex],
+        points: 10,
+        alsoAccept: [],
+        clue: q.clue ?? null,
+      }));
+
+      // 7️⃣ Cache forever
+      await AsyncStorage.setItem(QUIZ_KEY, JSON.stringify(finalItems));
+
+      setItems(finalItems);
+    } catch (err) {
+      console.error("❌ Error loading Sentence Construction quiz:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  loadQuiz();
+}, [levelId]);
+
 
   // Reset when question changes
   useEffect(() => {

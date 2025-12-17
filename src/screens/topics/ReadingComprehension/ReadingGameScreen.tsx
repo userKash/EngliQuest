@@ -18,6 +18,8 @@ import { Ionicons } from "@expo/vector-icons";
 import BottomNav from "../../../components/BottomNav";
 import ExitQuizModal from "../../../components/ExitQuizModal";
 import { useMusic } from "../../../context/MusicContext";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { FirebaseFirestoreTypes } from "@react-native-firebase/firestore";
 
 type Question = {
   question: string;
@@ -36,6 +38,22 @@ const LEVEL_MAP: Record<string, string> = {
   "hard-1": "C1",
   "hard-2": "C2",
 };
+
+type FirestoreReadingQuestion = {
+  question: string;
+  options: string[];
+  correctIndex: number;
+  explanation?: string;
+  passage?: string;
+  clue?: string;
+  status: string;
+  level: string;
+  interest: string;
+  gameMode: string;
+};
+
+const QUIZ_KEY = (uid: string, levelId: string) =>
+  `LOCKED_READING_QUIZ_${uid}_${levelId}`;
 
 // Save quiz result locally & to Firestore
 async function saveReadingResult(subId: string, percentage: number) {
@@ -76,6 +94,8 @@ async function saveReadingResult(subId: string, percentage: number) {
   }
 }
 
+
+
 export default function ReadingGameScreen() {
   const navigation = useNavigation();
   const route = useRoute<any>();
@@ -100,72 +120,138 @@ export default function ReadingGameScreen() {
     }, []);
 
   // Load quiz
-  useEffect(() => {
-    const loadQuiz = async () => {
-      setLoading(true);
-      try {
-        const { auth, db } = await initFirebase();
-        const user = auth.currentUser;
-        if (!user) return;
+useEffect(() => {
+  const loadQuiz = async () => {
+    try {
+      const { auth, db } = await initFirebase();
+      const user = auth.currentUser;
+      if (!user) return;
 
-        const uid = user.uid;
-        const normalized = String(levelId).replace(/^read-/, "");
-        const firestoreLevel = LEVEL_MAP[normalized];
+      const normalized = String(levelId).replace(/^read-/, "");
+      const firestoreLevel = LEVEL_MAP[normalized];
+      if (!firestoreLevel) return;
 
-        if (!firestoreLevel) {
-          console.warn(`No mapping found for sublevel: ${normalized}`);
-          return;
-        }
+      const storageKey = QUIZ_KEY(user.uid, normalized);
 
-        let snapshot;
-        try {
-          snapshot = await db
-            .collection("quizzes")
-            .where("userId", "==", uid)
-            .where("level", "==", firestoreLevel)
-            .where("gameMode", "==", "Reading Comprehension")
-            .orderBy("createdAt", "desc")
-            .limit(1)
-            .get();
-        } catch (err: any) {
-          if (String(err.message).includes("failed-precondition")) {
-            snapshot = await db
-              .collection("quizzes")
-              .where("userId", "==", uid)
-              .where("level", "==", firestoreLevel)
-              .where("gameMode", "==", "Reading Comprehension")
-              .limit(1)
-              .get();
-          } else {
-            throw err;
-          }
-        }
-
-        if (!snapshot.empty) {
-          const data = snapshot.docs[0].data();
-          const qArr = Array.isArray(data.questions) ? data.questions : [];
-          const normalizedQuestions: Question[] = qArr.map((q: any) => ({
-            question: q.question ?? "",
-            options: Array.isArray(q.options) ? q.options : [],
-            correctIndex: typeof q.correctIndex === "number" ? q.correctIndex : 0,
-            explanation: q.explanation ?? "",
-            passage: q.passage ?? "",
-            clue: q.clue ?? "", 
-          }));
-          setQuestions(normalizedQuestions);
-          setProgress({ current: 0, total: normalizedQuestions.length || 1 });
-        } else {
-          setQuestions([]);
-        }
-      } catch (err) {
-        console.error("❌ Error fetching reading quiz:", err);
-      } finally {
+      // 🔒 STEP 1: Load locked quiz if exists
+      const cached = await AsyncStorage.getItem(storageKey);
+      if (cached) {
+        const parsed: Question[] = JSON.parse(cached);
+        setQuestions(parsed);
+        setProgress({ current: 0, total: parsed.length });
         setLoading(false);
+        return;
       }
-    };
 
-    loadQuiz();
-  }, [levelId]);
+      // 🔹 STEP 2: Fetch user interests
+      const userSnap = await db
+        .collection("users")
+        .doc(user.uid)
+        .get();
+
+      const userData = userSnap.data();
+      if (!userData?.interests?.length) return;
+
+      const interests: string[] = userData.interests.slice(0, 3);
+      const COLLECTION = "quiz_template_questions";
+      const GAME_MODE = "Reading Comprehension";
+      const MAX_QUESTIONS = 15;
+
+      let allQuestions: FirestoreReadingQuestion[] = [];
+
+      // =================================================
+      // 🔵 React Native Firebase
+      // =================================================
+      if ("collection" in db) {
+        for (const interest of interests) {
+          const snap = await db
+            .collection(COLLECTION)
+            .where("interest", "==", interest)
+            .where("level", "==", firestoreLevel)
+            .where("gameMode", "==", GAME_MODE)
+            .get();
+
+          const approved = snap.docs
+            .map(
+              (doc: FirebaseFirestoreTypes.QueryDocumentSnapshot) =>
+                doc.data() as FirestoreReadingQuestion
+            )
+            .filter((q: { status: string; }) => q.status === "approved");
+
+          allQuestions.push(...approved);
+        }
+      }
+
+      // =================================================
+      // 🟠 Web Firebase fallback
+      // =================================================
+      else {
+        const { collection, query, where, getDocs } =
+          await import("firebase/firestore");
+
+        for (const interest of interests) {
+          const q = query(
+            collection(db, COLLECTION),
+            where("interest", "==", interest),
+            where("level", "==", firestoreLevel),
+            where("gameMode", "==", GAME_MODE)
+          );
+
+          const snap = await getDocs(q);
+          const approved = snap.docs
+            .map(doc => doc.data() as FirestoreReadingQuestion)
+            .filter(q => q.status === "approved");
+
+          allQuestions.push(...approved);
+        }
+      }
+
+      // 🛑 Safety check
+      allQuestions = allQuestions.filter(
+        q => q.gameMode === "Reading Comprehension"
+      );
+
+      // 🔀 Shuffle ONCE
+      for (let i = allQuestions.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [allQuestions[i], allQuestions[j]] = [
+          allQuestions[j],
+          allQuestions[i],
+        ];
+      }
+
+      // ✂️ Pick exactly 15
+      const finalQuestions: Question[] = allQuestions
+        .slice(0, MAX_QUESTIONS)
+        .map(q => ({
+          question: q.question,
+          options: q.options,
+          correctIndex: q.correctIndex,
+          explanation: q.explanation,
+          passage: q.passage,
+          clue: q.clue,
+        }));
+
+      if (!finalQuestions.length) return;
+
+      // 🔐 Lock quiz
+      await AsyncStorage.setItem(
+        storageKey,
+        JSON.stringify(finalQuestions)
+      );
+
+      setQuestions(finalQuestions);
+      setProgress({ current: 0, total: finalQuestions.length });
+
+    } catch (err) {
+      console.error("❌ Error loading reading quiz:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  loadQuiz();
+}, [levelId]);
 
   // Handle Android hardware back
   useEffect(() => {

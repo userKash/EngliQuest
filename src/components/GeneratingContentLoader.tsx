@@ -56,51 +56,56 @@ export default function GeneratingContentLoader() {
 
   const LOTTIE_SIZE = Math.min(300, Math.round(width * 0.68));
 
+
 useEffect(() => {
   const user = auth().currentUser;
   if (!user) return;
 
-  const userRef = firestore().collection("users").doc(user.uid);
+  let cancelled = false;
 
-  let quizUnsub: (() => void) | null = null;
+  const checkAvailability = async () => {
+    try {
+      const userDoc = await firestore()
+        .collection("users")
+        .doc(user.uid)
+        .get();
 
-  const unsubUser = userRef.onSnapshot((docSnap) => {
-    const uData = docSnap.data();
-    if (!uData) return;
+      const userData = userDoc.data();
+      if (!userData || !userData.interests || cancelled) return;
 
-    const regenActive = uData.regenerationInProgress === true;
-    if (regenActive) {
-      console.log("🔒 RE-GENERATION ACTIVE — waiting...");
-      if (quizUnsub) {
-        quizUnsub();  
-        quizUnsub = null;
+      const interests: string[] = userData.interests;
+      const level: string = userData.level || "A1";
+
+      console.log("🔍 Checking approved quizzes for:", interests, level);
+      const { hasApprovedQuizForUser } = await import(
+        "../services/quizAvailability"
+      );
+
+      const ready = await hasApprovedQuizForUser({
+        interests,
+        level,
+      });
+
+      if (ready && !cancelled) {
+        console.log("⚡ Approved quizzes found → navigating forward");
+        await AsyncStorage.setItem("GENERATION_STATUS", "completed");
+
+        navigation.replace("CloudLoading"); // or WordOfTheDay
+      } else {
+        console.log("⏳ No approved quizzes yet — staying on loader");
       }
-      return;
+    } catch (error) {
+      console.error("❌ Availability check failed:", error);
     }
-    console.log("🔓 LOCK CLEARED — watching approved quizzes...");
+  };
 
-    if (!quizUnsub) {
-      quizUnsub = firestore()
-        .collection("quizzes")
-        .where("userId", "==", user.uid)
-        .where("status", "==", "approved")
-        .onSnapshot(async (snapshot) => {
-          const approvedCount = snapshot.size;
-          console.log("📊 Approved quizzes →", approvedCount);
-
-          if (approvedCount >= 30) {
-            await AsyncStorage.setItem("GENERATION_STATUS", "completed");
-            navigation.navigate("CloudLoading");
-          }
-        });
-    }
-  });
+  checkAvailability();
 
   return () => {
-    if (quizUnsub) quizUnsub();
-    unsubUser();
+    cancelled = true;
   };
 }, []);
+
 
 
 
